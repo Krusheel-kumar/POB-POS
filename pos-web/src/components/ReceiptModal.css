@@ -1,0 +1,468 @@
+/* Thermal Receipt and KOT Slip Styles */
+.receipt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+}
+
+.receipt-modal-container {
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.receipt-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #0f172a;
+  color: #fff;
+}
+
+.modal-title-pill {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.receipt-btn-print {
+  background-color: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.receipt-btn-print:hover {
+  opacity: 0.9;
+}
+
+.receipt-btn-close {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.receipt-btn-close:hover {
+  color: #fff;
+}
+
+/* Thermal Paper Styling */
+.thermal-slip {
+  background-color: #ffffff;
+  margin: 16px;
+  padding: 24px 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  color: #000;
+  line-height: 1.35;
+  overflow-y: auto;
+  max-height: calc(90vh - 100px);
+}
+
+.thermal-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.brand-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.brand-sub {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.brand-contact {
+  font-size: 0.75rem;
+  color: #333;
+}
+
+.brand-tax-info {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.7rem;
+  color: #444;
+  margin-top: 4px;
+}
+
+.slip-divider {
+  font-size: 0.75rem;
+  letter-spacing: -1px;
+  color: #444;
+  margin: 4px 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.slip-title {
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.thermal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+  margin: 6px 0;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.thermal-items-header {
+  display: flex;
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.col-desc { flex: 2; }
+.col-qty { width: 32px; text-align: center; }
+.col-rate { width: 55px; text-align: right; }
+.col-amt { width: 65px; text-align: right; }
+
+.thermal-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+}
+
+.thermal-item-entry {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-main-row {
+  display: flex;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.item-title { flex: 2; }
+.item-qty { width: 32px; text-align: center; }
+.item-rate { width: 55px; text-align: right; }
+.item-amount { width: 65px; text-align: right; }
+
+.item-sub-note {
+  font-size: 0.7rem;
+  color: #444;
+  padding-left: 6px;
+}
+
+.thermal-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.78rem;
+}
+
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.grand-total {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.paid-tag {
+  font-weight: 700;
+  color: #047857;
+}
+
+.slip-footer {
+  text-align: center;
+  margin-top: 14px;
+  padding-top: 8px;
+}
+
+.qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.simulated-qr {
+  font-size: 1.1rem;
+  letter-spacing: 3px;
+}
+
+.qr-box span {
+  font-size: 0.68rem;
+  color: #555;
+}
+
+.thank-you-msg {
+  font-weight: 800;
+  font-size: 0.8rem;
+  margin: 4px 0;
+}
+
+.footer-software {
+  font-size: 0.65rem;
+  color: #777;
+}
+
+/* KOT Specific Styles */
+.kot-badge {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.kot-number {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #b91c1c;
+  margin: 2px 0;
+}
+
+.highlight-table {
+  font-size: 1.15rem;
+  font-weight: 900;
+  background-color: #fee2e2;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.kot-special-notes {
+  background-color: #fef3c7;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  color: #92400e;
+}
+
+.kot-items-header {
+  display: flex;
+  gap: 16px;
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.kot-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.kot-item-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.kot-qty {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.kot-desc {
+  flex: 1;
+}
+
+.kot-name {
+  font-size: 0.95rem;
+  display: block;
+}
+
+.kot-variant {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.kot-addons {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.kot-instruction {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-top: 2px;
+}
+
+.kot-footer {
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+}
+
+/* Original vs Duplicate Banners */
+.slip-copy-badge {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 3px 6px;
+  margin: 4px 0;
+  letter-spacing: 0.5px;
+}
+
+.slip-copy-badge.original {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px dashed #22c55e;
+}
+
+.duplicate-alert-banner {
+  border: 2px dashed #b91c1c;
+  background-color: #fef2f2;
+  color: #991b1b;
+  padding: 6px 8px;
+  margin: 6px 0;
+  text-align: center;
+  border-radius: 4px;
+}
+
+.dup-title {
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+
+.dup-sub {
+  font-weight: 800;
+  font-size: 0.8rem;
+  margin-top: 1px;
+}
+
+.dup-timestamp {
+  font-size: 0.7rem;
+  color: #555;
+  margin-top: 2px;
+}
+
+.dup-warning {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #b91c1c;
+  margin-top: 3px;
+}
+
+.duplicate-kot-banner {
+  border: 3px solid #dc2626;
+  background-color: #fff1f2;
+  color: #9f1239;
+  padding: 8px 10px;
+  margin: 8px 0;
+  text-align: center;
+  border-radius: 6px;
+}
+
+.dup-kot-title {
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+}
+
+.dup-kot-sub {
+  font-weight: 800;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.dup-kot-alert {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: #b91c1c;
+  margin-top: 4px;
+  background: #fee2e2;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.dup-kot-alert-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  margin-top: 2px;
+}
+
+.modal-print-status-tag {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.modal-print-status-tag.original {
+  background: #059669;
+  color: #ffffff;
+}
+
+.modal-print-status-tag.duplicate {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* Print Media Query */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-modal-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 10px;
+    box-shadow: none;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
