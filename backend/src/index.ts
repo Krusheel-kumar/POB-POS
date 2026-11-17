@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { initDatabase } from './db/database.js';
+import { initDatabase, isPostgresActive } from './db/database.js';
 import { catalogRoutes } from './routes/catalogRoutes.js';
 import { orderRoutes } from './routes/orderRoutes.js';
 import { billingRoutes } from './routes/billingRoutes.js';
@@ -30,10 +30,10 @@ async function startServer() {
       credentials: true,
     });
 
-    // 2. Initialize Low-Memory SQLite Database
-    fastify.log.info('Initializing SQLite database engine with WAL mode...');
+    // 2. Initialize Database (PostgreSQL / SQLite WAL)
+    fastify.log.info('Initializing production database engine...');
     await initDatabase();
-    fastify.log.info('Database initialized successfully with production schema and seed catalog.');
+    fastify.log.info(`Database engine: ${isPostgresActive ? '🐘 POSTGRESQL' : '🗄️ SQLITE (WAL Mode)'}`);
 
     // 3. Register Routes
     await fastify.register(catalogRoutes);
@@ -46,6 +46,7 @@ async function startServer() {
     // 4. Health Check
     fastify.get('/health', async () => ({
       status: 'UP',
+      database: isPostgresActive ? 'POSTGRESQL' : 'SQLITE_WAL',
       memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
@@ -57,6 +58,7 @@ async function startServer() {
 
     await fastify.listen({ port, host });
     fastify.log.info(`⚡ Pop O' Bob High-Performance POS Server running at http://${host}:${port}`);
+    fastify.log.info(`🗄️ Active DB Engine: ${isPostgresActive ? 'PostgreSQL 18 (:5432)' : 'LibSQL SQLite WAL'}`);
     fastify.log.info(`📊 Memory footprint: ~${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB RAM (vs 600MB+ in Java)`);
   } catch (err) {
     fastify.log.error(err);

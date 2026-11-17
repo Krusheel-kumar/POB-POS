@@ -1,15 +1,52 @@
 import { createClient, type Client } from '@libsql/client';
 import path from 'path';
+import { pgDatabase } from './pgDatabase.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const dbPath = path.resolve(process.cwd(), 'pos_production.db');
-export const db: Client = createClient({
+const sqliteClient: Client = createClient({
   url: `file:${dbPath}`,
 });
 
+export let isPostgresActive = false;
+
+export const db = {
+  execute: async (statement: string | { sql: string; args?: any[] }) => {
+    if (isPostgresActive) {
+      return pgDatabase.execute(statement);
+    }
+    return sqliteClient.execute(statement as any);
+  },
+};
+
 export async function initDatabase(): Promise<void> {
+  // Test and initialize PostgreSQL if requested or configured
+  if (process.env.DATABASE_TYPE === 'postgres' || process.env.DATABASE_URL) {
+    try {
+      console.log('[Database] Initializing PostgreSQL schema & connection...');
+      await pgDatabase.initSchema();
+      const connected = await pgDatabase.testConnection();
+      if (connected) {
+        isPostgresActive = true;
+        console.log('====================================================');
+        console.log('🚀 [Database] CONNECTED TO POSTGRESQL PRODUCTION DB!');
+        console.log(`   Host: ${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || '5432'}`);
+        console.log(`   Database: ${process.env.PGDATABASE || 'pob_pos'}`);
+        console.log(`   User: ${process.env.PGUSER || 'postgres'}`);
+        console.log('====================================================');
+        return;
+      }
+    } catch (err: any) {
+      console.warn('[Database] PostgreSQL connection attempt failed:', err.message);
+      console.warn('[Database] Falling back to SQLite WAL engine until PostgreSQL credentials are provided.');
+    }
+  }
+
+  isPostgresActive = false;
   // Enable Write-Ahead Logging for high concurrency and zero locking
-  await db.execute('PRAGMA journal_mode = WAL;');
-  await db.execute('PRAGMA foreign_keys = ON;');
+  await sqliteClient.execute('PRAGMA journal_mode = WAL;');
+  await sqliteClient.execute('PRAGMA foreign_keys = ON;');
 
   // 1. OUTLETS
   await db.execute(`
@@ -256,6 +293,10 @@ export async function initDatabase(): Promise<void> {
  * Guarantees zero gaps for GST invoices and sequential KOT tickets
  */
 export async function getNextSequence(sequenceName: string): Promise<number> {
+  if (isPostgresActive) {
+    return pgDatabase.getNextSequence(sequenceName);
+  }
+
   const selectRes = await db.execute({
     sql: 'SELECT last_value FROM sequences WHERE name = ?',
     args: [sequenceName],
