@@ -1265,6 +1265,7 @@ export function App() {
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         categories={categories.filter((c) => c.id !== 'cat-all')}
+        products={products}
         addOns={addOns}
         onProductCreated={handleCreateProduct}
         onProductUpdated={handleUpdateProduct}
@@ -1274,6 +1275,7 @@ export function App() {
         onDeleteAddOn={handleDeleteAddOn}
         onClearCatalog={handleClearCatalog}
         onLoadSampleCatalog={handleLoadSampleCatalog}
+        initialCategoryId={selectedCategoryId !== 'cat-all' ? selectedCategoryId : undefined}
       />
 
       {/* Strict Anti-Fraud Manager Approval Modal for Voiding KOT Items */}

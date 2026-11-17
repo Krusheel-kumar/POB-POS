@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type {
   Product,
   ProductCategory,
@@ -14,6 +14,7 @@ export interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: ProductCategory[];
+  products?: Product[];
   addOns?: AddOn[];
   editingProduct?: Product | null;
   onProductCreated: (req: ProductRequest) => Promise<void>;
@@ -24,7 +25,7 @@ export interface AddProductModalProps {
   onDeleteAddOn?: (id: string) => Promise<void>;
   onClearCatalog?: () => Promise<void>;
   onLoadSampleCatalog?: () => Promise<void>;
-  initialTab?: 'category' | 'addons' | 'product';
+  initialTab?: 'catalog' | 'category' | 'addons' | 'product';
   initialCategoryId?: string;
 }
 
@@ -47,6 +48,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
   categories,
+  products = [],
   addOns = [],
   editingProduct = null,
   onProductCreated,
@@ -60,12 +62,19 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   initialTab = 'product',
   initialCategoryId,
 }) => {
-  const [activeTab, setActiveTab] = useState<'product' | 'category' | 'addons'>(
+  const [activeTab, setActiveTab] = useState<'catalog' | 'product' | 'category' | 'addons'>(
     categories.length === 0 ? 'category' : initialTab
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Petpooja view states inside modal
+  const [selectedModalCatId, setSelectedModalCatId] = useState<string>(
+    initialCategoryId || (categories[0]?.id || 'ALL')
+  );
+  const [modalSearchQuery, setModalSearchQuery] = useState('');
+  const [selectedModalSubcat, setSelectedModalSubcat] = useState<string>('ALL');
 
   // --- Product Form State ---
   const [prodName, setProdName] = useState('');
@@ -156,6 +165,58 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       }
     }
   }, [selectedCatId, activeSubcats, selectedSubcat, editingProduct]);
+
+  // Items in the currently selected form category
+  const currentCategoryItems = useMemo(() => {
+    if (!products || !selectedCatId) return [];
+    return products.filter((p) => p.category?.id === selectedCatId);
+  }, [products, selectedCatId]);
+
+  // Items per category count
+  const catItemCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (products || []).forEach((p) => {
+      const cid = p.category?.id || 'uncategorized';
+      counts[cid] = (counts[cid] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  // Catalog filtered items for Petpooja view
+  const modalFilteredProducts = useMemo(() => {
+    return (products || []).filter((p) => {
+      if (selectedModalCatId !== 'ALL' && p.category?.id !== selectedModalCatId) {
+        return false;
+      }
+      if (selectedModalSubcat !== 'ALL' && p.subcategory !== selectedModalSubcat) {
+        return false;
+      }
+      if (modalSearchQuery.trim()) {
+        const q = modalSearchQuery.toLowerCase();
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchSku = p.sku?.toLowerCase().includes(q);
+        const matchDesc = p.description?.toLowerCase().includes(q);
+        if (!matchName && !matchSku && !matchDesc) return false;
+      }
+      return true;
+    });
+  }, [products, selectedModalCatId, selectedModalSubcat, modalSearchQuery]);
+
+  // Active category object in Petpooja view
+  const activeModalCatObj = useMemo(() => {
+    if (selectedModalCatId === 'ALL') return null;
+    return categories.find((c) => c.id === selectedModalCatId) || null;
+  }, [categories, selectedModalCatId]);
+
+  // Subcategories available in active modal category
+  const activeModalSubcategories = useMemo(() => {
+    if (!activeModalCatObj) return [];
+    const fromCat = activeModalCatObj.subcategories || [];
+    const fromProds = (products || [])
+      .filter((p) => p.category?.id === activeModalCatObj.id && p.subcategory)
+      .map((p) => p.subcategory!);
+    return Array.from(new Set([...fromCat, ...fromProds]));
+  }, [activeModalCatObj, products]);
 
   if (!isOpen) return null;
 
@@ -331,6 +392,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           <div className="min-tabs-nav">
             <button
               type="button"
+              className={`min-tab-pill ${activeTab === 'catalog' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('catalog');
+                setErrorMsg(null);
+              }}
+            >
+              📋 Categories & Items ({(products || []).length})
+            </button>
+            <button
+              type="button"
               className={`min-tab-pill ${activeTab === 'product' ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('product');
@@ -396,6 +467,263 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         {/* Status Banners */}
         {errorMsg && <div className="min-banner-error">{errorMsg}</div>}
         {successMsg && <div className="min-banner-success">{successMsg}</div>}
+
+        {/* TAB 0: PETPOOJA TWO-COLUMN CATEGORIES & ITEMS VIEW */}
+        {activeTab === 'catalog' && (
+          <div className="min-petpooja-view">
+            {/* Left: Category Sidebar */}
+            <div className="min-petpooja-sidebar">
+              <div className="min-petpooja-sidebar-header">
+                <span>Categories ({categories.length})</span>
+                <button
+                  type="button"
+                  className="btn-add-category-mini"
+                  onClick={() => setActiveTab('category')}
+                  title="Create new category"
+                >
+                  + New
+                </button>
+              </div>
+              <div className="min-petpooja-sidebar-list">
+                <div
+                  className={`min-petpooja-cat-row ${selectedModalCatId === 'ALL' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedModalCatId('ALL');
+                    setSelectedModalSubcat('ALL');
+                  }}
+                >
+                  <span className="category-item-name">All Categories</span>
+                  <span className="min-petpooja-cat-badge">{(products || []).length}</span>
+                </div>
+                {categories.map((c) => {
+                  const count = catItemCounts[c.id] || 0;
+                  const isSelected = selectedModalCatId === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      className={`min-petpooja-cat-row ${isSelected ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedModalCatId(c.id);
+                        setSelectedModalSubcat('ALL');
+                      }}
+                      title={c.name}
+                    >
+                      <span className="category-item-name">{c.name}</span>
+                      <span className="min-petpooja-cat-badge">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Right: Items Table */}
+            <div className="min-petpooja-main">
+              <div className="min-petpooja-toolbar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                  <div className="petpooja-search-box" style={{ width: '200px' }}>
+                    <span>🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Search items, SKU..."
+                      value={modalSearchQuery}
+                      onChange={(e) => setModalSearchQuery(e.target.value)}
+                    />
+                    {modalSearchQuery && (
+                      <button
+                        type="button"
+                        className="btn-clear-search"
+                        onClick={() => setModalSearchQuery('')}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  {activeModalSubcategories.length > 0 && (
+                    <div className="petpooja-subcat-pills">
+                      <button
+                        type="button"
+                        className={`subcat-pill ${selectedModalSubcat === 'ALL' ? 'active' : ''}`}
+                        onClick={() => setSelectedModalSubcat('ALL')}
+                      >
+                        All
+                      </button>
+                      {activeModalSubcategories.map((subcat: string) => (
+                        <button
+                          key={subcat}
+                          type="button"
+                          className={`subcat-pill ${selectedModalSubcat === subcat ? 'active' : ''}`}
+                          onClick={() => setSelectedModalSubcat(subcat)}
+                        >
+                          {subcat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm petpooja-add-btn"
+                  onClick={() => {
+                    if (selectedModalCatId !== 'ALL') {
+                      setSelectedCatId(selectedModalCatId);
+                    }
+                    setActiveTab('product');
+                  }}
+                  title="Create new menu item in this category"
+                >
+                  + Add Item
+                </button>
+              </div>
+
+              <div className="min-petpooja-table-wrapper">
+                {modalFilteredProducts.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '2.5rem 1rem' }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>
+                      {selectedModalCatId === 'ALL'
+                        ? 'No products created yet. Click "+ Add Item" to add your first menu item!'
+                        : `No items in "${activeModalCatObj?.name || 'this category'}". Click "+ Add Item" to add an item here.`}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm petpooja-add-btn"
+                      style={{ marginTop: '0.75rem', display: 'inline-flex' }}
+                      onClick={() => {
+                        if (selectedModalCatId !== 'ALL') {
+                          setSelectedCatId(selectedModalCatId);
+                        }
+                        setActiveTab('product');
+                      }}
+                    >
+                      + Add Item to {activeModalCatObj?.name || 'Category'}
+                    </button>
+                  </div>
+                ) : (
+                  <table className="petpooja-table">
+                    <thead>
+                      <tr>
+                        <th>Name *</th>
+                        <th>Short Code</th>
+                        <th>Price *</th>
+                        <th>Description</th>
+                        <th>Image</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalFilteredProducts.map((p: Product) => {
+                        const isVeg = p.dietaryType === 'VEG' || p.dietaryType === 'VEGAN';
+                        const isNonVeg = p.dietaryType === 'NON_VEG';
+                        return (
+                          <tr key={p.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span
+                                  className={
+                                    isVeg ? 'diet-dot-veg' : isNonVeg ? 'diet-dot-nonveg' : 'diet-dot-beverage'
+                                  }
+                                  title={p.dietaryType || 'BEVERAGE'}
+                                />
+                                <div>
+                                  <strong>{p.name}</strong>
+                                  {p.subcategory && (
+                                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                      {p.subcategory}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                              {p.sku || '-'}
+                            </td>
+                            <td>
+                              <strong style={{ color: '#0f172a' }}>₹{p.basePrice.toFixed(2)}</strong>
+                            </td>
+                            <td style={{ maxWidth: '180px', fontSize: '0.78rem', color: '#64748b' }}>
+                              {p.description || '-'}
+                            </td>
+                            <td>
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  style={{
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '6px',
+                                    objectFit: 'cover',
+                                    border: '1px solid #e2e8f0',
+                                  }}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '1.1rem' }}>🧋</span>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ padding: '2px 7px', fontSize: '0.75rem' }}
+                                  onClick={() => {
+                                    setProdName(p.name);
+                                    setProdPrice(p.basePrice);
+                                    setSelectedCatId(p.category?.id || '');
+                                    setSelectedSubcat(p.subcategory || '');
+                                    setDietaryType(p.dietaryType || 'BEVERAGE');
+                                    setProdImageUrl(p.imageUrl || '');
+                                    setProdBadge(p.badge || '');
+                                    setActiveTab('product');
+                                  }}
+                                  title="Edit item"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                {onProductDeleted && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    style={{ padding: '2px 7px', fontSize: '0.75rem' }}
+                                    onClick={async () => {
+                                      if (window.confirm(`Delete "${p.name}"?`)) {
+                                        await onProductDeleted(p.id);
+                                      }
+                                    }}
+                                  >
+                                    🗑️
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div className="petpooja-legend-footer">
+                <span>
+                  Showing {modalFilteredProducts.length} item(s) in{' '}
+                  <strong>{activeModalCatObj ? activeModalCatObj.name : 'All Categories'}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="min-btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                  onClick={onClose}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: ADD / EDIT MENU ITEM */}
         {activeTab === 'product' && (
@@ -492,6 +820,39 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                       </option>
                     ))}
                   </select>
+                )}
+                {activeCategory && (
+                  <div className="min-category-items-preview">
+                    <div className="min-category-items-title">
+                      <span>
+                        Items already in <strong>{activeCategory.name}</strong> ({currentCategoryItems.length}):
+                      </span>
+                      <button
+                        type="button"
+                        className="min-field-action-link"
+                        onClick={() => {
+                          setSelectedModalCatId(activeCategory.id);
+                          setActiveTab('catalog');
+                        }}
+                      >
+                        Petpooja Grid →
+                      </button>
+                    </div>
+                    {currentCategoryItems.length === 0 ? (
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        No items in this category yet. Fill the form below to add the first item!
+                      </span>
+                    ) : (
+                      <div className="min-category-items-chips">
+                        {currentCategoryItems.map((p: Product) => (
+                          <span key={p.id} className="min-item-badge-pill" title={p.name}>
+                            {p.dietaryType === 'VEG' || p.dietaryType === 'VEGAN' ? '🟢' : p.dietaryType === 'NON_VEG' ? '🔴' : '🧋'}
+                            <strong>{p.name}</strong> (₹{p.basePrice})
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -732,33 +1093,93 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
             </form>
 
-            {/* Existing Categories Table */}
+            {/* Existing Categories Table with Created Items Mapping */}
             <div className="min-table-wrapper">
               <table className="min-table">
                 <thead>
                   <tr>
                     <th>Category</th>
                     <th>Subcategories</th>
+                    <th>Items in this Category</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {categories.map((c) => (
-                    <tr key={c.id}>
-                      <td className="font-semibold">{c.name}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {(c.subcategories || []).map((sc) => (
-                            <span key={sc} className="min-tag">
-                              {sc}
+                  {categories.map((c) => {
+                    const catItems = (products || []).filter((p) => p.category?.id === c.id);
+                    return (
+                      <tr key={c.id}>
+                        <td className="font-semibold" style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{c.name}</span>
+                            <span className="min-petpooja-cat-badge">
+                              {catItems.length} items
                             </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {(c.subcategories || []).map((sc) => (
+                              <span key={sc} className="min-tag">
+                                {sc}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                            {catItems.length === 0 ? (
+                              <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                No items yet
+                              </span>
+                            ) : (
+                              catItems.map((item) => (
+                                <span
+                                  key={item.id}
+                                  className="min-item-badge-pill"
+                                  title={item.name}
+                                >
+                                  {item.dietaryType === 'VEG' || item.dietaryType === 'VEGAN' ? '🟢' : item.dietaryType === 'NON_VEG' ? '🔴' : '🧋'}
+                                  <strong>{item.name}</strong> (₹{item.basePrice})
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <button
+                            type="button"
+                            className="btn-add-category-mini"
+                            style={{ marginRight: '6px' }}
+                            onClick={() => {
+                              setSelectedCatId(c.id);
+                              setActiveTab('product');
+                            }}
+                            title={`Add item to ${c.name}`}
+                          >
+                            + Add Item
+                          </button>
+                          {catItems.length > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                              onClick={() => {
+                                setSelectedModalCatId(c.id);
+                                setActiveTab('catalog');
+                              }}
+                              title="View in Petpooja Grid"
+                            >
+                              View ({catItems.length})
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {categories.length === 0 && (
                     <tr>
-                      <td colSpan={2} className="text-center text-muted">
+                      <td colSpan={4} className="text-center text-muted">
                         No categories created yet.
                       </td>
                     </tr>
