@@ -584,9 +584,10 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  if (currentPath === '/admin') {
+  if (currentPath === '/admin' || currentPath === '/admin/reports') {
     return (
       <AdminLayout
+        initialTab={currentPath === '/admin/reports' ? 'reports' : 'dashboard'}
         onBackToPos={() => {
           window.history.pushState({}, '', '/');
           setCurrentPath('/');
@@ -670,9 +671,27 @@ export function App() {
               fontWeight: 700,
               boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)',
             }}
-            title="Open Admin Portal to manage catalog, categories, add-ons, and view live sales reports"
+            title="Open Admin Portal to manage catalog, categories, and add-ons"
           >
             ⚙️ Admin Portal
+          </button>
+          <button
+            type="button"
+            className="header-action-pill"
+            onClick={() => {
+              window.history.pushState({}, '', '/admin/reports');
+              setCurrentPath('/admin/reports');
+            }}
+            style={{
+              background: '#4f46e5',
+              color: '#ffffff',
+              borderColor: '#4f46e5',
+              fontWeight: 700,
+              boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)',
+            }}
+            title="Open Live Analytics & Reports Dashboard"
+          >
+            📊 Reports & Analytics
           </button>
           <button
             type="button"

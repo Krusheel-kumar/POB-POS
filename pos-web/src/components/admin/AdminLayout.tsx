@@ -15,17 +15,19 @@ import { AdminDashboard } from './AdminDashboard';
 import { AdminMenuManagement } from './AdminMenuManagement';
 import { AdminOrdersView } from './AdminOrdersView';
 import { AdminBillingView } from './AdminBillingView';
+import { ReportsDashboard } from './ReportsDashboard';
 import './Admin.css';
 
-type AdminTab = 'dashboard' | 'menu' | 'orders' | 'billing';
+type AdminTab = 'dashboard' | 'reports' | 'menu' | 'orders' | 'billing';
 
 export interface AdminLayoutProps {
+  initialTab?: AdminTab;
   onBackToPos?: () => void;
   onNavigateToKitchen?: () => void;
 }
 
-export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToPos, onNavigateToKitchen }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPos, onNavigateToKitchen }) => {
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab || 'dashboard');
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [selectedOutletId, setSelectedOutletId] = useState<string>(() => {
     return posApiClient.getConfig().outletId || '';
@@ -172,6 +174,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToPos, onNavigat
           </button>
           <button
             type="button"
+            className={`admin-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <span>📈</span> Reports & Analytics
+          </button>
+          <button
+            type="button"
             className={`admin-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
             onClick={() => setActiveTab('menu')}
           >
@@ -233,6 +242,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToPos, onNavigat
           <div className="admin-title-area">
             <h1>
               {activeTab === 'dashboard' && 'Restaurant Dashboard'}
+              {activeTab === 'reports' && 'Reports & Analytics'}
               {activeTab === 'menu' && 'Menu & Catalog Management'}
               {activeTab === 'orders' && 'Order Management'}
               {activeTab === 'billing' && 'Billing & Payment Records'}
@@ -288,6 +298,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ onBackToPos, onNavigat
               onRefresh={loadAdminData}
             />
           )}
+
+          {activeTab === 'reports' && <ReportsDashboard />}
 
           {activeTab === 'menu' && (
             <AdminMenuManagement
