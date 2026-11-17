@@ -141,38 +141,29 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
       {/* Order Type Tabs */}
       <div className="order-type-tabs" role="group" aria-label="Order Type">
-        {(['DINE_IN', 'TAKEAWAY', 'COUNTER'] as OrderType[]).map((type) => (
-          <button
-            key={type}
-            type="button"
-            className={`order-tab-btn ${orderType === type ? 'active' : ''}`}
-            onClick={() => onOrderTypeChange(type)}
-          >
-            <span className="tab-title">
-              {type === 'DINE_IN' && '🪑 Dine In'}
-              {type === 'TAKEAWAY' && '🛍️ Parcel'}
-              {type === 'COUNTER' && '⚡ Quick Counter'}
-            </span>
-            <span className="tab-sub">
-              {type === 'DINE_IN' ? 'Pay Later' : 'Pay First'}
-            </span>
-          </button>
-        ))}
-      </div>
+        {(['DINE_IN', 'TAKEAWAY', 'COUNTER'] as OrderType[]).map((type) => {
+          const typeClass = type.toLowerCase().replace('_', '-');
+          const label =
+            type === 'DINE_IN' ? 'Dine In' :
+            type === 'TAKEAWAY' ? 'Takeaway' :
+            'Counter';
+          const icon =
+            type === 'DINE_IN' ? '🪑' :
+            type === 'TAKEAWAY' ? '🛍️' :
+            '⚡';
 
-      {/* Cashier Order Flow Guide Indicator */}
-      <div className={`order-flow-indicator ${orderType === 'DINE_IN' ? 'pay-later' : 'pay-first'}`}>
-        {orderType === 'DINE_IN' ? (
-          <>
-            <span>🔵</span>
-            <span><strong>Sit & Order:</strong> KOT dispatched to kitchen first → Bill paid after dining</span>
-          </>
-        ) : (
-          <>
-            <span>🟢</span>
-            <span><strong>Pay First:</strong> Immediate settlement at counter → Bill & KOT issued together</span>
-          </>
-        )}
+          return (
+            <button
+              key={type}
+              type="button"
+              className={`order-tab-btn tab-${typeClass} ${orderType === type ? 'active' : ''}`}
+              onClick={() => onOrderTypeChange(type)}
+            >
+              <span className="tab-icon">{icon}</span>
+              <span className="tab-title">{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Selected Table or Running Order Banner */}
@@ -207,9 +198,6 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             <p className="empty-state-sub">
               Tap menu items on the catalog to add to this order
             </p>
-            <div className="terminal-active-tag">
-              <span className="active-green-dot">●</span> Scanner gun & terminal active
-            </div>
           </div>
         ) : (
           <div className="retail-items-list">
@@ -283,25 +271,27 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         )}
 
-        {/* Calculations */}
-        <div className="billing-calc-box">
-          <div className="calc-line">
-            <span>Subtotal (Taxable)</span>
-            <span>₹{subtotal.toFixed(2)}</span>
+        {/* Calculations Summary Card */}
+        <div className="billing-calc-card">
+          <div className="calc-breakdown-row">
+            <span className="calc-mini-item">
+              <span className="mini-label">Subtotal:</span>
+              <span className="mini-val">₹{subtotal.toFixed(2)}</span>
+            </span>
+            {discount > 0 && (
+              <span className="calc-mini-item discount">
+                <span className="mini-label">Disc:</span>
+                <span className="mini-val">-₹{discount.toFixed(2)}</span>
+              </span>
+            )}
+            <span className="calc-mini-item">
+              <span className="mini-label">GST (5%):</span>
+              <span className="mini-val">₹{tax.toFixed(2)}</span>
+            </span>
           </div>
-          {discount > 0 && (
-            <div className="calc-line discount">
-              <span>Special Discount</span>
-              <span>-₹{discount.toFixed(2)}</span>
-            </div>
-          )}
-          <div className="calc-line">
-            <span>GST (5% F&B)</span>
-            <span>₹{tax.toFixed(2)}</span>
-          </div>
-          <div className="calc-line grand-payable">
-            <span>Total Payable</span>
-            <span className="total-payable-amount">₹{total.toFixed(2)}</span>
+          <div className="calc-total-row">
+            <span className="total-label">Total Payable</span>
+            <span className="total-amount">₹{total.toFixed(2)}</span>
           </div>
         </div>
 
@@ -363,7 +353,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           <span className="auto-print-status">⚡ Auto-Print Enabled</span>
         </div>
 
-        {/* Main Big Checkout Button */}
+        {/* Main Checkout Button */}
         <button
           type="button"
           className="retail-checkout-btn"
@@ -372,12 +362,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
         >
           {items.length === 0 ? (
             <span>Checkout (Select Items)</span>
-          ) : runningOrderId ? (
-            <span>✓ Review & Place Order (Add Items) • ₹{total.toFixed(2)}</span>
-          ) : orderType === 'DINE_IN' ? (
-            <span>🪑 Review & Place Order (Sit & Dine) • ₹{total.toFixed(2)}</span>
           ) : (
-            <span>⚡ Review & Place Order (Pay First) • ₹{total.toFixed(2)}</span>
+            <span>Review & Place Order • ₹{total.toFixed(2)}</span>
           )}
         </button>
       </div>

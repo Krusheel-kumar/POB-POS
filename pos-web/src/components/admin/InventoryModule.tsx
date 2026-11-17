@@ -8,26 +8,40 @@ import {
   Zap,
   CheckCircle2,
   ListOrdered,
+  Store,
 } from 'lucide-react';
+import { MasterInventoryView } from './inventory/MasterInventoryView';
 import { RecipeBuilder } from './inventory/RecipeBuilder';
+import { MultiOutletComparisonView } from './inventory/MultiOutletComparisonView';
 import { StockTransferView } from './inventory/StockTransferView';
 import { StockTakeView } from './inventory/StockTakeView';
 import { VarianceReportView } from './inventory/VarianceReportView';
 import { useInventoryStore } from '../../store/useInventoryStore';
 import './InventoryModule.css';
 
-type InventoryTab = 'recipes' | 'transfers' | 'stock-take' | 'variance' | 'ledger';
+type InventoryTab =
+  | 'master'
+  | 'recipes'
+  | 'multi-outlet'
+  | 'transfers'
+  | 'stock-take'
+  | 'variance'
+  | 'ledger';
 
 export const InventoryModule: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<InventoryTab>('recipes');
+  const [activeTab, setActiveTab] = useState<InventoryTab>('master');
   const [simToast, setSimToast] = useState<string | null>(null);
 
-  const { depleteStockOnKot, ledger } = useInventoryStore();
+  const { billOrderAtOutlet, ledger } = useInventoryStore();
 
-  const handleSimulateKot = (name: string, items: { menuItemId: string; quantity: number }[]) => {
+  const handleSimulateKot = (
+    name: string,
+    outletId: string,
+    items: { menuItemId: string; size: 'REGULAR' | 'LARGE'; quantity: number }[]
+  ) => {
     const orderNum = `KOT-${Math.floor(1000 + Math.random() * 9000)}`;
-    depleteStockOnKot(orderNum, items);
-    setSimToast(`Simulated ${orderNum}: ${name}! Recipes auto-depleted branch ingredients.`);
+    const res = billOrderAtOutlet(outletId, orderNum, items);
+    setSimToast(`[${name}] ${res.message}`);
     setTimeout(() => setSimToast(null), 3500);
   };
 
@@ -47,36 +61,40 @@ export const InventoryModule: React.FC = () => {
           <div className="inventory-header-title">
             <h2>
               <Boxes size={24} color="#0284c7" />
-              Advanced Inventory, Recipes & Central Warehouse Management
+              Central Master Inventory, Size-Based Recipes & Multi-Outlet Stock
             </h2>
             <p>
-              End-to-end raw material tracking: Central Kitchen transfers, Recipe BOM auto-depletion per KOT, and Loss Prevention Variance Audits
+              Central Commissary bulk stock, Size-variant BOM recipes (Regular vs Large), and real-time outlet billing auto-depletion
             </p>
           </div>
 
           {/* Quick Demo Simulator Tool */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f8fafc', padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <Zap size={16} color="#eab308" />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>Live KOT Auto-Deplete:</span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>Quick POS Billing Demo:</span>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() =>
-                handleSimulateKot('10x Tiger Brown Sugar Boba', [{ menuItemId: 'prod-01', quantity: 10 }])
+                handleSimulateKot('2x Authentic Boba (Regular)', 'outlet-01', [
+                  { menuItemId: 'prod-02', size: 'REGULAR', quantity: 2 },
+                ])
               }
-              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', color: '#0284c7', fontWeight: 700 }}
             >
-              Fire 10x Boba KOT
+              🥤 2x Boba (Reg) @ Outlet 1
             </button>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() =>
-                handleSimulateKot('5x Truffle Fries', [{ menuItemId: 'prod-04', quantity: 5 }])
+                handleSimulateKot('1x Authentic Boba (Large)', 'outlet-01', [
+                  { menuItemId: 'prod-02', size: 'LARGE', quantity: 1 },
+                ])
               }
-              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+              style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', color: '#16a34a', fontWeight: 700 }}
             >
-              Fire 5x Fries KOT
+              🥤 1x Boba (Large) @ Outlet 1
             </button>
           </div>
         </div>
@@ -85,60 +103,88 @@ export const InventoryModule: React.FC = () => {
         <div className="inventory-tabs-nav" role="tablist">
           <button
             type="button"
+            className={`inventory-tab-btn ${activeTab === 'master' ? 'active' : ''}`}
+            onClick={() => setActiveTab('master')}
+          >
+            <Boxes size={16} />
+            1. Central Master Inventory
+          </button>
+
+          <button
+            type="button"
             className={`inventory-tab-btn ${activeTab === 'recipes' ? 'active' : ''}`}
             onClick={() => setActiveTab('recipes')}
           >
             <Utensils size={16} />
-            1. Recipe Builder (BOM)
+            2. Size-Based Recipes (BOM)
           </button>
+
+          <button
+            type="button"
+            className={`inventory-tab-btn ${activeTab === 'multi-outlet' ? 'active' : ''}`}
+            onClick={() => setActiveTab('multi-outlet')}
+          >
+            <Store size={16} />
+            3. Multi-Outlet Comparison & Billing
+          </button>
+
           <button
             type="button"
             className={`inventory-tab-btn ${activeTab === 'transfers' ? 'active' : ''}`}
             onClick={() => setActiveTab('transfers')}
           >
             <Truck size={16} />
-            2. Stock Indent & Transfers (GRN)
+            4. Stock Indents & Pipeline
           </button>
+
           <button
             type="button"
             className={`inventory-tab-btn ${activeTab === 'stock-take' ? 'active' : ''}`}
             onClick={() => setActiveTab('stock-take')}
           >
             <Scale size={16} />
-            3. End-of-Day Stock Take
+            5. End-of-Day Stock Take
           </button>
+
           <button
             type="button"
             className={`inventory-tab-btn tab-danger ${activeTab === 'variance' ? 'active' : ''}`}
             onClick={() => setActiveTab('variance')}
           >
             <AlertTriangle size={16} />
-            4. The Variance Report (&gt;3% Alert)
+            6. Variance Report (&gt;3% Alert)
           </button>
+
           <button
             type="button"
             className={`inventory-tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
             onClick={() => setActiveTab('ledger')}
           >
             <ListOrdered size={16} />
-            5. Immutable Stock Ledger ({ledger.length})
+            7. Immutable Stock Ledger ({ledger.length})
           </button>
         </div>
       </div>
 
-      {/* Screen 1: Recipe Builder */}
+      {/* Screen 1: Central Master Inventory */}
+      {activeTab === 'master' && <MasterInventoryView />}
+
+      {/* Screen 2: Size-Based Recipe Builder */}
       {activeTab === 'recipes' && <RecipeBuilder />}
 
-      {/* Screen 2: Stock Transfer State Machine */}
+      {/* Screen 3: Multi-Outlet Comparison & Billing Simulator */}
+      {activeTab === 'multi-outlet' && <MultiOutletComparisonView />}
+
+      {/* Screen 4: Stock Indents & Transfer Pipeline */}
       {activeTab === 'transfers' && <StockTransferView />}
 
-      {/* Screen 3: End of Day Stock Take */}
+      {/* Screen 5: End of Day Stock Take */}
       {activeTab === 'stock-take' && <StockTakeView />}
 
-      {/* Screen 4: The Variance Report */}
+      {/* Screen 6: Variance Report */}
       {activeTab === 'variance' && <VarianceReportView />}
 
-      {/* Screen 5: Immutable Ledger View */}
+      {/* Screen 7: Immutable Ledger */}
       {activeTab === 'ledger' && (
         <div className="inv-card">
           <div className="inv-card-header">
@@ -148,7 +194,7 @@ export const InventoryModule: React.FC = () => {
                 Immutable Stock Movement Ledger
               </h3>
               <p className="inv-card-subtitle">
-                Cryptographic-style append-only physical transaction ledger tracking every SALE, GRN, TRANSFER, and ADJUSTMENT
+                Cryptographic-style append-only physical transaction ledger tracking every SALE, GRN, TRANSFER, and RESTOCK
               </p>
             </div>
           </div>
@@ -186,6 +232,8 @@ export const InventoryModule: React.FC = () => {
                               ? '#ecfdf5'
                               : entry.transactionType === 'TRANSFER'
                               ? '#e0f2fe'
+                              : entry.transactionType === 'MASTER_RESTOCK'
+                              ? '#f0fdf4'
                               : '#f8fafc',
                           color:
                             entry.transactionType === 'SALE'
@@ -194,6 +242,8 @@ export const InventoryModule: React.FC = () => {
                               ? '#065f46'
                               : entry.transactionType === 'TRANSFER'
                               ? '#0369a1'
+                              : entry.transactionType === 'MASTER_RESTOCK'
+                              ? '#15803d'
                               : '#334155',
                           border: '1px solid currentColor',
                         }}

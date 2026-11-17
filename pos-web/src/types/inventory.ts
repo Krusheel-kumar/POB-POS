@@ -11,33 +11,61 @@ export type RawMaterialCategory =
   | 'CONDIMENTS'
   | 'PROTEIN';
 
+export interface InventoryOutlet {
+  id: string;
+  name: string;
+  code: string;
+  isCentralMaster?: boolean;
+}
+
 export interface RawMaterial {
   id: string;
   name: string;
   category: RawMaterialCategory;
   purchaseUom: UomType;
   consumptionUom: UomType;
-  conversionFactor: number; // e.g. 1000 (1 KG = 1000 GRAM)
+  conversionFactor: number; // e.g. 1000 (1 KG = 1000 GRAM, 1 LITER = 1000 ML)
   costPerPurchaseUom: number; // in INR ₹
   costPerConsumptionUom: number; // calculated cost in INR ₹
   reorderThreshold: number;
-  warehouseStock: number; // stock at Central Commissary
-  branchStock: number; // stock at Branch Outlet
+  masterStock: number; // Central Master Inventory (Commissary) in consumption UOM
+  outletStocks: Record<string, number>; // outletId -> quantity in consumption UOM
+  // Compatibility helpers
+  warehouseStock: number;
+  branchStock: number;
 }
 
 export interface RecipeIngredient {
   rawMaterialId: string;
+  rawMaterialName?: string;
   quantityConsumed: number;
   uom: UomType;
   notes?: string;
+}
+
+export type VariantSize = 'REGULAR' | 'LARGE';
+
+export interface SizeRecipe {
+  size: VariantSize;
+  sizeLabel: string;
+  ingredients: RecipeIngredient[];
+  estimatedCost: number;
 }
 
 export interface Recipe {
   id: string;
   menuItemId: string;
   menuItemName: string;
+  sizes: {
+    REGULAR: RecipeIngredient[];
+    LARGE: RecipeIngredient[];
+  };
+  estimatedCost: {
+    REGULAR: number;
+    LARGE: number;
+  };
+  // Compatibility single ingredients array (defaults to Regular)
   ingredients: RecipeIngredient[];
-  estimatedCost: number;
 }
 
 export type StockTransferStatus = 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
@@ -74,7 +102,8 @@ export type InventoryTransactionType =
   | 'TRANSFER'
   | 'WASTAGE'
   | 'OPENING_BALANCE'
-  | 'STOCK_ADJUSTMENT';
+  | 'STOCK_ADJUSTMENT'
+  | 'MASTER_RESTOCK';
 
 export interface InventoryLedgerEntry {
   id: string;
@@ -89,11 +118,6 @@ export interface InventoryLedgerEntry {
   notes?: string;
 }
 
-export interface PhysicalStockCount {
-  rawMaterialId: string;
-  actualQty: number;
-}
-
 export interface VarianceItemReport {
   rawMaterialId: string;
   name: string;
@@ -102,11 +126,11 @@ export interface VarianceItemReport {
   unitCost: number;
   openingStock: number;
   receivedStock: number;
-  theoreticalConsumption: number; // From POS KOT recipe depletion
-  expectedStock: number; // (Opening + Received) - Theoretical Consumption
+  theoreticalConsumption: number;
+  expectedStock: number;
   actualPhysicalStock: number;
-  missingQty: number; // Actual - Expected (negative means shortage)
-  varianceCost: number; // missingQty * unitCost
-  variancePct: number; // (missingQty / expectedStock) * 100
-  isHighVariance: boolean; // true if negative variance > 3%
+  missingQty: number;
+  varianceCost: number;
+  variancePct: number;
+  isHighVariance: boolean;
 }

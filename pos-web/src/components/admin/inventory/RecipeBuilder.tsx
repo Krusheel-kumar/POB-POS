@@ -1,45 +1,65 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, Utensils, CheckCircle2 } from 'lucide-react';
 import { useInventoryStore } from '../../../store/useInventoryStore';
-import type { RecipeIngredient } from '../../../types/inventory';
+import type { RecipeIngredient, VariantSize } from '../../../types/inventory';
 import { formatINR } from '../../../lib/mockReportsData';
 
 const MENU_ITEMS = [
-  { id: 'prod-01', name: 'Tiger Brown Sugar Boba', price: 240 },
-  { id: 'prod-02', name: 'Authentic Ceylon Milk Tea', price: 249 },
-  { id: 'prod-06', name: 'Velvet Cheese Foam Matcha', price: 260 },
-  { id: 'prod-04', name: 'Truffle Parmesan Fries', price: 220 },
-  { id: 'prod-03', name: 'Chicken Tikka Roll', price: 250 },
+  { id: 'prod-02', name: 'Authentic Boba Tea', priceRegular: 220, priceLarge: 270 },
+  { id: 'prod-01', name: 'Tiger Brown Sugar Boba', priceRegular: 240, priceLarge: 290 },
+  { id: 'prod-06', name: 'Velvet Cheese Foam Matcha', priceRegular: 260, priceLarge: 310 },
+  { id: 'prod-04', name: 'Truffle Parmesan Fries', priceRegular: 220, priceLarge: 280 },
+  { id: 'prod-03', name: 'Chicken Tikka Roll', priceRegular: 250, priceLarge: 310 },
 ];
 
 export const RecipeBuilder: React.FC = () => {
-  const { rawMaterials, recipes, saveRecipe } = useInventoryStore();
+  const { rawMaterials, recipes, saveSizeRecipe } = useInventoryStore();
 
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string>(MENU_ITEMS[0].id);
+  const [activeSize, setActiveSize] = useState<VariantSize>('REGULAR');
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Get current active recipe or create default structure
   const currentRecipe = recipes.find((r) => r.menuItemId === selectedMenuItemId);
+
+  // Active ingredients for current size
   const [draftIngredients, setDraftIngredients] = useState<RecipeIngredient[]>(() => {
-    return currentRecipe ? [...currentRecipe.ingredients] : [];
+    if (currentRecipe) {
+      return currentRecipe.sizes ? [...(currentRecipe.sizes[activeSize] || [])] : [...currentRecipe.ingredients];
+    }
+    return [];
   });
 
-  // Switch menu item
+  // Switch Menu Item
   const handleSelectMenuItem = (menuItemId: string) => {
     setSelectedMenuItemId(menuItemId);
     const existing = recipes.find((r) => r.menuItemId === menuItemId);
-    setDraftIngredients(existing ? [...existing.ingredients] : []);
+    if (existing) {
+      setDraftIngredients(existing.sizes ? [...(existing.sizes[activeSize] || [])] : [...existing.ingredients]);
+    } else {
+      setDraftIngredients([]);
+    }
   };
 
-  // Add ingredient row
+  // Switch Size (Regular vs Large)
+  const handleSwitchSize = (newSize: VariantSize) => {
+    setActiveSize(newSize);
+    const existing = recipes.find((r) => r.menuItemId === selectedMenuItemId);
+    if (existing) {
+      setDraftIngredients(existing.sizes ? [...(existing.sizes[newSize] || [])] : []);
+    } else {
+      setDraftIngredients([]);
+    }
+  };
+
+  // Add row
   const handleAddIngredient = () => {
-    const firstMaterial = rawMaterials[0];
+    const defaultMat = rawMaterials[0];
     setDraftIngredients([
       ...draftIngredients,
       {
-        rawMaterialId: firstMaterial.id,
+        rawMaterialId: defaultMat.id,
         quantityConsumed: 10,
-        uom: firstMaterial.consumptionUom,
+        uom: defaultMat.consumptionUom,
         notes: '',
       },
     ]);
@@ -66,24 +86,22 @@ export const RecipeBuilder: React.FC = () => {
     setDraftIngredients(updated);
   };
 
-  // Calculate live food cost
+  // Calculate live food cost for current draft size
   const liveFoodCost = draftIngredients.reduce((total, ing) => {
     const mat = rawMaterials.find((m) => m.id === ing.rawMaterialId);
-    if (mat) {
-      return total + ing.quantityConsumed * mat.costPerConsumptionUom;
-    }
-    return total;
+    return total + (mat ? ing.quantityConsumed * mat.costPerConsumptionUom : 0);
   }, 0);
 
   const selectedItemMeta = MENU_ITEMS.find((m) => m.id === selectedMenuItemId);
-  const sellingPrice = selectedItemMeta?.price || 200;
-  const foodCostPct = sellingPrice > 0 ? (liveFoodCost / sellingPrice) * 100 : 0;
-  const grossMargin = sellingPrice - liveFoodCost;
+
+  // Recipe cost for both sizes side-by-side
+  const regularCost = currentRecipe?.estimatedCost?.REGULAR || 42.64;
+  const largeCost = currentRecipe?.estimatedCost?.LARGE || 68.36;
 
   const handleSave = () => {
     if (!selectedItemMeta) return;
-    saveRecipe(selectedItemMeta.id, selectedItemMeta.name, draftIngredients);
-    setSuccessToast(`Recipe for "${selectedItemMeta.name}" saved successfully!`);
+    saveSizeRecipe(selectedItemMeta.id, selectedItemMeta.name, activeSize, draftIngredients);
+    setSuccessToast(`Recipe for ${selectedItemMeta.name} [${activeSize}] saved successfully!`);
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
@@ -96,14 +114,15 @@ export const RecipeBuilder: React.FC = () => {
         </div>
       )}
 
+      {/* Header */}
       <div className="inv-card-header">
         <div>
           <h3 className="inv-card-title">
             <Utensils size={20} color="#0284c7" />
-            Recipe Builder (Bill of Materials - BOM)
+            Size-Based Recipe Builder (Bill of Materials - BOM)
           </h3>
           <p className="inv-card-subtitle">
-            Map menu items to raw materials for automatic KOT stock depletion and precise gross margin analysis
+            Configure raw material consumption for each glass size (Regular vs Large) with live food cost calculation
           </p>
         </div>
         <button
@@ -112,12 +131,12 @@ export const RecipeBuilder: React.FC = () => {
           onClick={handleSave}
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
         >
-          <Save size={16} /> Save Recipe (BOM)
+          <Save size={16} /> Save Recipe ({activeSize})
         </button>
       </div>
 
       <div className="recipe-builder-layout">
-        {/* Left: Menu Item Selector */}
+        {/* Left: Menu Items Selector */}
         <div className="recipe-menu-selector">
           <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
             Select Menu Item
@@ -134,7 +153,9 @@ export const RecipeBuilder: React.FC = () => {
               >
                 <div>
                   <div style={{ fontWeight: 600 }}>{item.name}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Selling Price: {formatINR(item.price)}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    Reg: {formatINR(item.priceRegular)} | Lrg: {formatINR(item.priceLarge)}
+                  </div>
                 </div>
                 {hasRecipe ? (
                   <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>✓ Configured</span>
@@ -146,12 +167,29 @@ export const RecipeBuilder: React.FC = () => {
           })}
         </div>
 
-        {/* Right: Ingredient Rows & Dynamic BOM */}
+        {/* Right: Size Toggle & Ingredients Table */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>
-              Ingredients Required per 1 Serving of {selectedItemMeta?.name}
-            </h4>
+          {/* Glass Type / Size Selector Tabs */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', background: '#f1f5f9', padding: '0.35rem', borderRadius: '8px' }}>
+              <button
+                type="button"
+                className={`transfer-subtab-btn ${activeSize === 'REGULAR' ? 'active' : ''}`}
+                onClick={() => handleSwitchSize('REGULAR')}
+                style={{ fontWeight: 700 }}
+              >
+                🧋 Regular Glass (300ml)
+              </button>
+              <button
+                type="button"
+                className={`transfer-subtab-btn ${activeSize === 'LARGE' ? 'active' : ''}`}
+                onClick={() => handleSwitchSize('LARGE')}
+                style={{ fontWeight: 700 }}
+              >
+                🧋 Large Glass (500ml/700ml)
+              </button>
+            </div>
+
             <button
               type="button"
               className="btn btn-secondary btn-sm"
@@ -162,22 +200,23 @@ export const RecipeBuilder: React.FC = () => {
             </button>
           </div>
 
+          {/* Current Ingredients Table */}
           <div className="inv-table-wrapper">
             <table className="recipe-ingredients-table">
               <thead>
                 <tr>
-                  <th style={{ width: '40%' }}>Raw Material</th>
-                  <th style={{ width: '25%' }}>Quantity Consumed</th>
+                  <th style={{ width: '38%' }}>Ingredient / Raw Material</th>
+                  <th style={{ width: '22%' }}>Quantity for {activeSize}</th>
                   <th style={{ width: '15%' }}>UOM</th>
                   <th style={{ width: '15%' }}>Ingredient Cost</th>
-                  <th style={{ width: '5%' }}></th>
+                  <th style={{ width: '10%' }}></th>
                 </tr>
               </thead>
               <tbody>
                 {draftIngredients.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                      No raw materials linked yet. Click "Add Ingredient Row" to build the BOM.
+                      No ingredients configured for {activeSize} size. Click "Add Ingredient Row" to build recipe.
                     </td>
                   </tr>
                 ) : (
@@ -199,6 +238,11 @@ export const RecipeBuilder: React.FC = () => {
                               </option>
                             ))}
                           </select>
+                          {ing.notes && (
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                              Note: {ing.notes}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <input
@@ -240,25 +284,50 @@ export const RecipeBuilder: React.FC = () => {
             </table>
           </div>
 
-          {/* Real-Time Food Cost Summary */}
-          <div className="recipe-cost-summary-box">
-            <div className="recipe-cost-stat">
-              <span>Estimated Raw Food Cost</span>
-              <strong>{formatINR(liveFoodCost, true)}</strong>
+          {/* Size Comparison & Cost Breakdown */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.25rem' }}>
+            {/* Regular Summary Card */}
+            <div
+              style={{
+                background: activeSize === 'REGULAR' ? '#f0fdf4' : '#f8fafc',
+                border: activeSize === 'REGULAR' ? '2px solid #16a34a' : '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>Regular Glass (300ml)</strong>
+                {activeSize === 'REGULAR' && (
+                  <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>● Editing Now</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.6 }}>
+                • Raw Food Cost: <strong>{formatINR(activeSize === 'REGULAR' ? liveFoodCost : regularCost, true)}</strong><br />
+                • Selling Price: <strong>{formatINR(selectedItemMeta?.priceRegular || 220)}</strong><br />
+                • Food Cost %: <strong>{((activeSize === 'REGULAR' ? liveFoodCost : regularCost) / (selectedItemMeta?.priceRegular || 220) * 100).toFixed(1)}%</strong>
+              </div>
             </div>
-            <div className="recipe-cost-stat">
-              <span>Menu Selling Price</span>
-              <strong style={{ color: '#0f172a' }}>{formatINR(sellingPrice)}</strong>
-            </div>
-            <div className="recipe-cost-stat">
-              <span>Gross Margin per Order</span>
-              <strong style={{ color: '#0284c7' }}>{formatINR(grossMargin, true)}</strong>
-            </div>
-            <div className="recipe-cost-stat">
-              <span>Food Cost %</span>
-              <strong style={{ color: foodCostPct > 35 ? '#dc2626' : '#16a34a' }}>
-                {foodCostPct.toFixed(1)}%
-              </strong>
+
+            {/* Large Summary Card */}
+            <div
+              style={{
+                background: activeSize === 'LARGE' ? '#f0fdf4' : '#f8fafc',
+                border: activeSize === 'LARGE' ? '2px solid #16a34a' : '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '1rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>Large Glass (500ml)</strong>
+                {activeSize === 'LARGE' && (
+                  <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 700 }}>● Editing Now</span>
+                )}
+              </div>
+              <div style={{ fontSize: '0.8125rem', color: '#64748b', lineHeight: 1.6 }}>
+                • Raw Food Cost: <strong>{formatINR(activeSize === 'LARGE' ? liveFoodCost : largeCost, true)}</strong><br />
+                • Selling Price: <strong>{formatINR(selectedItemMeta?.priceLarge || 270)}</strong><br />
+                • Food Cost %: <strong>{((activeSize === 'LARGE' ? liveFoodCost : largeCost) / (selectedItemMeta?.priceLarge || 270) * 100).toFixed(1)}%</strong>
+              </div>
             </div>
           </div>
         </div>

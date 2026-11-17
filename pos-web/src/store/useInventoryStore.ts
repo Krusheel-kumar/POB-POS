@@ -3,29 +3,44 @@ import type {
   RawMaterial,
   Recipe,
   RecipeIngredient,
+  VariantSize,
   StockTransfer,
   StockTransferItem,
   StockTransferStatus,
   InventoryLedgerEntry,
   VarianceItemReport,
+  InventoryOutlet,
 } from '../types/inventory';
+
+export const OUTLETS_LIST: InventoryOutlet[] = [
+  { id: 'warehouse-central', name: 'Central Master Commissary', code: 'CENTRAL-HQ', isCentralMaster: true },
+  { id: 'outlet-01', name: 'Outlet 1 - Jubilee Hills Flagship', code: 'OUTLET-01' },
+  { id: 'outlet-02', name: 'Outlet 2 - Madhapur Express', code: 'OUTLET-02' },
+  { id: 'outlet-03', name: 'Outlet 3 - Hitech City Cyber Towers', code: 'OUTLET-03' },
+];
 
 export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
   {
-    id: 'raw-001',
-    name: 'Black Tapioca Boba Pearls',
-    category: 'BOBA_TOPPINGS',
+    id: 'raw-tea',
+    name: 'Ceylon Black Tea Base',
+    category: 'TEA_BASE',
     purchaseUom: 'KG',
     consumptionUom: 'GRAM',
     conversionFactor: 1000,
-    costPerPurchaseUom: 320,
-    costPerConsumptionUom: 0.32,
-    reorderThreshold: 10000, // 10 KG
-    warehouseStock: 180000, // 180 KG in central warehouse
-    branchStock: 25000, // 25 KG in branch
+    costPerPurchaseUom: 680,
+    costPerConsumptionUom: 0.68,
+    reorderThreshold: 5000, // 5 KG
+    masterStock: 50000, // 50 KG in Central Master
+    outletStocks: {
+      'outlet-01': 3500, // 3.5 KG
+      'outlet-02': 2800, // 2.8 KG
+      'outlet-03': 2200, // 2.2 KG
+    },
+    warehouseStock: 50000,
+    branchStock: 3500,
   },
   {
-    id: 'raw-002',
+    id: 'raw-milk',
     name: 'Farm Fresh Whole Milk (3.5% Fat)',
     category: 'DAIRY',
     purchaseUom: 'LITER',
@@ -34,103 +49,94 @@ export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
     costPerPurchaseUom: 72,
     costPerConsumptionUom: 0.072,
     reorderThreshold: 30000, // 30 Liters
-    warehouseStock: 500000, // 500 Liters in central warehouse
-    branchStock: 65000, // 65 Liters in branch
+    masterStock: 500000, // 500 Liters in Central Master
+    outletStocks: {
+      'outlet-01': 24000, // 24 Liters
+      'outlet-02': 18000, // 18 Liters
+      'outlet-03': 15000, // 15 Liters
+    },
+    warehouseStock: 500000,
+    branchStock: 24000,
   },
   {
-    id: 'raw-003',
-    name: 'Taiwanese Brown Sugar Tiger Syrup',
-    category: 'SYRUPS',
-    purchaseUom: 'LITER',
-    consumptionUom: 'MILLILITER',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 450,
-    costPerConsumptionUom: 0.45,
-    reorderThreshold: 5000, // 5 Liters
-    warehouseStock: 80000, // 80 Liters in central warehouse
-    branchStock: 12000, // 12 Liters in branch
-  },
-  {
-    id: 'raw-004',
-    name: 'Ceylon Black Tea Leaves',
-    category: 'TEA_BASE',
-    purchaseUom: 'KG',
-    consumptionUom: 'GRAM',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 680,
-    costPerConsumptionUom: 0.68,
-    reorderThreshold: 4000, // 4 KG
-    warehouseStock: 45000,
-    branchStock: 6000,
-  },
-  {
-    id: 'raw-005',
-    name: 'Ceremonial Uji Matcha Powder',
-    category: 'POWDERS',
-    purchaseUom: 'KG',
-    consumptionUom: 'GRAM',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 1800,
-    costPerConsumptionUom: 1.8,
-    reorderThreshold: 2000, // 2 KG
-    warehouseStock: 20000,
-    branchStock: 2500,
-  },
-  {
-    id: 'raw-006',
-    name: 'Creamy Taro Powder Mix',
-    category: 'POWDERS',
-    purchaseUom: 'KG',
-    consumptionUom: 'GRAM',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 580,
-    costPerConsumptionUom: 0.58,
-    reorderThreshold: 3000,
-    warehouseStock: 35000,
-    branchStock: 4000,
-  },
-  {
-    id: 'raw-007',
-    name: 'Cream Cheese Cap Foam Blend',
-    category: 'DAIRY',
-    purchaseUom: 'KG',
-    consumptionUom: 'GRAM',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 620,
-    costPerConsumptionUom: 0.62,
-    reorderThreshold: 4000,
-    warehouseStock: 30000,
-    branchStock: 5000,
-  },
-  {
-    id: 'raw-008',
-    name: 'Mango Juice Popping Boba',
+    id: 'raw-boba',
+    name: 'Popping Bubbles / Boba Pearls',
     category: 'BOBA_TOPPINGS',
     purchaseUom: 'KG',
     consumptionUom: 'GRAM',
     conversionFactor: 1000,
-    costPerPurchaseUom: 420,
-    costPerConsumptionUom: 0.42,
-    reorderThreshold: 6000,
-    warehouseStock: 60000,
-    branchStock: 8000,
+    costPerPurchaseUom: 320,
+    costPerConsumptionUom: 0.32,
+    reorderThreshold: 10000,
+    masterStock: 100000, // 100 KG in Central Master
+    outletStocks: {
+      'outlet-01': 6500, // 6.5 KG
+      'outlet-02': 4800, // 4.8 KG
+      'outlet-03': 4000, // 4.0 KG
+    },
+    warehouseStock: 100000,
+    branchStock: 6500,
   },
   {
-    id: 'raw-009',
-    name: '500ml Frosted PP Boba Cup',
+    id: 'raw-cream',
+    name: 'Velvet Whipped Cream Base',
+    category: 'DAIRY',
+    purchaseUom: 'LITER',
+    consumptionUom: 'MILLILITER',
+    conversionFactor: 1000,
+    costPerPurchaseUom: 280,
+    costPerConsumptionUom: 0.28,
+    reorderThreshold: 6000,
+    masterStock: 60000, // 60 Liters in Central Master
+    outletStocks: {
+      'outlet-01': 4500, // 4.5 Liters
+      'outlet-02': 3200, // 3.2 Liters
+      'outlet-03': 2800, // 2.8 Liters
+    },
+    warehouseStock: 60000,
+    branchStock: 4500,
+  },
+  {
+    id: 'raw-cup-reg',
+    name: 'Regular Glass Cup (300ml)',
     category: 'PACKAGING',
     purchaseUom: 'BOX',
     consumptionUom: 'UNIT',
     conversionFactor: 500,
-    costPerPurchaseUom: 1500,
-    costPerConsumptionUom: 3.0,
-    reorderThreshold: 300,
-    warehouseStock: 25000, // 50 boxes
-    branchStock: 850,
+    costPerPurchaseUom: 1200,
+    costPerConsumptionUom: 2.4,
+    reorderThreshold: 200,
+    masterStock: 5000, // 10 Boxes in Master
+    outletStocks: {
+      'outlet-01': 350,
+      'outlet-02': 280,
+      'outlet-03': 220,
+    },
+    warehouseStock: 5000,
+    branchStock: 350,
   },
   {
-    id: 'raw-010',
-    name: '12mm Individually Wrapped Boba Straw',
+    id: 'raw-cup-lrg',
+    name: 'Large Glass Cup (500ml/700ml)',
+    category: 'PACKAGING',
+    purchaseUom: 'BOX',
+    consumptionUom: 'UNIT',
+    conversionFactor: 500,
+    costPerPurchaseUom: 1600,
+    costPerConsumptionUom: 3.2,
+    reorderThreshold: 200,
+    masterStock: 5000, // 10 Boxes in Master
+    outletStocks: {
+      'outlet-01': 400,
+      'outlet-02': 320,
+      'outlet-03': 250,
+    },
+    warehouseStock: 5000,
+    branchStock: 400,
+  },
+  {
+    id: 'raw-straw',
+    name: '12mm Wide Boba Straw',
     category: 'PACKAGING',
     purchaseUom: 'BOX',
     consumptionUom: 'UNIT',
@@ -138,24 +144,36 @@ export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
     costPerPurchaseUom: 800,
     costPerConsumptionUom: 0.8,
     reorderThreshold: 500,
+    masterStock: 40000,
+    outletStocks: {
+      'outlet-01': 1200,
+      'outlet-02': 900,
+      'outlet-03': 850,
+    },
     warehouseStock: 40000,
     branchStock: 1200,
   },
   {
-    id: 'raw-011',
-    name: 'POP O BOB Branded Sealing Film',
-    category: 'PACKAGING',
-    purchaseUom: 'ROLL',
-    consumptionUom: 'UNIT',
-    conversionFactor: 2500,
-    costPerPurchaseUom: 1250,
-    costPerConsumptionUom: 0.5,
-    reorderThreshold: 1000,
-    warehouseStock: 62500, // 25 rolls
-    branchStock: 3400,
+    id: 'raw-syrup',
+    name: 'Taiwanese Brown Sugar Tiger Syrup',
+    category: 'SYRUPS',
+    purchaseUom: 'LITER',
+    consumptionUom: 'MILLILITER',
+    conversionFactor: 1000,
+    costPerPurchaseUom: 450,
+    costPerConsumptionUom: 0.45,
+    reorderThreshold: 5000,
+    masterStock: 80000,
+    outletStocks: {
+      'outlet-01': 5500,
+      'outlet-02': 4200,
+      'outlet-03': 3800,
+    },
+    warehouseStock: 80000,
+    branchStock: 5500,
   },
   {
-    id: 'raw-012',
+    id: 'raw-fries',
     name: 'Belgian Cut Potato Fries',
     category: 'SNACKS',
     purchaseUom: 'KG',
@@ -164,25 +182,18 @@ export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
     costPerPurchaseUom: 190,
     costPerConsumptionUom: 0.19,
     reorderThreshold: 15000,
+    masterStock: 120000,
+    outletStocks: {
+      'outlet-01': 16000,
+      'outlet-02': 12000,
+      'outlet-03': 10000,
+    },
     warehouseStock: 120000,
-    branchStock: 18000,
+    branchStock: 16000,
   },
   {
-    id: 'raw-013',
-    name: 'Truffle Mayo Dressing',
-    category: 'CONDIMENTS',
-    purchaseUom: 'KG',
-    consumptionUom: 'GRAM',
-    conversionFactor: 1000,
-    costPerPurchaseUom: 650,
-    costPerConsumptionUom: 0.65,
-    reorderThreshold: 2000,
-    warehouseStock: 25000,
-    branchStock: 3500,
-  },
-  {
-    id: 'raw-014',
-    name: 'Boneless Chicken Breast (Marinated)',
+    id: 'raw-chicken',
+    name: 'Boneless Marinated Chicken',
     category: 'PROTEIN',
     purchaseUom: 'KG',
     consumptionUom: 'GRAM',
@@ -190,6 +201,12 @@ export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
     costPerPurchaseUom: 340,
     costPerConsumptionUom: 0.34,
     reorderThreshold: 10000,
+    masterStock: 70000,
+    outletStocks: {
+      'outlet-01': 12000,
+      'outlet-02': 9000,
+      'outlet-03': 8000,
+    },
     warehouseStock: 70000,
     branchStock: 12000,
   },
@@ -197,122 +214,102 @@ export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
 
 export const INITIAL_RECIPES: Recipe[] = [
   {
-    id: 'rcp-01',
+    id: 'rcp-authentic-boba',
+    menuItemId: 'prod-02',
+    menuItemName: 'Authentic Boba Tea',
+    estimatedCost: {
+      REGULAR: 42.64, // calculated from ingredients
+      LARGE: 68.36,
+    },
+    sizes: {
+      // User's exact recipe specification for Regular:
+      REGULAR: [
+        { rawMaterialId: 'raw-cup-reg', quantityConsumed: 1, uom: 'UNIT', notes: 'Regular Cup (300ml)' },
+        { rawMaterialId: 'raw-tea', quantityConsumed: 20, uom: 'GRAM', notes: 'Ceylon Tea Base (20g)' },
+        { rawMaterialId: 'raw-milk', quantityConsumed: 120, uom: 'MILLILITER', notes: 'Fresh Milk (120ml)' },
+        { rawMaterialId: 'raw-boba', quantityConsumed: 30, uom: 'GRAM', notes: 'Popping Bubbles (30g)' },
+        { rawMaterialId: 'raw-cream', quantityConsumed: 30, uom: 'MILLILITER', notes: 'Whipped Cream (30ml)' },
+        { rawMaterialId: 'raw-straw', quantityConsumed: 1, uom: 'UNIT', notes: '12mm Straw' },
+      ],
+      // User's exact recipe specification for Large:
+      LARGE: [
+        { rawMaterialId: 'raw-cup-lrg', quantityConsumed: 1, uom: 'UNIT', notes: 'Large Cup (500ml/700ml)' },
+        { rawMaterialId: 'raw-tea', quantityConsumed: 30, uom: 'GRAM', notes: 'Ceylon Tea Base (30g)' },
+        { rawMaterialId: 'raw-milk', quantityConsumed: 180, uom: 'MILLILITER', notes: 'Fresh Milk (180ml)' },
+        { rawMaterialId: 'raw-boba', quantityConsumed: 60, uom: 'GRAM', notes: 'Popping Bubbles (60g)' },
+        { rawMaterialId: 'raw-cream', quantityConsumed: 60, uom: 'MILLILITER', notes: 'Whipped Cream (60ml)' },
+        { rawMaterialId: 'raw-straw', quantityConsumed: 1, uom: 'UNIT', notes: '12mm Straw' },
+      ],
+    },
+    ingredients: [], // compatibility
+  },
+  {
+    id: 'rcp-tiger-boba',
     menuItemId: 'prod-01',
     menuItemName: 'Tiger Brown Sugar Boba',
-    estimatedCost: 35.84, // calculated from raw materials
-    ingredients: [
-      { rawMaterialId: 'raw-001', quantityConsumed: 45, uom: 'GRAM', notes: 'Warm steeped boba scoop' },
-      { rawMaterialId: 'raw-002', quantityConsumed: 180, uom: 'MILLILITER', notes: 'Fresh chilled milk' },
-      { rawMaterialId: 'raw-003', quantityConsumed: 35, uom: 'MILLILITER', notes: 'Cup wall tiger marbling' },
-      { rawMaterialId: 'raw-009', quantityConsumed: 1, uom: 'UNIT', notes: '500ml Cup' },
-      { rawMaterialId: 'raw-010', quantityConsumed: 1, uom: 'UNIT', notes: '12mm Straw' },
-      { rawMaterialId: 'raw-011', quantityConsumed: 1, uom: 'UNIT', notes: 'Sealing film' },
-    ],
-  },
-  {
-    id: 'rcp-02',
-    menuItemId: 'prod-02',
-    menuItemName: 'Authentic Ceylon Milk Tea',
-    estimatedCost: 35.18,
-    ingredients: [
-      { rawMaterialId: 'raw-004', quantityConsumed: 12, uom: 'GRAM', notes: 'Brewed decoction' },
-      { rawMaterialId: 'raw-002', quantityConsumed: 160, uom: 'MILLILITER', notes: 'Steamed dairy' },
-      { rawMaterialId: 'raw-001', quantityConsumed: 35, uom: 'GRAM', notes: 'Classic boba scoop' },
-      { rawMaterialId: 'raw-009', quantityConsumed: 1, uom: 'UNIT', notes: 'Cup' },
-      { rawMaterialId: 'raw-010', quantityConsumed: 1, uom: 'UNIT', notes: 'Straw' },
-      { rawMaterialId: 'raw-011', quantityConsumed: 1, uom: 'UNIT', notes: 'Sealing film' },
-    ],
-  },
-  {
-    id: 'rcp-06',
-    menuItemId: 'prod-06',
-    menuItemName: 'Velvet Cheese Foam Matcha',
-    estimatedCost: 59.44,
-    ingredients: [
-      { rawMaterialId: 'raw-005', quantityConsumed: 8, uom: 'GRAM', notes: 'Ceremonial matcha whisked' },
-      { rawMaterialId: 'raw-002', quantityConsumed: 170, uom: 'MILLILITER', notes: 'Whole milk base' },
-      { rawMaterialId: 'raw-007', quantityConsumed: 50, uom: 'GRAM', notes: 'Whipped salted cheese foam cap' },
-      { rawMaterialId: 'raw-009', quantityConsumed: 1, uom: 'UNIT', notes: 'Cup' },
-      { rawMaterialId: 'raw-010', quantityConsumed: 1, uom: 'UNIT', notes: 'Straw' },
-    ],
-  },
-  {
-    id: 'rcp-04',
-    menuItemId: 'prod-04',
-    menuItemName: 'Truffle Parmesan Fries',
-    estimatedCost: 64.0,
-    ingredients: [
-      { rawMaterialId: 'raw-012', quantityConsumed: 200, uom: 'GRAM', notes: 'Crispy fried fries portion' },
-      { rawMaterialId: 'raw-013', quantityConsumed: 40, uom: 'GRAM', notes: 'Truffle dip dressing' },
-    ],
-  },
-  {
-    id: 'rcp-03',
-    menuItemId: 'prod-03',
-    menuItemName: 'Chicken Tikka Roll',
-    estimatedCost: 54.4,
-    ingredients: [
-      { rawMaterialId: 'raw-014', quantityConsumed: 160, uom: 'GRAM', notes: 'Char-grilled chicken strips' },
-    ],
+    estimatedCost: {
+      REGULAR: 44.54,
+      LARGE: 72.10,
+    },
+    sizes: {
+      REGULAR: [
+        { rawMaterialId: 'raw-cup-reg', quantityConsumed: 1, uom: 'UNIT', notes: 'Regular Cup' },
+        { rawMaterialId: 'raw-milk', quantityConsumed: 150, uom: 'MILLILITER', notes: 'Chilled Milk (150ml)' },
+        { rawMaterialId: 'raw-syrup', quantityConsumed: 30, uom: 'MILLILITER', notes: 'Brown Sugar Syrup (30ml)' },
+        { rawMaterialId: 'raw-boba', quantityConsumed: 40, uom: 'GRAM', notes: 'Boba Pearls (40g)' },
+        { rawMaterialId: 'raw-straw', quantityConsumed: 1, uom: 'UNIT', notes: '12mm Straw' },
+      ],
+      LARGE: [
+        { rawMaterialId: 'raw-cup-lrg', quantityConsumed: 1, uom: 'UNIT', notes: 'Large Cup' },
+        { rawMaterialId: 'raw-milk', quantityConsumed: 220, uom: 'MILLILITER', notes: 'Chilled Milk (220ml)' },
+        { rawMaterialId: 'raw-syrup', quantityConsumed: 45, uom: 'MILLILITER', notes: 'Brown Sugar Syrup (45ml)' },
+        { rawMaterialId: 'raw-boba', quantityConsumed: 70, uom: 'GRAM', notes: 'Boba Pearls (70g)' },
+        { rawMaterialId: 'raw-straw', quantityConsumed: 1, uom: 'UNIT', notes: '12mm Straw' },
+      ],
+    },
+    ingredients: [],
   },
 ];
+
+// Ensure fallback ingredients array is populated
+INITIAL_RECIPES.forEach((rcp) => {
+  rcp.ingredients = rcp.sizes.REGULAR;
+});
 
 export const INITIAL_TRANSFERS: StockTransfer[] = [
   {
     id: 'trf-01',
     transferNumber: 'TRF-2026-1001',
     fromOutletId: 'warehouse-central',
-    fromOutletName: 'Central Kitchen & Commissary',
-    toOutletId: 'outlet-downtown',
-    toOutletName: 'POP O BOB Flagship (Jubilee Hills)',
+    fromOutletName: 'Central Master Commissary',
+    toOutletId: 'outlet-01',
+    toOutletName: 'Outlet 1 - Jubilee Hills Flagship',
     status: 'IN_TRANSIT',
     requestedBy: 'Rahul Sharma (Branch Manager)',
-    dispatchedBy: 'Vikram Patel (Warehouse Admin)',
+    dispatchedBy: 'Vikram Patel (Commissary Admin)',
     requestedAt: 'Today, 08:30 AM',
     dispatchedAt: 'Today, 10:15 AM',
-    notes: 'Morning priority restock for boba pearls & fresh milk',
+    notes: 'Morning restock: 20L Milk & 10kg Boba',
     items: [
-      { rawMaterialId: 'raw-001', requestedQty: 15000, dispatchedQty: 15000, receivedQty: 0, uom: 'GRAM' },
-      { rawMaterialId: 'raw-002', requestedQty: 30000, dispatchedQty: 30000, receivedQty: 0, uom: 'MILLILITER' },
-      { rawMaterialId: 'raw-009', requestedQty: 500, dispatchedQty: 500, receivedQty: 0, uom: 'UNIT' },
+      { rawMaterialId: 'raw-boba', requestedQty: 10000, dispatchedQty: 10000, receivedQty: 0, uom: 'GRAM' },
+      { rawMaterialId: 'raw-milk', requestedQty: 20000, dispatchedQty: 20000, receivedQty: 0, uom: 'MILLILITER' },
+      { rawMaterialId: 'raw-cup-reg', requestedQty: 500, dispatchedQty: 500, receivedQty: 0, uom: 'UNIT' },
     ],
   },
   {
     id: 'trf-02',
     transferNumber: 'TRF-2026-1002',
     fromOutletId: 'warehouse-central',
-    fromOutletName: 'Central Kitchen & Commissary',
-    toOutletId: 'outlet-downtown',
-    toOutletName: 'POP O BOB Flagship (Jubilee Hills)',
+    fromOutletName: 'Central Master Commissary',
+    toOutletId: 'outlet-02',
+    toOutletName: 'Outlet 2 - Madhapur Express',
     status: 'PENDING',
-    requestedBy: 'Priya Mehta (Asst. Manager)',
+    requestedBy: 'Priya Mehta (Outlet 2 Manager)',
     requestedAt: 'Today, 11:00 AM',
-    notes: 'Afternoon indent for ceremonial matcha and tiger brown sugar syrup',
+    notes: 'Afternoon indent: 5kg Tea & 15L Whipped Cream',
     items: [
-      { rawMaterialId: 'raw-005', requestedQty: 3000, dispatchedQty: 0, receivedQty: 0, uom: 'GRAM' },
-      { rawMaterialId: 'raw-003', requestedQty: 10000, dispatchedQty: 0, receivedQty: 0, uom: 'MILLILITER' },
-      { rawMaterialId: 'raw-010', requestedQty: 500, dispatchedQty: 0, receivedQty: 0, uom: 'UNIT' },
-    ],
-  },
-  {
-    id: 'trf-03',
-    transferNumber: 'TRF-2026-0998',
-    fromOutletId: 'warehouse-central',
-    fromOutletName: 'Central Kitchen & Commissary',
-    toOutletId: 'outlet-downtown',
-    toOutletName: 'POP O BOB Flagship (Jubilee Hills)',
-    status: 'RECEIVED',
-    requestedBy: 'Rahul Sharma (Branch Manager)',
-    dispatchedBy: 'Vikram Patel (Warehouse Admin)',
-    receivedBy: 'Rahul Sharma (Branch Manager)',
-    requestedAt: 'Yesterday, 09:00 AM',
-    dispatchedAt: 'Yesterday, 11:30 AM',
-    receivedAt: 'Yesterday, 02:15 PM',
-    notes: 'Regular replenishment',
-    items: [
-      { rawMaterialId: 'raw-008', requestedQty: 5000, dispatchedQty: 5000, receivedQty: 5000, uom: 'GRAM' },
-      { rawMaterialId: 'raw-006', requestedQty: 3000, dispatchedQty: 3000, receivedQty: 3000, uom: 'GRAM' },
+      { rawMaterialId: 'raw-tea', requestedQty: 5000, dispatchedQty: 0, receivedQty: 0, uom: 'GRAM' },
+      { rawMaterialId: 'raw-cream', requestedQty: 15000, dispatchedQty: 0, receivedQty: 0, uom: 'MILLILITER' },
     ],
   },
 ];
@@ -320,75 +317,64 @@ export const INITIAL_TRANSFERS: StockTransfer[] = [
 export const INITIAL_LEDGER: InventoryLedgerEntry[] = [
   {
     id: 'led-001',
-    outletId: 'outlet-downtown',
-    rawMaterialId: 'raw-001',
-    rawMaterialName: 'Black Tapioca Boba Pearls',
-    transactionType: 'OPENING_BALANCE',
-    quantityChange: 25000,
-    uom: 'GRAM',
-    referenceId: 'SYS-INIT',
-    createdAt: 'Today, 07:00 AM',
-    notes: 'Daily Opening Stock Verified',
+    outletId: 'warehouse-central',
+    rawMaterialId: 'raw-milk',
+    rawMaterialName: 'Farm Fresh Whole Milk',
+    transactionType: 'MASTER_RESTOCK',
+    quantityChange: 500000,
+    uom: 'MILLILITER',
+    referenceId: 'PO-DELIVERY-441',
+    createdAt: 'Today, 06:00 AM',
+    notes: 'Dairy Supplier Tanker Delivery (500 Liters)',
   },
   {
     id: 'led-002',
-    outletId: 'outlet-downtown',
-    rawMaterialId: 'raw-002',
-    rawMaterialName: 'Farm Fresh Whole Milk',
+    outletId: 'outlet-01',
+    rawMaterialId: 'raw-boba',
+    rawMaterialName: 'Popping Bubbles / Boba Pearls',
     transactionType: 'OPENING_BALANCE',
-    quantityChange: 65000,
-    uom: 'MILLILITER',
+    quantityChange: 6500,
+    uom: 'GRAM',
     referenceId: 'SYS-INIT',
     createdAt: 'Today, 07:00 AM',
-    notes: 'Daily Opening Stock Verified',
-  },
-  {
-    id: 'led-003',
-    outletId: 'outlet-downtown',
-    rawMaterialId: 'raw-001',
-    rawMaterialName: 'Black Tapioca Boba Pearls',
-    transactionType: 'SALE',
-    quantityChange: -450,
-    uom: 'GRAM',
-    referenceId: 'KOT-1011',
-    createdAt: 'Today, 10:15 AM',
-    notes: 'Auto-depleted via KOT-1011 (10x Tiger Brown Sugar Boba)',
-  },
-  {
-    id: 'led-004',
-    outletId: 'outlet-downtown',
-    rawMaterialId: 'raw-002',
-    rawMaterialName: 'Farm Fresh Whole Milk',
-    transactionType: 'SALE',
-    quantityChange: -1800,
-    uom: 'MILLILITER',
-    referenceId: 'KOT-1011',
-    createdAt: 'Today, 10:15 AM',
-    notes: 'Auto-depleted via KOT-1011 (10x Tiger Brown Sugar Boba)',
+    notes: 'Outlet 1 Opening Stock Verified',
   },
 ];
 
 interface InventoryStoreState {
+  outlets: InventoryOutlet[];
+  selectedOutletId: string;
   rawMaterials: RawMaterial[];
   recipes: Recipe[];
   transfers: StockTransfer[];
   ledger: InventoryLedgerEntry[];
-  physicalCounts: Record<string, number>; // rawMaterialId -> actual physical count
+  physicalCounts: Record<string, number>;
 
-  // Recipe Builder Actions
-  saveRecipe: (menuItemId: string, menuItemName: string, ingredients: RecipeIngredient[]) => void;
+  // Navigation / Outlet Selection
+  setSelectedOutletId: (outletId: string) => void;
+
+  // Screen 1: Master Inventory Actions
+  addRawMaterial: (material: Omit<RawMaterial, 'id' | 'costPerConsumptionUom' | 'warehouseStock' | 'branchStock'>) => void;
+  addStockToMaster: (rawMaterialId: string, addedQty: number, notes?: string) => void;
+
+  // Screen 2: Recipe Builder with Sizes (Regular vs Large)
+  saveSizeRecipe: (menuItemId: string, menuItemName: string, size: VariantSize, ingredients: RecipeIngredient[]) => void;
   deleteRecipe: (recipeId: string) => void;
 
-  // Stock Transfer State Machine
-  createStockIndent: (
-    requestedBy: string,
-    items: { rawMaterialId: string; requestedQty: number }[],
-    notes?: string
-  ) => StockTransfer;
+  // Screen 3: Multi-Outlet Transfers & Replenishment
+  transferStockFromMaster: (toOutletId: string, rawMaterialId: string, quantity: number, notes?: string) => void;
+  createStockIndent: (requestedBy: string, items: { rawMaterialId: string; requestedQty: number }[], notes?: string) => StockTransfer;
   dispatchStockTransfer: (transferId: string, dispatchedBy: string) => void;
   receiveStockTransfer: (transferId: string, receivedBy: string) => void;
 
-  // POS KOT Auto-Depletion Event
+  // Screen 4: POS Billing & Auto-Depletion with Dual Comparison
+  billOrderAtOutlet: (
+    outletId: string,
+    orderNumber: string,
+    items: { menuItemId: string; size: VariantSize; quantity: number }[]
+  ) => { success: boolean; deductions: Record<string, number>; message: string };
+
+  // Compatibility method
   depleteStockOnKot: (orderNumber: string, items: { menuItemId: string; quantity: number }[]) => void;
 
   // Physical Stock Take & Variance
@@ -398,69 +384,214 @@ interface InventoryStoreState {
 }
 
 export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
+  outlets: OUTLETS_LIST,
+  selectedOutletId: 'outlet-01',
   rawMaterials: INITIAL_RAW_MATERIALS,
   recipes: INITIAL_RECIPES,
   transfers: INITIAL_TRANSFERS,
   ledger: INITIAL_LEDGER,
   physicalCounts: {
-    // Initial mocked physical count for realistic demonstration of variance:
-    'raw-001': 21350, // Expected ~22,400 -> -4.69% shortage (THEFT/WASTAGE FLAGGED IN RED >3%)
-    'raw-002': 51000, // Expected ~54,200 -> -5.90% shortage (SPOILAGE/OVERPOUR FLAGGED IN RED >3%)
-    'raw-003': 10850, // Expected 10,950 -> -0.91% normal variance
-    'raw-004': 5650,  // Expected 5,700 -> -0.88% normal variance
-    'raw-005': 2380,  // Expected 2,400 -> -0.83% normal variance
-    'raw-006': 3910,  // Expected 3,920 -> -0.25% normal variance
-    'raw-007': 4720,  // Expected 4,750 -> -0.63% normal variance
-    'raw-008': 7850,  // Expected 7,900 -> -0.63% normal variance
-    'raw-009': 740,   // Expected 750 -> -1.33% normal variance
-    'raw-010': 1140,  // Expected 1,150 -> -0.87% normal variance
-    'raw-011': 3290,  // Expected 3,300 -> -0.30% normal variance
-    'raw-012': 16100, // Expected 16,200 -> -0.62% normal variance
-    'raw-013': 2680,  // Expected 2,800 -> -4.29% shortage (OVER-DISPENSE FLAGGED IN RED >3%)
-    'raw-014': 11200, // Expected 11,300 -> -0.88% normal variance
+    'raw-tea': 3350,   // Expected 3500 -> slight shortage
+    'raw-milk': 21800, // Expected 24000 -> -9.1% shortage (flagged in RED > 3%)
+    'raw-boba': 5900,  // Expected 6500 -> -9.2% shortage (flagged in RED > 3%)
+    'raw-cream': 4300,
+    'raw-cup-reg': 340,
+    'raw-cup-lrg': 390,
+    'raw-straw': 1180,
+    'raw-syrup': 5400,
+    'raw-fries': 15800,
+    'raw-chicken': 11900,
   },
 
-  // 1. SAVE RECIPE (BILL OF MATERIALS)
-  saveRecipe: (menuItemId: string, menuItemName: string, ingredients: RecipeIngredient[]) => {
-    const { rawMaterials, recipes } = get();
+  setSelectedOutletId: (outletId: string) => set({ selectedOutletId: outletId }),
 
-    // Calculate estimated food cost
-    let totalCost = 0;
-    ingredients.forEach((ing) => {
-      const mat = rawMaterials.find((m) => m.id === ing.rawMaterialId);
-      if (mat) {
-        totalCost += ing.quantityConsumed * mat.costPerConsumptionUom;
+  // 1. MASTER INVENTORY ACTIONS
+  addRawMaterial: (newMatData) => {
+    const { rawMaterials, ledger } = get();
+    const id = `raw-${Date.now()}`;
+    const costPerConsumption =
+      newMatData.conversionFactor > 0
+        ? newMatData.costPerPurchaseUom / newMatData.conversionFactor
+        : newMatData.costPerPurchaseUom;
+
+    const newMaterial: RawMaterial = {
+      ...newMatData,
+      id,
+      costPerConsumptionUom: Math.round(costPerConsumption * 1000) / 1000,
+      warehouseStock: newMatData.masterStock,
+      branchStock: newMatData.outletStocks['outlet-01'] || 0,
+    };
+
+    const newLedgerEntry: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: 'warehouse-central',
+      rawMaterialId: id,
+      rawMaterialName: newMatData.name,
+      transactionType: 'MASTER_RESTOCK',
+      quantityChange: newMatData.masterStock,
+      uom: newMatData.consumptionUom,
+      referenceId: 'NEW-MATERIAL-INIT',
+      createdAt: 'Just now',
+      notes: `Added new material to Central Master with initial stock of ${newMatData.masterStock} ${newMatData.consumptionUom}`,
+    };
+
+    set({
+      rawMaterials: [...rawMaterials, newMaterial],
+      ledger: [newLedgerEntry, ...ledger],
+    });
+  },
+
+  addStockToMaster: (rawMaterialId, addedQty, notes) => {
+    const { rawMaterials, ledger } = get();
+    const target = rawMaterials.find((m) => m.id === rawMaterialId);
+    if (!target) return;
+
+    const updatedMaterials = rawMaterials.map((mat) => {
+      if (mat.id === rawMaterialId) {
+        const newMaster = mat.masterStock + addedQty;
+        return {
+          ...mat,
+          masterStock: newMaster,
+          warehouseStock: newMaster,
+        };
       }
+      return mat;
     });
 
-    const existingIdx = recipes.findIndex((r) => r.menuItemId === menuItemId);
-    if (existingIdx >= 0) {
-      const updated = [...recipes];
-      updated[existingIdx] = {
-        ...updated[existingIdx],
-        menuItemName,
-        ingredients,
-        estimatedCost: Math.round(totalCost * 100) / 100,
+    const newLedger: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: 'warehouse-central',
+      rawMaterialId: target.id,
+      rawMaterialName: target.name,
+      transactionType: 'MASTER_RESTOCK',
+      quantityChange: addedQty,
+      uom: target.consumptionUom,
+      referenceId: `RESTOCK-${Date.now()}`,
+      createdAt: 'Just now',
+      notes: notes || `Direct stock replenishment to Central Master (+${addedQty} ${target.consumptionUom})`,
+    };
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [newLedger, ...ledger],
+    });
+  },
+
+  // 2. RECIPE BUILDER WITH SIZES (REGULAR VS LARGE)
+  saveSizeRecipe: (menuItemId, menuItemName, size, ingredients) => {
+    const { recipes, rawMaterials } = get();
+    const existing = recipes.find((r) => r.menuItemId === menuItemId);
+
+    // Calculate cost for this size
+    const sizeCost = ingredients.reduce((total, ing) => {
+      const mat = rawMaterials.find((m) => m.id === ing.rawMaterialId);
+      return total + (mat ? ing.quantityConsumed * mat.costPerConsumptionUom : 0);
+    }, 0);
+
+    if (existing) {
+      const updatedSizes = {
+        ...existing.sizes,
+        [size]: ingredients,
       };
+      const updatedCost = {
+        ...existing.estimatedCost,
+        [size]: Math.round(sizeCost * 100) / 100,
+      };
+
+      const updated = recipes.map((r) =>
+        r.menuItemId === menuItemId
+          ? {
+              ...r,
+              menuItemName,
+              sizes: updatedSizes,
+              estimatedCost: updatedCost,
+              ingredients: updatedSizes.REGULAR,
+            }
+          : r
+      );
       set({ recipes: updated });
     } else {
       const newRecipe: Recipe = {
         id: `rcp-${Date.now()}`,
         menuItemId,
         menuItemName,
+        sizes: {
+          REGULAR: size === 'REGULAR' ? ingredients : [],
+          LARGE: size === 'LARGE' ? ingredients : [],
+        },
+        estimatedCost: {
+          REGULAR: size === 'REGULAR' ? Math.round(sizeCost * 100) / 100 : 0,
+          LARGE: size === 'LARGE' ? Math.round(sizeCost * 100) / 100 : 0,
+        },
         ingredients,
-        estimatedCost: Math.round(totalCost * 100) / 100,
       };
       set({ recipes: [...recipes, newRecipe] });
     }
   },
 
-  deleteRecipe: (recipeId: string) => {
+  deleteRecipe: (recipeId) => {
     set((state) => ({ recipes: state.recipes.filter((r) => r.id !== recipeId) }));
   },
 
-  // 2. STOCK TRANSFER STATE MACHINE
-  // Step A: Branch creates Indent -> PENDING
+  // 3. MULTI-OUTLET TRANSFERS
+  transferStockFromMaster: (toOutletId, rawMaterialId, quantity, notes) => {
+    const { rawMaterials, ledger, outlets } = get();
+    const mat = rawMaterials.find((m) => m.id === rawMaterialId);
+    const destOutlet = outlets.find((o) => o.id === toOutletId);
+    if (!mat || !destOutlet || mat.masterStock < quantity) return;
+
+    const newLedgerEntries: InventoryLedgerEntry[] = [
+      {
+        id: `led-${Date.now()}-out`,
+        outletId: 'warehouse-central',
+        rawMaterialId: mat.id,
+        rawMaterialName: mat.name,
+        transactionType: 'TRANSFER',
+        quantityChange: -quantity,
+        uom: mat.consumptionUom,
+        referenceId: `TRF-${destOutlet.code}`,
+        createdAt: 'Just now',
+        notes: `Transfer dispatched to ${destOutlet.name}`,
+      },
+      {
+        id: `led-${Date.now()}-in`,
+        outletId: toOutletId,
+        rawMaterialId: mat.id,
+        rawMaterialName: mat.name,
+        transactionType: 'GRN',
+        quantityChange: quantity,
+        uom: mat.consumptionUom,
+        referenceId: `TRF-${destOutlet.code}`,
+        createdAt: 'Just now',
+        notes: `Received from Central Master Commissary: ${notes || 'Restock'}`,
+      },
+    ];
+
+    const updatedMaterials = rawMaterials.map((m) => {
+      if (m.id === rawMaterialId) {
+        const newMaster = m.masterStock - quantity;
+        const currentOutletStock = m.outletStocks[toOutletId] || 0;
+        const updatedOutlets = {
+          ...m.outletStocks,
+          [toOutletId]: currentOutletStock + quantity,
+        };
+        return {
+          ...m,
+          masterStock: newMaster,
+          warehouseStock: newMaster,
+          outletStocks: updatedOutlets,
+          branchStock: updatedOutlets['outlet-01'] || 0,
+        };
+      }
+      return m;
+    });
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [...newLedgerEntries, ...ledger],
+    });
+  },
+
   createStockIndent: (requestedBy, items, notes) => {
     const { rawMaterials, transfers } = get();
     const transferNumber = `TRF-2026-${1000 + transfers.length + 1}`;
@@ -480,9 +611,9 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
       id: `trf-${Date.now()}`,
       transferNumber,
       fromOutletId: 'warehouse-central',
-      fromOutletName: 'Central Kitchen & Commissary',
-      toOutletId: 'outlet-downtown',
-      toOutletName: 'POP O BOB Flagship (Jubilee Hills)',
+      fromOutletName: 'Central Master Commissary',
+      toOutletId: 'outlet-01',
+      toOutletName: 'Outlet 1 - Jubilee Hills Flagship',
       status: 'PENDING',
       requestedBy,
       requestedAt: 'Just now',
@@ -494,18 +625,15 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
     return newTransfer;
   },
 
-  // Step B: Warehouse Admin Approves & Dispatches -> IN_TRANSIT (Deducts Warehouse Stock)
   dispatchStockTransfer: (transferId, dispatchedBy) => {
     const { transfers, rawMaterials, ledger } = get();
     const target = transfers.find((t) => t.id === transferId);
     if (!target || target.status !== 'PENDING') return;
 
-    // Deduct stock from central warehouse and create ledger entries
     const newLedgerEntries: InventoryLedgerEntry[] = [];
     const updatedMaterials = rawMaterials.map((mat) => {
       const transferItem = target.items.find((item) => item.rawMaterialId === mat.id);
       if (transferItem) {
-        // Transfer item dispatched matches requested quantity
         transferItem.dispatchedQty = transferItem.requestedQty;
         newLedgerEntries.push({
           id: `led-${Date.now()}-${mat.id}`,
@@ -519,9 +647,11 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
           createdAt: 'Just now',
           notes: `Dispatched to ${target.toOutletName} by ${dispatchedBy}`,
         });
+        const newMaster = Math.max(0, mat.masterStock - transferItem.requestedQty);
         return {
           ...mat,
-          warehouseStock: Math.max(0, mat.warehouseStock - transferItem.requestedQty),
+          masterStock: newMaster,
+          warehouseStock: newMaster,
         };
       }
       return mat;
@@ -545,7 +675,6 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
     });
   },
 
-  // Step C: Branch Manager Receives -> RECEIVED (Adds Stock to Branch Inventory with GRN)
   receiveStockTransfer: (transferId, receivedBy) => {
     const { transfers, rawMaterials, ledger } = get();
     const target = transfers.find((t) => t.id === transferId);
@@ -568,12 +697,19 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
           uom: mat.consumptionUom,
           referenceId: `${target.transferNumber}-GRN`,
           createdAt: 'Just now',
-          notes: `GRN Verified & Received from Central Warehouse by ${receivedBy}`,
+          notes: `GRN Verified & Received from Central Master by ${receivedBy}`,
         });
+
+        const currentOutletStock = mat.outletStocks[target.toOutletId] || 0;
+        const updatedOutlets = {
+          ...mat.outletStocks,
+          [target.toOutletId]: currentOutletStock + qtyToReceive,
+        };
 
         return {
           ...mat,
-          branchStock: mat.branchStock + qtyToReceive,
+          outletStocks: updatedOutlets,
+          branchStock: updatedOutlets['outlet-01'] || 0,
         };
       }
       return mat;
@@ -597,28 +733,33 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
     });
   },
 
-  // 3. AUTO-DEPLETION ON KOT
-  depleteStockOnKot: (orderNumber, items) => {
-    const { recipes, rawMaterials, ledger } = get();
-    const deductions: Record<string, number> = {}; // rawMaterialId -> total grams/units consumed
+  // 4. POS BILLING AUTO-DEPLETION WITH DUAL COMPARISON
+  billOrderAtOutlet: (outletId, orderNumber, items) => {
+    const { recipes, rawMaterials, ledger, outlets } = get();
+    const outlet = outlets.find((o) => o.id === outletId) || outlets[1];
+    const totalDeductions: Record<string, number> = {};
 
     items.forEach((item) => {
       const rcp = recipes.find((r) => r.menuItemId === item.menuItemId);
       if (rcp) {
-        rcp.ingredients.forEach((ing) => {
-          const totalConsumed = ing.quantityConsumed * item.quantity;
-          deductions[ing.rawMaterialId] = (deductions[ing.rawMaterialId] || 0) + totalConsumed;
+        const ingredientList = rcp.sizes[item.size] || rcp.sizes.REGULAR;
+        ingredientList.forEach((ing) => {
+          const qty = ing.quantityConsumed * item.quantity;
+          totalDeductions[ing.rawMaterialId] = (totalDeductions[ing.rawMaterialId] || 0) + qty;
         });
       }
     });
 
     const newLedgerEntries: InventoryLedgerEntry[] = [];
     const updatedMaterials = rawMaterials.map((mat) => {
-      const consumed = deductions[mat.id];
+      const consumed = totalDeductions[mat.id];
       if (consumed) {
+        const currentStock = mat.outletStocks[outletId] || 0;
+        const newStock = Math.max(0, currentStock - consumed);
+
         newLedgerEntries.push({
           id: `led-${Date.now()}-${mat.id}`,
-          outletId: 'outlet-downtown',
+          outletId,
           rawMaterialId: mat.id,
           rawMaterialName: mat.name,
           transactionType: 'SALE',
@@ -626,11 +767,82 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
           uom: mat.consumptionUom,
           referenceId: orderNumber,
           createdAt: 'Just now',
-          notes: `Auto-depleted on KOT ${orderNumber} (${consumed} ${mat.consumptionUom})`,
+          notes: `Billed at ${outlet.name}: Auto-depleted ${consumed} ${mat.consumptionUom}`,
         });
+
+        const updatedOutlets = {
+          ...mat.outletStocks,
+          [outletId]: newStock,
+        };
+
         return {
           ...mat,
-          branchStock: Math.max(0, mat.branchStock - consumed),
+          outletStocks: updatedOutlets,
+          branchStock: updatedOutlets['outlet-01'] || 0,
+        };
+      }
+      return mat;
+    });
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [...newLedgerEntries, ...ledger],
+    });
+
+    return {
+      success: true,
+      deductions: totalDeductions,
+      message: `Billed ${orderNumber} at ${outlet.name}! Auto-depleted ${Object.keys(totalDeductions).length} ingredients.`,
+    };
+  },
+
+  // Compatibility helper for single items
+  depleteStockOnKot: (orderNumber, items) => {
+    const formatted = items.map((i) => ({ ...i, size: 'REGULAR' as VariantSize }));
+    get().billOrderAtOutlet('outlet-01', orderNumber, formatted);
+  },
+
+  // Physical Stock Take
+  updatePhysicalCount: (rawMaterialId, count) => {
+    set((state) => ({
+      physicalCounts: { ...state.physicalCounts, [rawMaterialId]: count },
+    }));
+  },
+
+  submitStockTake: () => {
+    const { physicalCounts, rawMaterials, ledger, selectedOutletId } = get();
+    const newLedgerEntries: InventoryLedgerEntry[] = [];
+
+    const updatedMaterials = rawMaterials.map((mat) => {
+      const actual = physicalCounts[mat.id];
+      const currentStock = mat.outletStocks[selectedOutletId] || mat.branchStock;
+
+      if (typeof actual === 'number') {
+        const diff = actual - currentStock;
+        if (diff !== 0) {
+          newLedgerEntries.push({
+            id: `led-${Date.now()}-${mat.id}`,
+            outletId: selectedOutletId,
+            rawMaterialId: mat.id,
+            rawMaterialName: mat.name,
+            transactionType: 'STOCK_ADJUSTMENT',
+            quantityChange: diff,
+            uom: mat.consumptionUom,
+            referenceId: `ST-AUDIT-${new Date().toISOString().slice(0, 10)}`,
+            createdAt: 'Just now',
+            notes: `Stock Take Audit: Diff ${diff > 0 ? '+' : ''}${diff} ${mat.consumptionUom}`,
+          });
+        }
+
+        const updatedOutlets = {
+          ...mat.outletStocks,
+          [selectedOutletId]: actual,
+        };
+
+        return {
+          ...mat,
+          outletStocks: updatedOutlets,
+          branchStock: updatedOutlets['outlet-01'] || 0,
         };
       }
       return mat;
@@ -642,58 +854,16 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
     });
   },
 
-  // 4. PHYSICAL STOCK TAKE & VARIANCE CALCULATION
-  updatePhysicalCount: (rawMaterialId, count) => {
-    set((state) => ({
-      physicalCounts: { ...state.physicalCounts, [rawMaterialId]: count },
-    }));
-  },
-
-  submitStockTake: () => {
-    const { physicalCounts, rawMaterials, ledger } = get();
-    const newLedgerEntries: InventoryLedgerEntry[] = [];
-
-    // Recalculate and add adjustment ledger entries for any variance
-    const updatedMaterials = rawMaterials.map((mat) => {
-      const actual = physicalCounts[mat.id];
-      if (typeof actual === 'number') {
-        const diff = actual - mat.branchStock;
-        if (diff !== 0) {
-          newLedgerEntries.push({
-            id: `led-${Date.now()}-${mat.id}`,
-            outletId: 'outlet-downtown',
-            rawMaterialId: mat.id,
-            rawMaterialName: mat.name,
-            transactionType: 'STOCK_ADJUSTMENT',
-            quantityChange: diff,
-            uom: mat.consumptionUom,
-            referenceId: `ST-AUDIT-${new Date().toISOString().slice(0, 10)}`,
-            createdAt: 'Just now',
-            notes: `End of Day Stock Take Reconciliation (Diff: ${diff > 0 ? '+' : ''}${diff} ${mat.consumptionUom})`,
-          });
-        }
-        return { ...mat, branchStock: actual };
-      }
-      return mat;
-    });
-
-    set({
-      rawMaterials: updatedMaterials,
-      ledger: [...newLedgerEntries, ...ledger],
-    });
-  },
-
   getVarianceReports: () => {
-    const { rawMaterials, physicalCounts, ledger } = get();
+    const { rawMaterials, physicalCounts, ledger, selectedOutletId } = get();
 
     return rawMaterials.map((mat) => {
-      // Aggregate ledger transactions for this branch
       const relevantEntries = ledger.filter(
-        (l) => l.rawMaterialId === mat.id && l.outletId === 'outlet-downtown'
+        (l) => l.rawMaterialId === mat.id && l.outletId === selectedOutletId
       );
 
       const openingEntry = relevantEntries.find((l) => l.transactionType === 'OPENING_BALANCE');
-      const openingStock = openingEntry ? openingEntry.quantityChange : mat.branchStock;
+      const openingStock = openingEntry ? openingEntry.quantityChange : mat.outletStocks[selectedOutletId] || mat.branchStock;
 
       const receivedStock = relevantEntries
         .filter((l) => l.transactionType === 'GRN')
@@ -705,18 +875,14 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
           .reduce((sum, l) => sum + l.quantityChange, 0)
       );
 
-      // (Opening + Received) - Theoretical POS Consumption = Expected Stock
       const expectedStock = openingStock + receivedStock - theoreticalConsumption;
-
-      // Actual physical count input by branch manager
+      const currentOutletStock = mat.outletStocks[selectedOutletId] || mat.branchStock;
       const actualPhysicalStock =
-        typeof physicalCounts[mat.id] === 'number' ? physicalCounts[mat.id] : mat.branchStock;
+        typeof physicalCounts[mat.id] === 'number' ? physicalCounts[mat.id] : currentOutletStock;
 
       const missingQty = actualPhysicalStock - expectedStock;
       const variancePct = expectedStock > 0 ? (missingQty / expectedStock) * 100 : 0;
       const varianceCost = Math.round(missingQty * mat.costPerConsumptionUom * 100) / 100;
-
-      // Negative variance greater than 3% (e.g. -4.5%) indicates high theft/wastage
       const isHighVariance = variancePct < -3.0;
 
       return {
