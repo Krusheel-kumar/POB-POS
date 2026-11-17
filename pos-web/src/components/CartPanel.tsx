@@ -204,51 +204,64 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             {items.map((item) => (
               <div key={item.id} className="retail-item-row">
                 <div className="item-details">
-                  <span className="item-name">
-                    {item.product.name}
-                    {item.selectedVariant && (
-                      <span className="item-variant"> ({item.selectedVariant.name})</span>
-                    )}
-                  </span>
-                  {item.selectedAddOns.length > 0 && (
-                    <span className="item-addons">
-                      + {item.selectedAddOns.map((a) => a.name).join(', ')}
-                    </span>
-                  )}
-                  {item.itemNotes && (
-                    <span className="item-instructions">Note: {item.itemNotes}</span>
-                  )}
-                  <span className="item-rate-calc">
-                    ₹{item.unitPrice.toFixed(0)} × {item.quantity} = ₹{item.lineTotal.toFixed(0)}
-                  </span>
-                </div>
+                  <div className="item-title-row">
+                    <span className="item-name">{item.product.name}</span>
+                    <span className="item-line-total">₹{item.lineTotal.toFixed(2)}</span>
+                  </div>
 
-                <div className="item-qty-controls">
-                  <button
-                    type="button"
-                    className="qty-circle-btn"
-                    onClick={() => onUpdateQuantity(item.id, -1)}
-                    aria-label={`Decrease ${item.product.name} quantity`}
-                  >
-                    −
-                  </button>
-                  <span className="qty-number">{item.quantity}</span>
-                  <button
-                    type="button"
-                    className="qty-circle-btn"
-                    onClick={() => onUpdateQuantity(item.id, 1)}
-                    aria-label={`Increase ${item.product.name} quantity`}
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    className="item-delete-btn"
-                    onClick={() => onRemoveItem(item.id)}
-                    aria-label={`Remove ${item.product.name} from cart`}
-                  >
-                    ✕
-                  </button>
+                  {(item.selectedVariant || (item.selectedAddOns && item.selectedAddOns.length > 0)) && (
+                    <div className="item-addons-wrap">
+                      {item.selectedVariant && (
+                        <span className="cart-badge-variant">
+                          {item.selectedVariant.name}
+                        </span>
+                      )}
+                      {item.selectedAddOns.map((addon) => (
+                        <span key={addon.id} className="cart-badge-addon">
+                          +{addon.name} {addon.price > 0 ? `(₹${addon.price})` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {item.itemNotes && (
+                    <span className="item-instructions">📝 {item.itemNotes}</span>
+                  )}
+
+                  <div className="item-footer-row">
+                    <span className="item-rate-calc">
+                      ₹{item.unitPrice.toFixed(2)} × {item.quantity}
+                    </span>
+
+                    <div className="item-qty-controls">
+                      <button
+                        type="button"
+                        className="qty-circle-btn"
+                        onClick={() => onUpdateQuantity(item.id, -1)}
+                        aria-label={`Decrease ${item.product.name} quantity`}
+                      >
+                        −
+                      </button>
+                      <span className="qty-number">{item.quantity}</span>
+                      <button
+                        type="button"
+                        className="qty-circle-btn"
+                        onClick={() => onUpdateQuantity(item.id, 1)}
+                        aria-label={`Increase ${item.product.name} quantity`}
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        className="item-delete-btn"
+                        onClick={() => onRemoveItem(item.id)}
+                        aria-label={`Remove ${item.product.name} from cart`}
+                        title="Remove item"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

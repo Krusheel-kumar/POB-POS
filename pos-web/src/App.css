@@ -335,8 +335,8 @@
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 16px;
 }
 
 /* Retail Product Card */
@@ -368,7 +368,7 @@
 .card-image-wrapper {
   position: relative;
   width: 100%;
-  height: 125px;
+  height: 138px;
   background-color: #f1f5f9;
   overflow: hidden;
 }
@@ -562,14 +562,16 @@
    3. PERSISTENT RIGHT CART PANEL
    ========================================= */
 .retail-cart-panel {
-  width: 430px;
-  min-width: 430px;
+  width: clamp(460px, 31vw, 540px);
+  min-width: 460px;
+  max-width: 540px;
   background-color: #ffffff;
   border-left: 1px solid var(--pos-border);
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  box-shadow: -3px 0 16px rgba(15, 23, 42, 0.04);
 }
 
 /* Cart Header */
@@ -866,83 +868,165 @@
 .retail-items-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 6px 0;
+  gap: 10px;
+  padding: 10px 0;
 }
 
 .retail-item-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px;
-  background-color: #f8fafc;
+  flex-direction: column;
+  padding: 12px 14px;
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.retail-item-row:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
 }
 
 .item-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  gap: 6px;
+  width: 100%;
+}
+
+.item-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .item-name {
-  font-size: 0.82rem;
+  font-size: 0.94rem;
   font-weight: 700;
   color: #0f172a;
+  line-height: 1.3;
 }
 
-.item-variant, .item-addons, .item-instructions {
-  font-size: 0.7rem;
-  color: #64748b;
+.item-line-total {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.item-addons-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.cart-badge-variant {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.cart-badge-addon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background-color: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+}
+
+.item-instructions {
+  font-size: 0.75rem;
+  color: #b45309;
+  background-color: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  max-width: fit-content;
+}
+
+.item-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #f1f5f9;
 }
 
 .item-rate-calc {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .item-qty-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .qty-circle-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  font-size: 0.85rem;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.15s;
+}
+
+.qty-circle-btn:hover {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
 }
 
 .qty-number {
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 800;
-  min-width: 16px;
+  color: #0f172a;
+  min-width: 20px;
   text-align: center;
 }
 
 .item-delete-btn {
-  background: none;
-  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
   color: #94a3b8;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
 .item-delete-btn:hover {
+  background-color: #fee2e2;
   color: #ef4444;
+  border-color: #fecaca;
 }
 
 /* =========================================
