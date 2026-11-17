@@ -721,7 +721,14 @@ class MockStore {
     return list;
   }
 
-  public createAddOn(name: string, price: number, category?: string, selectionType?: 'SINGLE' | 'MULTI'): AddOn {
+  public createAddOn(
+    name: string,
+    price: number,
+    category?: string,
+    selectionType?: 'SINGLE' | 'MULTI',
+    minSelections?: number,
+    maxSelections?: number
+  ): AddOn {
     const list = this.getAddOns();
     const resolvedCat = category?.trim() || 'Choice Of Size';
     const isSingle = selectionType ? selectionType === 'SINGLE' : (
@@ -731,6 +738,9 @@ class MockStore {
       resolvedCat.toLowerCase().includes('ice') ||
       resolvedCat.toLowerCase().includes('milk')
     );
+    const resolvedMin = minSelections !== undefined ? minSelections : (isSingle ? 1 : 0);
+    const resolvedMax = maxSelections !== undefined ? maxSelections : (isSingle ? 1 : 3);
+
     const newAddOn: AddOn = {
       id: `addon-${Date.now()}`,
       name,
@@ -738,6 +748,8 @@ class MockStore {
       isActive: true,
       category: resolvedCat,
       selectionType: isSingle ? 'SINGLE' : 'MULTI',
+      minSelections: resolvedMin,
+      maxSelections: resolvedMax,
     };
     list.push(newAddOn);
     this.setStorage('addons', list);

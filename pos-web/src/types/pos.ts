@@ -65,6 +65,8 @@ export interface AddOn {
   isActive: boolean;
   category?: string;
   selectionType?: 'SINGLE' | 'MULTI';
+  minSelections?: number;
+  maxSelections?: number;
 }
 
 export interface ProductVariant {
@@ -144,6 +146,8 @@ export interface AddOnRequest {
   isActive?: boolean;
   category?: string;
   selectionType?: 'SINGLE' | 'MULTI';
+  minSelections?: number;
+  maxSelections?: number;
 }
 
 export interface CartItem {

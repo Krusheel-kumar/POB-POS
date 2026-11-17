@@ -73,6 +73,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [modChoiceName, setModChoiceName] = useState('');
   const [modChoicePrice, setModChoicePrice] = useState<number | ''>(0);
   const [modSelectionType, setModSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE');
+  const [modMinSelections, setModMinSelections] = useState<number>(1);
+  const [modMaxSelections, setModMaxSelections] = useState<number>(1);
 
   // Auto-sync selected category if not set or invalid
   useEffect(() => {
@@ -221,6 +223,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         price: Number(modChoicePrice) || 0,
         category: group,
         selectionType: modSelectionType,
+        minSelections: modSelectionType === 'SINGLE' ? 1 : modMinSelections,
+        maxSelections: modSelectionType === 'SINGLE' ? 1 : modMaxSelections,
       });
 
       if (!selectedGroupNames.includes(group)) {
@@ -685,14 +689,18 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#475569' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', fontSize: '0.8rem', color: '#475569', flexWrap: 'wrap' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="modSelType"
                       checked={modSelectionType === 'SINGLE'}
-                      onChange={() => setModSelectionType('SINGLE')}
+                      onChange={() => {
+                        setModSelectionType('SINGLE');
+                        setModMinSelections(1);
+                        setModMaxSelections(1);
+                      }}
                     />
                     Single Select (1 choice, e.g. Size)
                   </label>
@@ -701,10 +709,41 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                       type="radio"
                       name="modSelType"
                       checked={modSelectionType === 'MULTI'}
-                      onChange={() => setModSelectionType('MULTI')}
+                      onChange={() => {
+                        setModSelectionType('MULTI');
+                        setModMinSelections(0);
+                        setModMaxSelections(3);
+                      }}
                     />
                     Multi Select (Checkboxes, e.g. Toppings)
                   </label>
+
+                  {modSelectionType === 'MULTI' && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
+                        Min:
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={modMinSelections}
+                          onChange={(e) => setModMinSelections(Math.max(0, Number(e.target.value) || 0))}
+                          style={{ width: '42px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center' }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#334155' }}>
+                        Max:
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={modMaxSelections}
+                          onChange={(e) => setModMaxSelections(Math.max(1, Number(e.target.value) || 1))}
+                          style={{ width: '42px', padding: '2px 4px', fontSize: '0.75rem', border: '1px solid #94a3b8', borderRadius: '4px', textAlign: 'center' }}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <button
@@ -729,10 +768,16 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 <tbody>
                   {allModifierGroups.map((grp) => {
                     const items = addOnsByGroup[grp] || [];
+                    const isSingle = items[0]?.selectionType === 'SINGLE' || (!items[0] && (grp.toLowerCase().includes('size') || grp.toLowerCase().includes('sweetness') || grp.toLowerCase().includes('ice')));
+                    const min = items[0]?.minSelections ?? (isSingle ? 1 : 0);
+                    const max = items[0]?.maxSelections ?? (isSingle ? 1 : 3);
                     return (
                       <tr key={grp}>
                         <td className="font-semibold" style={{ width: '220px' }}>
-                          {grp}
+                          <div>{grp}</div>
+                          <div style={{ fontSize: '0.7rem', color: isSingle ? '#64748b' : '#0369a1', fontWeight: 500, marginTop: '2px' }}>
+                            {isSingle ? '● Single Choice (Pick 1)' : `✦ Multi Choice (Min ${min}, Max ${max})`}
+                          </div>
                         </td>
                         <td>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>

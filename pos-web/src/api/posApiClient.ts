@@ -520,7 +520,7 @@ export class PosApiClient {
    */
   public async createAddOn(req: AddOnRequest): Promise<AddOn> {
     if (this.demoMode) {
-      return mockStore.createAddOn(req.name, req.price, req.category, req.selectionType);
+      return mockStore.createAddOn(req.name, req.price, req.category, req.selectionType, req.minSelections, req.maxSelections);
     }
 
     try {
@@ -536,7 +536,7 @@ export class PosApiClient {
 
       return res.json();
     } catch {
-      return mockStore.createAddOn(req.name, req.price, req.category, req.selectionType);
+      return mockStore.createAddOn(req.name, req.price, req.category, req.selectionType, req.minSelections, req.maxSelections);
     }
   }
 
