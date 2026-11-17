@@ -45,9 +45,9 @@ export class PosApiClient {
       authHeader: config?.authHeader || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_AUTH_HEADER : undefined),
     };
 
-    // Default to true in browser unless explicitly disabled
+    // Default to false (Real Fastify + SQLite WAL Production Engine)
     const storedDemo = typeof window !== 'undefined' ? localStorage.getItem('pos_demo_mode') : null;
-    this.demoMode = storedDemo !== null ? storedDemo === 'true' : true;
+    this.demoMode = storedDemo !== null ? storedDemo === 'true' : false;
   }
 
   public updateConfig(newConfig: Partial<PosApiConfig>) {

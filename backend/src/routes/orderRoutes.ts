@@ -254,4 +254,110 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
 
     return reply.send(orders);
   });
+
+  // --- REAL-TIME PRICING CALCULATION ---
+  fastify.post('/api/v1/pricing/calculate', async (req: FastifyRequest<{
+    Body: {
+      outletId?: string;
+      items: { productId: string; variantId?: string; addOnIds: string[]; quantity: number }[];
+    }
+  }>, reply: FastifyReply) => {
+    const { items } = req.body;
+    if (!items || items.length === 0) {
+      return reply.send({
+        subtotal: 0,
+        discountAmount: 0,
+        taxableAmount: 0,
+        cgstAmount: 0,
+        sgstAmount: 0,
+        taxAmount: 0,
+        totalAmount: 0,
+        roundOffAmount: 0,
+      });
+    }
+
+    let subtotal = 0;
+    for (const item of items) {
+      const prodRes = await db.execute({ sql: 'SELECT base_price FROM products WHERE id = ?', args: [item.productId] });
+      const basePrice = prodRes.rows.length > 0 ? Number(prodRes.rows[0].base_price) : 0;
+      let addonTotal = 0;
+      if (item.addOnIds && item.addOnIds.length > 0) {
+        for (const aid of item.addOnIds) {
+          const addonRes = await db.execute({ sql: 'SELECT price FROM add_ons WHERE id = ?', args: [aid] });
+          if (addonRes.rows.length > 0) {
+            addonTotal += Number(addonRes.rows[0].price);
+          }
+        }
+      }
+      subtotal += (basePrice + addonTotal) * item.quantity;
+    }
+
+    const discountAmount = 0;
+    const taxableAmount = subtotal - discountAmount;
+    const cgstAmount = Number((taxableAmount * 0.025).toFixed(2));
+    const sgstAmount = Number((taxableAmount * 0.025).toFixed(2));
+    const taxAmount = Number((cgstAmount + sgstAmount).toFixed(2));
+    const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+
+    return reply.send({
+      subtotal,
+      discountAmount,
+      taxableAmount,
+      cgstAmount,
+      sgstAmount,
+      taxAmount,
+      totalAmount,
+      roundOffAmount: 0,
+    });
+  });
+
+  // --- ADD ITEMS TO EXISTING ORDER (Table Top-up) ---
+  fastify.post('/api/v1/orders/:orderId/add-items', async (req: FastifyRequest<{
+    Params: { orderId: string };
+    Body: { items: CreateOrderItemDTO[] };
+  }>, reply: FastifyReply) => {
+    const { orderId } = req.params;
+    const { items } = req.body;
+
+    const orderRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    if (orderRes.rows.length === 0) return reply.status(404).send({ error: 'Order not found' });
+
+    const order = orderRes.rows[0];
+    let addedSubtotal = 0;
+
+    for (const item of items) {
+      const prodRes = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [item.productId] });
+      if (prodRes.rows.length === 0) continue;
+      const prod = prodRes.rows[0];
+      let addonTotal = 0;
+      if (item.addOnIds && item.addOnIds.length > 0) {
+        for (const aid of item.addOnIds) {
+          const addRes = await db.execute({ sql: 'SELECT price FROM add_ons WHERE id = ?', args: [aid] });
+          if (addRes.rows.length > 0) addonTotal += Number(addRes.rows[0].price);
+        }
+      }
+      const unitPrice = Number(prod.base_price) + addonTotal;
+      const lineTotal = unitPrice * item.quantity;
+      addedSubtotal += lineTotal;
+
+      await db.execute({
+        sql: `INSERT INTO order_items (id, order_id, product_id, product_name_snapshot, unit_price_snapshot, quantity, line_total_snapshot, item_notes)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [`oi-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, orderId, item.productId, String(prod.name), unitPrice, item.quantity, lineTotal, item.itemNotes || null],
+      });
+    }
+
+    const newSubtotal = Number(order.subtotal) + addedSubtotal;
+    const newTaxable = newSubtotal - Number(order.discount_amount);
+    const newTax = Number((newTaxable * 0.05).toFixed(2));
+    const newTotal = Number((newTaxable + newTax).toFixed(2));
+
+    await db.execute({
+      sql: 'UPDATE orders SET subtotal = ?, taxable_amount = ?, tax_amount = ?, total_amount = ? WHERE id = ?',
+      args: [newSubtotal, newTaxable, newTax, newTotal, orderId],
+    });
+
+    const updatedRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
+    return reply.send(updatedRes.rows[0]);
+  });
 }

@@ -865,33 +865,29 @@ export function App() {
             type="button"
             className="header-action-pill"
             onClick={() => setIsAddProductOpen(true)}
-            style={{ background: '#0f172a', color: '#ffffff', borderColor: '#0f172a', fontWeight: 600 }}
-            title="Create new menu items, categories, or modifiers"
+            style={{ background: '#2563eb', color: '#ffffff', borderColor: '#2563eb', fontWeight: 600 }}
+            title="Create and manage menu items, categories, or modifiers in Petpooja view"
           >
-            + Add Item
+            📋 Menu & Items
           </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={async () => {
-              if (window.confirm('Wipe catalog items to start clean?')) {
-                await handleClearCatalog();
-              }
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#ecfdf5',
+              padding: '3px 10px',
+              borderRadius: '20px',
+              border: '1px solid #a7f3d0',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              color: '#065f46',
             }}
-            style={{ color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }}
-            title="Clear all catalog items"
+            title="Live Fastify + SQLite WAL Production Engine running locally on port 8080"
           >
-            Clean Slate
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={handleLoadSampleCatalog}
-            style={{ color: '#475569', borderColor: '#cbd5e1' }}
-            title="Restore sample menu catalog"
-          >
-            Reset Demo
-          </button>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+            <span>Fastify Engine (:8080)</span>
+          </div>
           <div
             style={{
               display: 'inline-flex',
