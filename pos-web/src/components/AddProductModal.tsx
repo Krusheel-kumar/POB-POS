@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type {
   ProductCategory,
   DietaryType,
@@ -93,6 +93,23 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [imageUrl, setImageUrl] = useState(PRESET_IMAGES[0].url);
   // Group selection mapping: which topping groups are mapped to this product
   const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>(['Choice Of Size', 'Choice Of Boba & Toppings']);
+
+  // Sync selectedCatId when categories prop changes or is created
+  useEffect(() => {
+    if ((!selectedCatId || !categories.some((c) => c.id === selectedCatId)) && categories.length > 0) {
+      setSelectedCatId(categories[0].id);
+    }
+  }, [categories, selectedCatId]);
+
+  // Sync default subcategory when selectedCatId changes
+  useEffect(() => {
+    const current = categories.find((c) => c.id === selectedCatId);
+    if (current && current.subcategories && current.subcategories.length > 0) {
+      if (!selectedSubcat || !current.subcategories.includes(selectedSubcat)) {
+        setSelectedSubcat(current.subcategories[0]);
+      }
+    }
+  }, [selectedCatId, categories, selectedSubcat]);
 
   if (!isOpen) return null;
 
@@ -685,6 +702,141 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </p>
             </div>
 
+            {/* STEP 3 - FIELD 1 & 2: CATEGORY & SUBCATEGORY SELECTION (PROMINENT TOP CARD) */}
+            <div className="item-category-selection-card">
+              <div className="item-cat-header">
+                <div>
+                  <label className="form-label font-bold" style={{ fontSize: '0.92rem', color: '#0f172a', margin: 0 }}>
+                    📁 Menu Category & Subcategory <span className="req">*</span>
+                  </label>
+                  <span className="form-hint">
+                    Select which Category and Subcategory section this dish belongs to
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('category')}
+                  className="wizard-btn-ghost text-xs"
+                  title="Create or manage categories"
+                >
+                  + Add / Edit Categories
+                </button>
+              </div>
+
+              {/* 1. Category Selector */}
+              <div style={{ marginTop: '0.65rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.35rem' }}>
+                  1. Select Category:
+                </span>
+                {categories.length === 0 ? (
+                  <div className="empty-category-inline-warning">
+                    <span>⚠️ No menu categories created yet.</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('category')}
+                      className="wizard-btn-primary"
+                      style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                    >
+                      + Create Category in Step 1
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                    <div className="category-chips-selector">
+                      {categories.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`cat-select-chip ${selectedCatId === c.id ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedCatId(c.id);
+                            if (c.subcategories && c.subcategories.length > 0) {
+                              setSelectedSubcat(c.subcategories[0]);
+                            } else {
+                              setSelectedSubcat('');
+                            }
+                          }}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                    <select
+                      className="form-select font-semibold"
+                      value={selectedCatId}
+                      onChange={(e) => {
+                        setSelectedCatId(e.target.value);
+                        const c = categories.find((cat) => cat.id === e.target.value);
+                        if (c?.subcategories && c.subcategories.length > 0) {
+                          setSelectedSubcat(c.subcategories[0]);
+                        } else {
+                          setSelectedSubcat('');
+                        }
+                      }}
+                      style={{ maxWidth: '200px', padding: '0.45rem 0.75rem', fontSize: '0.82rem' }}
+                      required
+                      aria-label="Select Category Dropdown"
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Subcategory Selector */}
+              <div style={{ marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '0.35rem' }}>
+                  2. Select Subcategory (Menu Section):
+                </span>
+                {availableSubcategories.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                    <div className="subcat-chips-selector">
+                      {availableSubcategories.map((sc) => (
+                        <button
+                          key={sc}
+                          type="button"
+                          className={`subcat-select-chip ${selectedSubcat === sc && !customSubcat ? 'active' : ''}`}
+                          onClick={() => {
+                            setSelectedSubcat(sc);
+                            setCustomSubcat('');
+                          }}
+                        >
+                          🏷️ {sc}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.2rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Or type custom section:</span>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Special Reserve, Chef Selection..."
+                        value={customSubcat}
+                        onChange={(e) => setCustomSubcat(e.target.value)}
+                        style={{ maxWidth: '260px', padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. Milk Teas, Fruit Teas, Classic..."
+                      value={customSubcat}
+                      onChange={(e) => setCustomSubcat(e.target.value)}
+                      style={{ maxWidth: '300px' }}
+                    />
+                    <span className="form-hint">Type a subcategory for this category</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">
@@ -717,79 +869,6 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     required
                   />
                 </div>
-              </div>
-            </div>
-
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label">
-                  Select Category <span className="req">*</span>
-                </label>
-                {categories.length === 0 ? (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <span className="text-red-500 text-sm font-semibold">No category available.</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('category')}
-                      className="text-indigo-600 font-bold underline text-sm"
-                    >
-                      + Create Category in Step 1
-                    </button>
-                  </div>
-                ) : (
-                  <select
-                    className="form-select font-semibold"
-                    value={selectedCatId}
-                    onChange={(e) => {
-                      setSelectedCatId(e.target.value);
-                      setSelectedSubcat('');
-                    }}
-                    required
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Subcategory / Menu Section</label>
-                {availableSubcategories.length > 0 ? (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <select
-                      className="form-select"
-                      value={selectedSubcat}
-                      onChange={(e) => setSelectedSubcat(e.target.value)}
-                      style={{ flex: 1 }}
-                    >
-                      <option value="">-- Choose Subcategory --</option>
-                      {availableSubcategories.map((sc) => (
-                        <option key={sc} value={sc}>
-                          {sc}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Or custom..."
-                      value={customSubcat}
-                      onChange={(e) => setCustomSubcat(e.target.value)}
-                      style={{ width: '130px' }}
-                    />
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Milk Teas, Specialty Brews..."
-                    value={customSubcat}
-                    onChange={(e) => setCustomSubcat(e.target.value)}
-                  />
-                )}
               </div>
             </div>
 

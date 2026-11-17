@@ -48,6 +48,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [prodSku, setProdSku] = useState('');
   const [prodPrice, setProdPrice] = useState('0');
   const [prodCategoryId, setProdCategoryId] = useState('');
+  const [prodSubcategory, setProdSubcategory] = useState('');
+  const [customProdSubcat, setCustomProdSubcat] = useState('');
   const [prodVariantName, setProdVariantName] = useState('');
   const [prodVariantPrice, setProdVariantPrice] = useState('');
   const [prodSelectedAddOnIds, setProdSelectedAddOnIds] = useState<string[]>([]);
@@ -152,8 +154,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
             ]
           : undefined;
 
+      const finalSubcat = customProdSubcat.trim() || prodSubcategory.trim() || undefined;
+
       await onCreateProduct({
         categoryId: prodCategoryId || categories[0]?.id,
+        subcategory: finalSubcat,
         name: prodName,
         description: prodDesc,
         sku: prodSku || undefined,
@@ -167,6 +172,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       setProdDesc('');
       setProdSku('');
       setProdPrice('0');
+      setProdSubcategory('');
+      setCustomProdSubcat('');
       setProdVariantName('');
       setProdVariantPrice('');
       setProdSelectedAddOnIds([]);
@@ -867,18 +874,65 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
           <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '580px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginTop: 0 }}>Create Product</h3>
             <form onSubmit={handleCreateProduct}>
-              <div className="form-group">
-                <label className="form-label">Category</label>
-                <select
-                  className="form-select"
-                  value={prodCategoryId}
-                  onChange={(e) => setProdCategoryId(e.target.value)}
-                  required
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Category *</label>
+                  <select
+                    className="form-select"
+                    value={prodCategoryId}
+                    onChange={(e) => {
+                      setProdCategoryId(e.target.value);
+                      const targetCat = categories.find((c) => c.id === e.target.value);
+                      if (targetCat?.subcategories && targetCat.subcategories.length > 0) {
+                        setProdSubcategory(targetCat.subcategories[0]);
+                      } else {
+                        setProdSubcategory('');
+                      }
+                      setCustomProdSubcat('');
+                    }}
+                    required
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Subcategory / Section</label>
+                  {(() => {
+                    const currentCat = categories.find((c) => c.id === (prodCategoryId || categories[0]?.id));
+                    const subcats = currentCat?.subcategories || [];
+                    return (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {subcats.length > 0 ? (
+                          <select
+                            className="form-select"
+                            value={prodSubcategory}
+                            onChange={(e) => {
+                              setProdSubcategory(e.target.value);
+                              setCustomProdSubcat('');
+                            }}
+                            style={{ flex: 1 }}
+                          >
+                            <option value="">-- Choose Subcategory --</option>
+                            {subcats.map((sc) => (
+                              <option key={sc} value={sc}>{sc}</option>
+                            ))}
+                          </select>
+                        ) : null}
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder={subcats.length > 0 ? "Or custom..." : "e.g. Milk Teas, Classic..."}
+                          value={customProdSubcat}
+                          onChange={(e) => setCustomProdSubcat(e.target.value)}
+                          style={{ flex: subcats.length > 0 ? 1 : 2 }}
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Product Name</label>
