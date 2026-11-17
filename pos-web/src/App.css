@@ -1050,25 +1050,91 @@
   outline: none;
 }
 
-/* Compact & easily lookable Billing Summary */
+/* Compact & easily lookable Billing Summary with Toggleable Details */
 .billing-calc-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 7px 10px;
+  padding: 8px 12px;
   background-color: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
-.calc-breakdown-row {
+.calc-total-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.total-label-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.total-label {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+}
+
+.breakdown-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 7px;
   font-size: 0.72rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.breakdown-toggle-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.direction-arrow {
+  font-size: 0.65rem;
   color: #64748b;
-  padding-bottom: 4px;
-  border-bottom: 1px dashed #e2e8f0;
+  line-height: 1;
+}
+
+.total-amount {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #059669;
+}
+
+.calc-breakdown-row.expanded-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #64748b;
+  padding-top: 6px;
+  margin-top: 6px;
+  border-top: 1px dashed #cbd5e1;
+  animation: fadeInDown 0.15s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .calc-mini-item {
@@ -1079,7 +1145,7 @@
 
 .calc-mini-item .mini-label {
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .calc-mini-item .mini-val {
@@ -1089,26 +1155,6 @@
 
 .calc-mini-item.discount .mini-val {
   color: #10b981;
-}
-
-.calc-total-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 2px;
-}
-
-.total-label {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: 0.2px;
-}
-
-.total-amount {
-  font-size: 1.15rem;
-  font-weight: 900;
-  color: #059669;
 }
 
 /* Payment Method Bar */

@@ -48,6 +48,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const [localCustomerPhone, setLocalCustomerPhone] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('UPI');
   const [autoPrint, setAutoPrint] = useState(true);
+  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const activeCustomerName = customerName !== undefined ? customerName : localCustomerName;
   const handleNameChange = (val: string) => {
@@ -284,28 +285,45 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         )}
 
-        {/* Calculations Summary Card */}
-        <div className="billing-calc-card">
-          <div className="calc-breakdown-row">
-            <span className="calc-mini-item">
-              <span className="mini-label">Subtotal:</span>
-              <span className="mini-val">₹{subtotal.toFixed(2)}</span>
-            </span>
-            {discount > 0 && (
-              <span className="calc-mini-item discount">
-                <span className="mini-label">Disc:</span>
-                <span className="mini-val">-₹{discount.toFixed(2)}</span>
-              </span>
-            )}
-            <span className="calc-mini-item">
-              <span className="mini-label">GST (5%):</span>
-              <span className="mini-val">₹{tax.toFixed(2)}</span>
-            </span>
-          </div>
+        {/* Calculations Summary Card - Collapsible Tax & Subtotal Breakdown */}
+        <div className={`billing-calc-card ${showBreakdown ? 'expanded' : ''}`}>
+          {/* Main Total Row (Always Visible) */}
           <div className="calc-total-row">
-            <span className="total-label">Total Payable</span>
+            <div className="total-label-wrap">
+              <span className="total-label">Total Payable</span>
+              <button
+                type="button"
+                className="breakdown-toggle-btn"
+                onClick={() => setShowBreakdown((prev) => !prev)}
+                title={showBreakdown ? 'Hide Tax & Subtotal details' : 'Show Tax & Subtotal details'}
+                aria-expanded={showBreakdown}
+              >
+                <span>{showBreakdown ? 'Hide details' : 'Tax & breakdown'}</span>
+                <span className="direction-arrow">{showBreakdown ? '▲' : '▼'}</span>
+              </button>
+            </div>
             <span className="total-amount">₹{total.toFixed(2)}</span>
           </div>
+
+          {/* Hidden Breakdown: Subtotal, Discount & Tax (Revealed by direction button) */}
+          {showBreakdown && (
+            <div className="calc-breakdown-row expanded-details">
+              <span className="calc-mini-item">
+                <span className="mini-label">Subtotal:</span>
+                <span className="mini-val">₹{subtotal.toFixed(2)}</span>
+              </span>
+              {discount > 0 && (
+                <span className="calc-mini-item discount">
+                  <span className="mini-label">Disc:</span>
+                  <span className="mini-val">-₹{discount.toFixed(2)}</span>
+                </span>
+              )}
+              <span className="calc-mini-item">
+                <span className="mini-label">GST (5%):</span>
+                <span className="mini-val">₹{tax.toFixed(2)}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Payment Method Selector */}
