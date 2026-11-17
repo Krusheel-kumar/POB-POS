@@ -17,6 +17,7 @@ import { AdminOrdersView } from './AdminOrdersView';
 import { AdminBillingView } from './AdminBillingView';
 import { ReportsDashboard } from './ReportsDashboard';
 import { InventoryModule } from './InventoryModule';
+import { CreateOutletModal } from './CreateOutletModal';
 import './Admin.css';
 
 type AdminTab = 'dashboard' | 'reports' | 'inventory' | 'menu' | 'orders' | 'billing';
@@ -149,10 +150,18 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     await loadAdminData();
   };
 
+  const [showAddOutletModal, setShowAddOutletModal] = useState<boolean>(false);
+
   const handleOutletChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newId = e.target.value;
     setSelectedOutletId(newId);
     posApiClient.updateConfig({ outletId: newId });
+  };
+
+  const handleOutletCreated = (newOutlet: Outlet) => {
+    setOutlets((prev) => [...prev, newOutlet]);
+    setSelectedOutletId(newOutlet.id);
+    posApiClient.updateConfig({ outletId: newOutlet.id });
   };
 
   return (
