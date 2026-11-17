@@ -256,18 +256,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             </div>
           ) : (
-            /* KITCHEN ORDER TICKET (KOT) */
+            /* KITCHEN ORDER TICKET (KOT) - PRODUCTION LEVEL */
             <div className="thermal-kot">
               <div className="thermal-header">
-                <div className="kot-brand-badge" style={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '1px' }}>POP O' BOB</div>
+                <div className="brand-name">POP O' BOB</div>
+                <div className="brand-sub">Speciality Bubble Tea • Barista & Kitchen Line</div>
+                <div className="slip-divider">========================================</div>
                 {isDuplicate ? (
                   <div className="duplicate-kot-banner">
                     <div className="dup-kot-title">⚠️ *** DUPLICATE KOT *** ⚠️</div>
                     <div className="dup-kot-sub">[ REPRINT COPY #{printCount + 1} ]</div>
-                    <div className="dup-kot-alert">🛑 DO NOT PREPARE AGAIN! 🛑</div>
+                    <div className="dup-kot-alert">🛑 CHECK IF ALREADY PREPARED! 🛑</div>
                     {printHistory.firstKotPrintedAt && (
                       <div className="dup-kot-alert-sub">
-                        Original KOT sent at {new Date(printHistory.firstKotPrintedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        Original KOT printed: {new Date(printHistory.firstKotPrintedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     )}
                   </div>
@@ -277,82 +279,145 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <div className="kot-badge">KITCHEN ORDER TICKET</div>
                   </>
                 )}
-                <div className="kot-number">
-                  {ticket?.ticketNumber || 'KOT-104'}
+
+                <div className="kot-number-banner">
+                  <span className="kot-num-title">KOT NO:</span>
+                  <span className="kot-number">
+                    {ticket?.ticketNumber || (order?.orderNumber ? order.orderNumber.replace('ORD-', 'KOT-') : 'KOT-104')}
+                  </span>
                 </div>
-                <div className="slip-divider">================================</div>
+                <div className="slip-divider">========================================</div>
               </div>
 
               <div className="thermal-meta">
                 <div className="meta-row highlight-table">
-                  <span>
+                  <span className="table-bold">
                     {order?.table
-                      ? `TABLE ${order.table.tableNumber}`
+                      ? `🪑 TABLE: ${order.table.tableNumber}`
                       : ticket?.customerNotesSnapshot?.includes('Table')
-                      ? ticket.customerNotesSnapshot.split('•')[0]
-                      : 'COUNTER / TAKEAWAY'}
+                      ? `🪑 ${ticket.customerNotesSnapshot.split('•')[0]}`
+                      : '⚡ COUNTER / TAKEAWAY'}
                   </span>
-                  <span>#{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-042'}</span>
+                  <span className="ord-num">
+                    #{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-4095'}
+                  </span>
                 </div>
+
+                <div className="meta-row" style={{ marginTop: '4px' }}>
+                  <span className="meta-bold">Date:</span>
+                  <span>{formattedDate.split(',')[0]}</span>
+                  <span className="meta-bold" style={{ marginLeft: '12px' }}>Time:</span>
+                  <span className="time-highlight">{formattedDate.split(',')[1]}</span>
+                </div>
+
+                <div className="meta-row">
+                  <span className="meta-bold">Order Type:</span>
+                  <span>{ticket?.orderTypeSnapshot || order?.orderType ? (ticket?.orderTypeSnapshot || order?.orderType || '').replace('_', ' ') : 'DINE IN'}</span>
+                </div>
+
                 {(activeCustomerName || activeCustomerPhone) && (
-                  <div className="meta-row" style={{ fontWeight: 700 }}>
-                    <span>Guest: {activeCustomerName || 'Walk-in'}</span>
-                    <span>{activeCustomerPhone ? `+91 ${activeCustomerPhone}` : ''}</span>
+                  <div className="meta-row customer-row">
+                    <span className="meta-bold">Guest:</span>
+                    <span>{activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}</span>
                   </div>
                 )}
+
                 <div className="meta-row">
-                  <span>Type: {ticket?.orderTypeSnapshot || order?.orderType || 'DINE_IN'}</span>
-                  <span>Time: {formattedDate.split(',')[1]}</span>
+                  <span className="meta-bold">Biller / Staff:</span>
+                  <span>POS Terminal #1 (Cashier JD)</span>
                 </div>
+
                 {(ticket?.customerNotesSnapshot || order?.customerNotes) && (
                   <div className="kot-special-notes">
-                    <strong>Kitchen Note:</strong>{' '}
-                    {ticket?.customerNotesSnapshot || order?.customerNotes}
+                    <div className="kot-notes-title">🚨 SPECIAL KITCHEN / COOKING NOTE:</div>
+                    <div className="kot-notes-body">{ticket?.customerNotesSnapshot || order?.customerNotes}</div>
                   </div>
                 )}
               </div>
 
-              <div className="slip-divider">================================</div>
+              <div className="slip-divider">========================================</div>
               <div className="kot-items-header">
-                <span>QTY</span>
-                <span>ITEM & MODIFIERS</span>
+                <span className="col-kot-qty">QTY</span>
+                <span className="col-kot-desc">ITEM & TOPPING MODIFIERS</span>
               </div>
-              <div className="slip-divider">================================</div>
+              <div className="slip-divider">========================================</div>
 
               <div className="kot-items-list">
-                {ticket?.items && ticket.items.length > 0 ? (
-                  ticket.items.map((it, idx) => (
-                    <div key={idx} className="kot-item-row">
-                      <span className="kot-qty">{it.quantity}x</span>
-                      <div className="kot-desc">
-                        <strong className="kot-name">{it.productNameSnapshot}</strong>
-                        {it.variantNameSnapshot && (
-                          <div className="kot-variant">[{it.variantNameSnapshot}]</div>
-                        )}
-                        {it.addOns && it.addOns.length > 0 && (
-                          <div className="kot-addons">
-                            + {it.addOns.map((a) => a.addOnNameSnapshot).join(', ')}
-                          </div>
-                        )}
-                        {it.itemNotesSnapshot && (
-                          <div className="kot-instruction">👉 {it.itemNotesSnapshot}</div>
-                        )}
+                {(() => {
+                  const kotItems =
+                    ticket?.items && ticket.items.length > 0
+                      ? ticket.items.map((it) => ({
+                          name: it.productNameSnapshot,
+                          variant: it.variantNameSnapshot,
+                          quantity: it.quantity,
+                          addOns: it.addOns?.map((a) => a.addOnNameSnapshot) || [],
+                          notes: it.itemNotesSnapshot,
+                        }))
+                      : order?.items && order.items.length > 0
+                      ? order.items.map((it) => {
+                          let variant = it.variantNameSnapshot;
+                          let addOns: string[] = [];
+                          if (variant && variant.includes('• +')) {
+                            const parts = variant.split('• +');
+                            variant = parts[0].trim();
+                            addOns = parts[1].split(',').map((s) => s.trim());
+                          } else if (variant && variant.startsWith('+')) {
+                            addOns = variant.substring(1).split(',').map((s) => s.trim());
+                            variant = undefined;
+                          }
+                          return {
+                            name: it.productNameSnapshot,
+                            variant,
+                            quantity: it.quantity,
+                            addOns,
+                            notes: it.itemNotes,
+                          };
+                        })
+                      : [
+                          {
+                            name: 'AUTHENTIC MILK TEA',
+                            variant: 'Regular (350ml)',
+                            quantity: 1,
+                            addOns: ['Brown Sugar Pearls', 'Grass Jelly'],
+                            notes: 'Less sweet, 50% ice',
+                          },
+                        ];
+
+                  return kotItems.map((it, idx) => (
+                    <div key={idx} className="kot-item-entry">
+                      <div className="kot-item-row">
+                        <span className="kot-qty">{it.quantity}x</span>
+                        <div className="kot-desc">
+                          <div className="kot-name">{it.name}</div>
+                          {it.variant && (
+                            <div className="kot-variant">▸ Size: {it.variant}</div>
+                          )}
+                          {it.addOns && it.addOns.length > 0 && (
+                            <div className="kot-addons">
+                              {it.addOns.map((add, aIdx) => (
+                                <div key={aIdx} className="kot-addon-line">
+                                  ✦ Topping: {add}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {it.notes && (
+                            <div className="kot-instruction">👉 Note: {it.notes}</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="kot-item-row">
-                    <span className="kot-qty">1x</span>
-                    <div className="kot-desc">
-                      <strong className="kot-name">Assorted Chef Preparation</strong>
-                    </div>
-                  </div>
-                )}
+                  ));
+                })()}
               </div>
 
-              <div className="slip-divider">================================</div>
+              <div className="slip-divider">========================================</div>
               <div className="kot-footer">
-                <span>[ KOT SENT TO CHEF STATION ]</span>
+                <div className="kot-summary-row">
+                  <span>Total Items: {ticket?.items?.length || order?.items?.length || 1}</span>
+                  <span>Kitchen Station: MAIN BAR</span>
+                </div>
+                <div className="kot-dispatch-tag">[ DISPATCHED TO BARISTA & KITCHEN LINE ]</div>
               </div>
             </div>
           )}
