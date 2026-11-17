@@ -16,6 +16,7 @@ import type {
   Order,
   AddOn,
   AddOnRequest,
+  Outlet,
 } from './types/pos';
 import { ProductCard } from './components/ProductCard';
 import { ProductModal } from './components/ProductModal';
@@ -77,6 +78,29 @@ export function App() {
 
   // Outlet & Payment Policy
   const [paymentPolicy, setPaymentPolicy] = useState<PaymentPolicy>('FLEXIBLE');
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [currentOutletId, setCurrentOutletId] = useState<string>(() => posApiClient.getConfig().outletId || 'outlet-demo-flagship');
+
+  useEffect(() => {
+    let isMounted = true;
+    posApiClient.getOutlets().then((list) => {
+      if (isMounted) {
+        setOutlets(list);
+        const configured = posApiClient.getConfig().outletId;
+        if (!configured && list.length > 0) {
+          setCurrentOutletId(list[0].id);
+          posApiClient.updateConfig({ outletId: list[0].id });
+        }
+      }
+    }).catch(console.warn);
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSwitchOutlet = (newId: string) => {
+    setCurrentOutletId(newId);
+    posApiClient.updateConfig({ outletId: newId });
+    loadTables();
+  };
 
   // Loading & Error States
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -854,6 +878,42 @@ export function App() {
           >
             Reset Demo
           </button>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: '#f8fafc',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+            }}
+            title="Current active outlet branch"
+          >
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>📍 Branch:</span>
+            <select
+              value={currentOutletId}
+              onChange={(e) => handleSwitchOutlet(e.target.value)}
+              style={{
+                border: 'none',
+                background: 'transparent',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                color: '#0f172a',
+                cursor: 'pointer',
+                outline: 'none',
+                maxWidth: '180px',
+              }}
+              aria-label="Active Outlet Branch"
+            >
+              {outlets.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <span className="counter-active-badge">
             ● Counter #01
           </span>

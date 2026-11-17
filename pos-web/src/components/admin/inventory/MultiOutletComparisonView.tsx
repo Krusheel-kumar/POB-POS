@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useInventoryStore } from '../../../store/useInventoryStore';
 import type { VariantSize } from '../../../types/inventory';
+import { CreateOutletModal } from '../CreateOutletModal';
 
 export const MultiOutletComparisonView: React.FC = () => {
   const {
@@ -19,6 +20,7 @@ export const MultiOutletComparisonView: React.FC = () => {
   } = useInventoryStore();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showAddOutletModal, setShowAddOutletModal] = useState<boolean>(false);
 
   // Transfer Modal State
   const [transferModal, setTransferModal] = useState<{
@@ -108,21 +110,41 @@ export const MultiOutletComparisonView: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn btn-primary btn-sm"
-          onClick={() =>
-            setTransferModal({
-              open: true,
-              materialId: rawMaterials[0]?.id || 'raw-milk',
-              targetOutletId: 'outlet-01',
-              qty: 10000,
-            })
-          }
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
-        >
-          <Send size={15} /> 📦 Transfer from Master to Outlet
-        </button>
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-outline-primary btn-sm"
+            onClick={() => setShowAddOutletModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: 600,
+              borderRadius: '8px',
+              border: '1px solid #0284c7',
+              color: '#0284c7',
+              background: '#f0f9ff',
+              cursor: 'pointer',
+            }}
+          >
+            <Store size={15} /> + Add Outlet Branch
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() =>
+              setTransferModal({
+                open: true,
+                materialId: rawMaterials[0]?.id || 'raw-milk',
+                targetOutletId: 'outlet-01',
+                qty: 10000,
+              })
+            }
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
+          >
+            <Send size={15} /> 📦 Transfer from Master to Outlet
+          </button>
+        </div>
       </div>
 
       {/* =========================================================================
@@ -412,6 +434,14 @@ export const MultiOutletComparisonView: React.FC = () => {
           </div>
         </div>
       )}
+
+      <CreateOutletModal
+        isOpen={showAddOutletModal}
+        onClose={() => setShowAddOutletModal(false)}
+        onOutletCreated={(newOutlet) => {
+          showToast(`✨ Branch "${newOutlet.name}" onboarded and ready for Master Commissary transfers!`);
+        }}
+      />
     </div>
   );
 };

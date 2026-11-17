@@ -301,6 +301,28 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
               ) : (
                 <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Default Outlet</span>
               )}
+
+              <button
+                type="button"
+                className="btn btn-outline-primary btn-sm"
+                onClick={() => setShowAddOutletModal(true)}
+                style={{
+                  fontSize: '0.8rem',
+                  padding: '0.35rem 0.65rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  border: '1px solid #0284c7',
+                  color: '#0284c7',
+                  background: '#f0f9ff',
+                  cursor: 'pointer',
+                }}
+                title="Onboard and create a new outlet branch"
+              >
+                + Add Outlet
+              </button>
             </div>
           </div>
         </header>
@@ -355,6 +377,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
             />
           )}
         </div>
+
+        <CreateOutletModal
+          isOpen={showAddOutletModal}
+          onClose={() => setShowAddOutletModal(false)}
+          onOutletCreated={handleOutletCreated}
+        />
       </main>
     </div>
   );
