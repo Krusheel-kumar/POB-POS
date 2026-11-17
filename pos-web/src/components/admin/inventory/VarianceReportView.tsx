@@ -165,15 +165,15 @@ export const VarianceReportView: React.FC = () => {
           <thead>
             <tr>
               <th>Raw Material / Ingredient</th>
-              <th>Opening Stock (Subah)</th>
-              <th>Received (Maal Aaya)</th>
-              <th>Bikri / POS Usage</th>
-              <th>Expected (Hisaab)</th>
-              <th>Physical Count (Asli)</th>
-              <th>Shortage (Kam Hua)</th>
-              <th>Nuksan Value (₹)</th>
+              <th>Opening Balance</th>
+              <th>Goods Received (GRN)</th>
+              <th>POS Billed Usage</th>
+              <th>Expected Stock</th>
+              <th>Actual Physical Count</th>
+              <th>Variance Qty</th>
+              <th>Financial Loss (INR)</th>
               <th>Variance %</th>
-              <th>Audit Status (Nazar)</th>
+              <th>Audit Flag</th>
             </tr>
           </thead>
           <tbody>

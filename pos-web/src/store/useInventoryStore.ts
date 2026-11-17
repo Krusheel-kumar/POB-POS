@@ -365,7 +365,10 @@ interface InventoryStoreState {
 
   // Screen 1: Master Inventory Actions
   addRawMaterial: (material: Omit<RawMaterial, 'id' | 'costPerConsumptionUom' | 'warehouseStock' | 'branchStock'>) => void;
+  updateRawMaterial: (id: string, updates: Partial<RawMaterial>) => void;
+  deleteRawMaterial: (id: string) => void;
   addStockToMaster: (rawMaterialId: string, addedQty: number, notes?: string) => void;
+  setStockLevel: (rawMaterialId: string, targetOutletId: string, newTotalQty: number, notes?: string) => void;
 
   // Screen 2: Recipe Builder with Sizes (Regular vs Large)
   saveSizeRecipe: (menuItemId: string, menuItemName: string, size: VariantSize, ingredients: RecipeIngredient[]) => void;
@@ -530,6 +533,127 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
       referenceId: `RESTOCK-${Date.now()}`,
       createdAt: 'Just now',
       notes: notes || `Direct stock replenishment to Central Master (+${addedQty} ${target.consumptionUom})`,
+    };
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [newLedger, ...ledger],
+    });
+  },
+
+  updateRawMaterial: (id, updates) => {
+    const { rawMaterials, ledger } = get();
+    const target = rawMaterials.find((m) => m.id === id);
+    if (!target) return;
+
+    const conversionFactor = updates.conversionFactor ?? target.conversionFactor;
+    const costPerPurchaseUom = updates.costPerPurchaseUom ?? target.costPerPurchaseUom;
+    const costPerConsumptionUom =
+      conversionFactor > 0
+        ? Math.round((costPerPurchaseUom / conversionFactor) * 1000) / 1000
+        : costPerPurchaseUom;
+
+    const updatedMaterials = rawMaterials.map((mat) => {
+      if (mat.id === id) {
+        return {
+          ...mat,
+          ...updates,
+          costPerConsumptionUom,
+        };
+      }
+      return mat;
+    });
+
+    const newLedger: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: 'warehouse-central',
+      rawMaterialId: target.id,
+      rawMaterialName: updates.name || target.name,
+      transactionType: 'STOCK_ADJUSTMENT',
+      quantityChange: 0,
+      uom: target.consumptionUom,
+      referenceId: `UPDATE-${Date.now()}`,
+      createdAt: 'Just now',
+      notes: `Updated item specifications for "${updates.name || target.name}"`,
+    };
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [newLedger, ...ledger],
+    });
+  },
+
+  deleteRawMaterial: (id) => {
+    const { rawMaterials, ledger } = get();
+    const target = rawMaterials.find((m) => m.id === id);
+    if (!target) return;
+
+    const updatedMaterials = rawMaterials.filter((m) => m.id !== id);
+
+    const newLedger: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: 'warehouse-central',
+      rawMaterialId: target.id,
+      rawMaterialName: target.name,
+      transactionType: 'STOCK_ADJUSTMENT',
+      quantityChange: -target.masterStock,
+      uom: target.consumptionUom,
+      referenceId: `DELETE-${Date.now()}`,
+      createdAt: 'Just now',
+      notes: `Deleted raw material "${target.name}" from central catalog`,
+    };
+
+    set({
+      rawMaterials: updatedMaterials,
+      ledger: [newLedger, ...ledger],
+    });
+  },
+
+  setStockLevel: (rawMaterialId, targetOutletId, newTotalQty, notes) => {
+    const { rawMaterials, ledger, outlets } = get();
+    const target = rawMaterials.find((m) => m.id === rawMaterialId);
+    if (!target) return;
+
+    const isCentral = targetOutletId === 'warehouse-central';
+    const oldQty = isCentral ? target.masterStock : (target.outletStocks[targetOutletId] || 0);
+    const diff = newTotalQty - oldQty;
+
+    const updatedMaterials = rawMaterials.map((mat) => {
+      if (mat.id === rawMaterialId) {
+        if (isCentral) {
+          return {
+            ...mat,
+            masterStock: Math.max(0, newTotalQty),
+            warehouseStock: Math.max(0, newTotalQty),
+          };
+        } else {
+          const updatedOutlets = {
+            ...mat.outletStocks,
+            [targetOutletId]: Math.max(0, newTotalQty),
+          };
+          return {
+            ...mat,
+            outletStocks: updatedOutlets,
+            branchStock: updatedOutlets['outlet-01'] || 0,
+          };
+        }
+      }
+      return mat;
+    });
+
+    const targetOutletName = outlets.find((o) => o.id === targetOutletId)?.name || targetOutletId;
+
+    const newLedger: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: targetOutletId,
+      rawMaterialId: target.id,
+      rawMaterialName: target.name,
+      transactionType: 'STOCK_ADJUSTMENT',
+      quantityChange: diff,
+      uom: target.consumptionUom,
+      referenceId: `ADJUST-${Date.now()}`,
+      createdAt: 'Just now',
+      notes: notes || `Direct stock balance adjustment at ${targetOutletName}: updated to ${newTotalQty} ${target.consumptionUom} (Delta: ${diff >= 0 ? '+' : ''}${diff})`,
     };
 
     set({

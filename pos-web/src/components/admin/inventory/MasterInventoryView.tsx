@@ -7,21 +7,58 @@ import {
   AlertTriangle,
   ArrowUpRight,
   TrendingUp,
+  Edit2,
+  Trash2,
+  SlidersHorizontal,
+  X,
+  Package,
 } from 'lucide-react';
 import { useInventoryStore } from '../../../store/useInventoryStore';
-import type { RawMaterialCategory, UomType } from '../../../types/inventory';
+import type { RawMaterial, RawMaterialCategory, UomType } from '../../../types/inventory';
 import { formatINR } from '../../../lib/mockReportsData';
 
 export const MasterInventoryView: React.FC = () => {
-  const { rawMaterials, addRawMaterial, addStockToMaster } = useInventoryStore();
+  const {
+    rawMaterials,
+    addRawMaterial,
+    updateRawMaterial,
+    deleteRawMaterial,
+    addStockToMaster,
+    setStockLevel,
+  } = useInventoryStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Quick Restock Modal State
-  const [restockItem, setRestockItem] = useState<{ id: string; name: string; uom: string; conversion: number; purchaseUom: string } | null>(null);
+  const [restockItem, setRestockItem] = useState<{
+    id: string;
+    name: string;
+    uom: string;
+    conversion: number;
+    purchaseUom: string;
+  } | null>(null);
   const [restockAmount, setRestockAmount] = useState<number>(50);
+
+  // Direct Adjust / Update Stock Modal State
+  const [adjustItem, setAdjustItem] = useState<{
+    material: RawMaterial;
+    newBulkQuantity: number;
+    reason: string;
+  } | null>(null);
+
+  // Edit Material Modal State
+  const [editItem, setEditItem] = useState<{
+    id: string;
+    name: string;
+    category: RawMaterialCategory;
+    costPerPurchaseUom: number;
+    reorderThreshold: number;
+  } | null>(null);
+
+  // Delete Confirmation State
+  const [deleteConfirmItem, setDeleteConfirmItem] = useState<RawMaterial | null>(null);
 
   // New Material Modal State
   const [isNewMaterialOpen, setIsNewMaterialOpen] = useState(false);
@@ -31,7 +68,7 @@ export const MasterInventoryView: React.FC = () => {
   const [newMatConsumptionUom, setNewMatConsumptionUom] = useState<UomType>('GRAM');
   const newMatConversion = newMatPurchaseUom === 'BOX' ? 500 : 1000;
   const [newMatCost, setNewMatCost] = useState<number>(350);
-  const [newMatInitialStock, setNewMatInitialStock] = useState<number>(50000);
+  const [newMatInitialStock, setNewMatInitialStock] = useState<number>(50);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -46,6 +83,7 @@ export const MasterInventoryView: React.FC = () => {
     return matchCat && matchSearch;
   });
 
+  // 1. Handle Quick Restock Submission
   const handleQuickRestockSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!restockItem) return;
@@ -55,33 +93,76 @@ export const MasterInventoryView: React.FC = () => {
       addedInConsumption,
       `Delivery truck restock: +${restockAmount} ${restockItem.purchaseUom}`
     );
-    showToast(`Added ${restockAmount} ${restockItem.purchaseUom} to Central Master stock of "${restockItem.name}"!`);
+    showToast(`Added ${restockAmount} ${restockItem.purchaseUom} to Central Commissary stock of "${restockItem.name}"!`);
     setRestockItem(null);
   };
 
+  // 2. Handle Direct Stock Balance Adjustment (e.g. set Boba to 20 KG)
+  const handleDirectAdjustSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustItem) return;
+    const mat = adjustItem.material;
+    const newConsumptionQty = adjustItem.newBulkQuantity * mat.conversionFactor;
+    setStockLevel(
+      mat.id,
+      'warehouse-central',
+      newConsumptionQty,
+      adjustItem.reason.trim() || `Manual warehouse audit adjustment to ${adjustItem.newBulkQuantity} ${mat.purchaseUom}`
+    );
+    showToast(`✓ Updated stock for "${mat.name}" to ${adjustItem.newBulkQuantity} ${mat.purchaseUom}!`);
+    setAdjustItem(null);
+  };
+
+  // 3. Handle Edit Material Metadata
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editItem) return;
+    updateRawMaterial(editItem.id, {
+      name: editItem.name.trim(),
+      category: editItem.category,
+      costPerPurchaseUom: editItem.costPerPurchaseUom,
+      reorderThreshold: editItem.reorderThreshold,
+    });
+    showToast(`✓ Updated specifications for "${editItem.name}"!`);
+    setEditItem(null);
+  };
+
+  // 4. Handle Delete Item
+  const handleDeleteConfirm = () => {
+    if (!deleteConfirmItem) return;
+    deleteRawMaterial(deleteConfirmItem.id);
+    showToast(`✓ Removed "${deleteConfirmItem.name}" from inventory catalog.`);
+    setDeleteConfirmItem(null);
+  };
+
+  // 5. Handle New Material Creation
   const handleCreateNewMaterial = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMatName.trim()) return;
 
+    const initialConsumption = newMatInitialStock * newMatConversion;
+
     addRawMaterial({
-      name: newMatName,
+      name: newMatName.trim(),
       category: newMatCategory,
       purchaseUom: newMatPurchaseUom,
       consumptionUom: newMatConsumptionUom,
       conversionFactor: newMatConversion,
       costPerPurchaseUom: newMatCost,
       reorderThreshold: newMatConversion * 5,
-      masterStock: newMatInitialStock,
+      masterStock: initialConsumption,
       outletStocks: {
-        'outlet-01': Math.round(newMatInitialStock * 0.1),
-        'outlet-02': Math.round(newMatInitialStock * 0.08),
-        'outlet-03': Math.round(newMatInitialStock * 0.06),
+        'outlet-01': Math.round(initialConsumption * 0.1),
+        'outlet-02': Math.round(initialConsumption * 0.08),
+        'outlet-03': Math.round(initialConsumption * 0.06),
       },
     });
 
-    showToast(`"${newMatName}" added to Central Master Inventory with initial stock!`);
+    showToast(`✓ "${newMatName}" added to Central Commissary with ${newMatInitialStock} ${newMatPurchaseUom} initial stock!`);
     setIsNewMaterialOpen(false);
     setNewMatName('');
+    setNewMatCost(350);
+    setNewMatInitialStock(50);
   };
 
   // Summary Metrics
@@ -102,10 +183,10 @@ export const MasterInventoryView: React.FC = () => {
         <div>
           <h3 className="inv-card-title">
             <Boxes size={22} color="#0284c7" />
-            Central Master Inventory (Commissary & Main Warehouse) — Main Godown Bulk Stock
+            Central Master Inventory (Commissary & Main Warehouse)
           </h3>
           <p className="inv-card-subtitle">
-            Main Godown bulk stock for all raw materials before dispatch to retail cafe outlets
+            Enterprise central repository for raw materials, bulk inventory adjustments, and supply chain control
           </p>
         </div>
 
@@ -115,15 +196,15 @@ export const MasterInventoryView: React.FC = () => {
           onClick={() => setIsNewMaterialOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
         >
-          <Plus size={16} /> ➕ Add New Raw Material / Item
+          <Plus size={16} /> + Add Raw Material
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Summary Cards */}
       <div className="kpi-grid" style={{ marginBottom: '1.5rem' }}>
         <div className="kpi-card" style={{ borderLeft: '4px solid #0284c7' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Total Godown Items</span>
+            <span className="kpi-card-title">Total Catalog Materials</span>
             <Boxes size={18} color="#0284c7" />
           </div>
           <div className="kpi-card-value">{totalItemsCount} Catalog Items</div>
@@ -134,7 +215,7 @@ export const MasterInventoryView: React.FC = () => {
 
         <div className="kpi-card" style={{ borderLeft: '4px solid #16a34a' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Main Milk Reserve (Godown)</span>
+            <span className="kpi-card-title">Central Bulk Milk</span>
             <TrendingUp size={18} color="#16a34a" />
           </div>
           <div className="kpi-card-value">
@@ -147,12 +228,12 @@ export const MasterInventoryView: React.FC = () => {
 
         <div className="kpi-card" style={{ borderLeft: '4px solid #f59e0b' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Khatam Hone Wala (Low Alert)</span>
+            <span className="kpi-card-title">Reorder Alerts</span>
             <AlertTriangle size={18} color="#f59e0b" />
           </div>
-          <div className="kpi-card-value">{lowMasterItems.length} Low Alert</div>
+          <div className="kpi-card-value">{lowMasterItems.length} Low Alerts</div>
           <div className="kpi-card-subtitle">
-            <span>Needs vendor purchase order</span>
+            <span>Triggered threshold reorder</span>
           </div>
         </div>
       </div>
@@ -168,7 +249,7 @@ export const MasterInventoryView: React.FC = () => {
           <input
             type="text"
             className="inv-input"
-            placeholder="Search raw material name..."
+            placeholder="Search raw material by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ paddingLeft: '2.25rem' }}
@@ -197,12 +278,12 @@ export const MasterInventoryView: React.FC = () => {
             <tr>
               <th>Raw Material / Ingredient</th>
               <th>Category</th>
-              <th>Godown Bulk Stock (Central Master)</th>
-              <th>Portion Unit (Kitchen)</th>
-              <th>Purchase Rate (Vendor)</th>
-              <th>Cost per Cup / Portion</th>
-              <th>Stock Status</th>
-              <th>Maal Inward (Restock)</th>
+              <th>Central Commissary Stock</th>
+              <th>Portion Unit</th>
+              <th>Purchase Rate</th>
+              <th>Unit Cost</th>
+              <th>Status</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -237,7 +318,7 @@ export const MasterInventoryView: React.FC = () => {
                   <td>
                     {isLow ? (
                       <span className="badge-slow-seller" style={{ fontSize: '0.75rem' }}>
-                        ⚠️ Low Master Stock
+                        ⚠️ Low Stock
                       </span>
                     ) : (
                       <span className="badge-top-seller" style={{ fontSize: '0.75rem' }}>
@@ -246,30 +327,91 @@ export const MasterInventoryView: React.FC = () => {
                     )}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() =>
-                        setRestockItem({
-                          id: mat.id,
-                          name: mat.name,
-                          uom: mat.consumptionUom,
-                          conversion: mat.conversionFactor,
-                          purchaseUom: mat.purchaseUom,
-                        })
-                      }
-                      style={{
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        color: '#0284c7',
-                        borderColor: '#bae6fd',
-                      }}
-                    >
-                      <ArrowUpRight size={13} /> + Add Stock
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                      {/* Set / Adjust Stock Quantity (e.g. set to 20 KG) */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() =>
+                          setAdjustItem({
+                            material: mat,
+                            newBulkQuantity: parseFloat(bulkQty) || 0,
+                            reason: 'Warehouse physical audit correction',
+                          })
+                        }
+                        title={`Adjust or set current stock quantity for ${mat.name}`}
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          color: '#0284c7',
+                          borderColor: '#bae6fd',
+                          background: '#f0f9ff',
+                        }}
+                      >
+                        <SlidersHorizontal size={12} /> Adjust Stock
+                      </button>
+
+                      {/* Quick Restock (+ Add Stock) */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() =>
+                          setRestockItem({
+                            id: mat.id,
+                            name: mat.name,
+                            uom: mat.consumptionUom,
+                            conversion: mat.conversionFactor,
+                            purchaseUom: mat.purchaseUom,
+                          })
+                        }
+                        title={`Receive vendor delivery for ${mat.name}`}
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          color: '#16a34a',
+                          borderColor: '#bbf7d0',
+                          background: '#f0fdf4',
+                        }}
+                      >
+                        <ArrowUpRight size={13} /> + Add Stock
+                      </button>
+
+                      {/* Edit Specifications */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() =>
+                          setEditItem({
+                            id: mat.id,
+                            name: mat.name,
+                            category: mat.category,
+                            costPerPurchaseUom: mat.costPerPurchaseUom,
+                            reorderThreshold: mat.reorderThreshold,
+                          })
+                        }
+                        title="Edit ingredient specifications"
+                        style={{ padding: '0.35rem 0.5rem', color: '#475569' }}
+                      >
+                        <Edit2 size={13} />
+                      </button>
+
+                      {/* Delete Raw Material */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setDeleteConfirmItem(mat)}
+                        title={`Delete ${mat.name} from inventory`}
+                        style={{ padding: '0.35rem 0.5rem', color: '#dc2626', borderColor: '#fecaca' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -278,44 +420,269 @@ export const MasterInventoryView: React.FC = () => {
         </table>
       </div>
 
-      {/* QUICK RESTOCK MODAL */}
-      {restockItem && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '12px',
-              maxWidth: '460px',
-              width: '100%',
-              padding: '1.5rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: '#0f172a' }}>
-              Add Stock to Central Master
-            </h3>
-            <p style={{ margin: '0 0 1rem 0', fontSize: '0.875rem', color: '#64748b' }}>
-              Receiving vendor delivery for <strong>{restockItem.name}</strong>
-            </p>
+      {/* =========================================================================
+          MODAL 1: DIRECT STOCK ADJUSTMENT (e.g. Change Boba to 20 KG)
+          ========================================================================= */}
+      {adjustItem && (
+        <div className="outlet-modal-backdrop" onClick={() => setAdjustItem(null)} role="dialog" aria-modal="true">
+          <div className="outlet-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="outlet-modal-header">
+              <div className="outlet-modal-title">
+                <div className="outlet-modal-icon-badge">
+                  <SlidersHorizontal size={22} color="#0284c7" />
+                </div>
+                <div>
+                  <h3>Adjust Stock Balance</h3>
+                  <p>Update Central Commissary inventory for <strong>{adjustItem.material.name}</strong></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="outlet-modal-close-btn"
+                onClick={() => setAdjustItem(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-            <form onSubmit={handleQuickRestockSubmit}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                  Delivery Quantity ({restockItem.purchaseUom})
+            <form onSubmit={handleDirectAdjustSubmit} className="outlet-modal-form">
+              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Current Recorded Balance:</span>
+                <span style={{ fontWeight: 800, color: '#0f172a' }}>
+                  {(adjustItem.material.masterStock / adjustItem.material.conversionFactor).toFixed(1)} {adjustItem.material.purchaseUom} ({adjustItem.material.masterStock.toLocaleString()} {adjustItem.material.consumptionUom})
+                </span>
+              </div>
+
+              <div className="outlet-form-group">
+                <label htmlFor="adjust-qty">
+                  New Desired Balance ({adjustItem.material.purchaseUom}) <span className="req">*</span>
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    id="adjust-qty"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    className="inv-input"
+                    value={adjustItem.newBulkQuantity}
+                    onChange={(e) =>
+                      setAdjustItem({
+                        ...adjustItem,
+                        newBulkQuantity: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    style={{ fontSize: '1.1rem', fontWeight: 700 }}
+                  />
+                  <span style={{ fontWeight: 700, color: '#475569', minWidth: '40px' }}>
+                    {adjustItem.material.purchaseUom}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#0284c7', marginTop: '0.25rem' }}>
+                  Equals <strong>{(adjustItem.newBulkQuantity * adjustItem.material.conversionFactor).toLocaleString()} {adjustItem.material.consumptionUom}</strong> in Central Commissary
+                </div>
+              </div>
+
+              <div className="outlet-form-group">
+                <label htmlFor="adjust-reason">Audit Justification / Notes</label>
+                <input
+                  id="adjust-reason"
+                  type="text"
+                  placeholder="e.g. Physical inventory count correction or shrinkage write-off"
+                  value={adjustItem.reason}
+                  onChange={(e) => setAdjustItem({ ...adjustItem, reason: e.target.value })}
+                />
+              </div>
+
+              <div className="outlet-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setAdjustItem(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }}>
+                  ✓ Update Stock Balance
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 2: EDIT INGREDIENT SPECIFICATIONS
+          ========================================================================= */}
+      {editItem && (
+        <div className="outlet-modal-backdrop" onClick={() => setEditItem(null)} role="dialog" aria-modal="true">
+          <div className="outlet-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+            <div className="outlet-modal-header">
+              <div className="outlet-modal-title">
+                <div className="outlet-modal-icon-badge">
+                  <Edit2 size={22} color="#0284c7" />
+                </div>
+                <div>
+                  <h3>Edit Raw Material</h3>
+                  <p>Update specifications and purchase cost</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="outlet-modal-close-btn"
+                onClick={() => setEditItem(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="outlet-modal-form">
+              <div className="outlet-form-group">
+                <label htmlFor="edit-name">Raw Material Name</label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  required
+                  value={editItem.name}
+                  onChange={(e) => setEditItem({ ...editItem, name: e.target.value })}
+                />
+              </div>
+
+              <div className="outlet-form-row">
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="edit-category">Category</label>
+                  <select
+                    id="edit-category"
+                    value={editItem.category}
+                    onChange={(e) => setEditItem({ ...editItem, category: e.target.value as RawMaterialCategory })}
+                  >
+                    <option value="BOBA_TOPPINGS">Boba & Toppings</option>
+                    <option value="DAIRY">Dairy & Milk</option>
+                    <option value="TEA_BASE">Tea Base</option>
+                    <option value="SYRUPS">Syrups & Sugar</option>
+                    <option value="POWDERS">Powders & Mixes</option>
+                    <option value="PACKAGING">Cups & Packaging</option>
+                    <option value="SNACKS">Snacks & Sides</option>
+                    <option value="PROTEIN">Protein & Meats</option>
+                  </select>
+                </div>
+
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="edit-cost">Purchase Rate (₹)</label>
+                  <input
+                    id="edit-cost"
+                    type="number"
+                    min="1"
+                    required
+                    value={editItem.costPerPurchaseUom}
+                    onChange={(e) => setEditItem({ ...editItem, costPerPurchaseUom: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+
+              <div className="outlet-modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setEditItem(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }}>
+                  Save Specifications
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 3: DELETE CONFIRMATION
+          ========================================================================= */}
+      {deleteConfirmItem && (
+        <div className="outlet-modal-backdrop" onClick={() => setDeleteConfirmItem(null)} role="dialog" aria-modal="true">
+          <div className="outlet-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+            <div className="outlet-modal-header" style={{ background: '#fef2f2' }}>
+              <div className="outlet-modal-title">
+                <div className="outlet-modal-icon-badge" style={{ background: '#fee2e2' }}>
+                  <Trash2 size={22} color="#dc2626" />
+                </div>
+                <div>
+                  <h3 style={{ color: '#dc2626' }}>Delete Raw Material?</h3>
+                  <p>Permanent removal from inventory</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="outlet-modal-close-btn"
+                onClick={() => setDeleteConfirmItem(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.25rem', fontSize: '0.875rem', color: '#334155' }}>
+              Are you sure you want to delete <strong>{deleteConfirmItem.name}</strong> from the Central Commissary?
+              <div style={{ marginTop: '0.5rem', background: '#fff1f2', border: '1px solid #fecdd3', padding: '0.6rem 0.8rem', borderRadius: '8px', color: '#9f1239', fontSize: '0.8rem' }}>
+                ⚠️ This item will be removed from future recipes and stock transfer tracking.
+              </div>
+            </div>
+
+            <div className="outlet-modal-footer" style={{ padding: '1rem 1.25rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setDeleteConfirmItem(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={handleDeleteConfirm}
+                style={{ background: '#dc2626', borderColor: '#dc2626', color: '#ffffff' }}
+              >
+                Yes, Delete Material
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 4: QUICK RESTOCK (+ ADD STOCK)
+          ========================================================================= */}
+      {restockItem && (
+        <div className="outlet-modal-backdrop" onClick={() => setRestockItem(null)} role="dialog" aria-modal="true">
+          <div className="outlet-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div className="outlet-modal-header">
+              <div className="outlet-modal-title">
+                <div className="outlet-modal-icon-badge">
+                  <ArrowUpRight size={22} color="#16a34a" />
+                </div>
+                <div>
+                  <h3>Receive Inward Delivery</h3>
+                  <p>Log incoming vendor stock for <strong>{restockItem.name}</strong></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="outlet-modal-close-btn"
+                onClick={() => setRestockItem(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickRestockSubmit} className="outlet-modal-form">
+              <div className="outlet-form-group">
+                <label htmlFor="restock-qty">
+                  Delivery Quantity ({restockItem.purchaseUom}) <span className="req">*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input
+                    id="restock-qty"
                     type="number"
                     min="1"
                     className="inv-input"
@@ -328,20 +695,20 @@ export const MasterInventoryView: React.FC = () => {
                   </span>
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.35rem' }}>
-                  Equals +{(restockAmount * restockItem.conversion).toLocaleString()} {restockItem.uom} added to Master Stock
+                  Adds +{(restockAmount * restockItem.conversion).toLocaleString()} {restockItem.uom} to Central Commissary stock
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div className="outlet-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary"
                   onClick={() => setRestockItem(null)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 600 }}>
-                  Confirm & Add to Central Master
+                <button type="submit" className="btn btn-primary" style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+                  + Confirm & Add Stock
                 </button>
               </div>
             </form>
@@ -349,58 +716,50 @@ export const MasterInventoryView: React.FC = () => {
         </div>
       )}
 
-      {/* NEW MATERIAL MODAL */}
+      {/* =========================================================================
+          MODAL 5: NEW RAW MATERIAL
+          ========================================================================= */}
       {isNewMaterialOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '12px',
-              maxWidth: '520px',
-              width: '100%',
-              padding: '1.5rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: '#0f172a' }}>
-              ➕ Add New Raw Material to Master
-            </h3>
-            <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: '#64748b' }}>
-              Define ingredient specifications and initial bulk stock in the Central Commissary
-            </p>
-
-            <form onSubmit={handleCreateNewMaterial}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div className="outlet-modal-backdrop" onClick={() => setIsNewMaterialOpen(false)} role="dialog" aria-modal="true">
+          <div className="outlet-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="outlet-modal-header">
+              <div className="outlet-modal-title">
+                <div className="outlet-modal-icon-badge">
+                  <Package size={22} color="#0284c7" />
+                </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Material Name
+                  <h3>Add New Raw Material</h3>
+                  <p>Define ingredient specifications and initial stock</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="outlet-modal-close-btn"
+                onClick={() => setIsNewMaterialOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewMaterial} className="outlet-modal-form">
+              <div className="outlet-form-row">
+                <div className="outlet-form-group flex-2">
+                  <label htmlFor="new-mat-name">
+                    Material Name <span className="req">*</span>
                   </label>
                   <input
+                    id="new-mat-name"
                     type="text"
-                    className="inv-input"
                     placeholder="e.g. Alphonso Mango Puree"
                     value={newMatName}
                     onChange={(e) => setNewMatName(e.target.value)}
                     required
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Category
-                  </label>
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="new-mat-cat">Category</label>
                   <select
-                    className="inv-select"
+                    id="new-mat-cat"
                     value={newMatCategory}
                     onChange={(e) => setNewMatCategory(e.target.value as RawMaterialCategory)}
                   >
@@ -411,17 +770,16 @@ export const MasterInventoryView: React.FC = () => {
                     <option value="POWDERS">Powders & Mixes</option>
                     <option value="PACKAGING">Cups & Packaging</option>
                     <option value="SNACKS">Snacks & Sides</option>
+                    <option value="PROTEIN">Protein & Meats</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Purchase Unit (Vendor)
-                  </label>
+              <div className="outlet-form-row">
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="new-mat-puom">Purchase Unit (Vendor)</label>
                   <select
-                    className="inv-select"
+                    id="new-mat-puom"
                     value={newMatPurchaseUom}
                     onChange={(e) => setNewMatPurchaseUom(e.target.value as UomType)}
                   >
@@ -432,12 +790,10 @@ export const MasterInventoryView: React.FC = () => {
                     <option value="CAN">CAN</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Consumption Unit (Recipe)
-                  </label>
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="new-mat-cuom">Portion Unit (Recipe)</label>
                   <select
-                    className="inv-select"
+                    id="new-mat-cuom"
                     value={newMatConsumptionUom}
                     onChange={(e) => setNewMatConsumptionUom(e.target.value as UomType)}
                   >
@@ -448,28 +804,24 @@ export const MasterInventoryView: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Purchase Price (₹ per {newMatPurchaseUom})
-                  </label>
+              <div className="outlet-form-row">
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="new-mat-cost">Purchase Rate (₹ per {newMatPurchaseUom})</label>
                   <input
+                    id="new-mat-cost"
                     type="number"
                     min="1"
-                    className="inv-input"
                     value={newMatCost}
                     onChange={(e) => setNewMatCost(parseFloat(e.target.value) || 0)}
                     required
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    Initial Master Stock ({newMatConsumptionUom})
-                  </label>
+                <div className="outlet-form-group flex-1">
+                  <label htmlFor="new-mat-initial">Initial Stock ({newMatPurchaseUom})</label>
                   <input
+                    id="new-mat-initial"
                     type="number"
-                    min="1"
-                    className="inv-input"
+                    min="0"
                     value={newMatInitialStock}
                     onChange={(e) => setNewMatInitialStock(parseFloat(e.target.value) || 0)}
                     required
@@ -477,15 +829,19 @@ export const MasterInventoryView: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <div style={{ background: '#f0f9ff', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #bae6fd', fontSize: '0.8rem', color: '#0369a1' }}>
+                Conversion: 1 {newMatPurchaseUom} = {newMatConversion} {newMatConsumptionUom} • Initial: {(newMatInitialStock * newMatConversion).toLocaleString()} {newMatConsumptionUom}
+              </div>
+
+              <div className="outlet-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary"
                   onClick={() => setIsNewMaterialOpen(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary btn-sm" style={{ fontWeight: 600 }}>
+                <button type="submit" className="btn btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }}>
                   Create & Save Material
                 </button>
               </div>

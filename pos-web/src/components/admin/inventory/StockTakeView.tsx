@@ -46,10 +46,10 @@ export const StockTakeView: React.FC = () => {
         <div>
           <h3 className="inv-card-title">
             <Scale size={20} color="#0284c7" />
-            Sham Ka Hisaab (End-of-Day Physical Stock Take)
+            End-of-Day Physical Stock Take
           </h3>
           <p className="inv-card-subtitle">
-            Enter physical counts & weighed stock at store closing (Milk, Boba, Cups) to audit against POS billed consumption
+            Enter physical counts and weighed stock at store closing (Milk, Boba, Cups) to audit against POS billed consumption
           </p>
         </div>
 
@@ -60,7 +60,7 @@ export const StockTakeView: React.FC = () => {
             onClick={handleMatchAllSystem}
             style={{ fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
           >
-            <RotateCcw size={14} /> 🔄 Autofill Expected Counts
+            <RotateCcw size={14} /> Prefill System Counts
           </button>
           <button
             type="button"
@@ -68,7 +68,7 @@ export const StockTakeView: React.FC = () => {
             onClick={handleSubmit}
             style={{ fontSize: '0.8125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
           >
-            <ClipboardCheck size={16} /> ✓ Save Sham Ka Hisaab (Submit)
+            <ClipboardCheck size={16} /> Submit Daily Stock Take
           </button>
         </div>
       </div>
@@ -96,11 +96,11 @@ export const StockTakeView: React.FC = () => {
               <tr>
                 <th>Raw Material / Ingredient</th>
                 <th>Category</th>
-                <th>System Ka Hisaab (Expected Stock)</th>
-                <th>Store Me Asli Stock (Physical Count)</th>
-                <th>Portion UOM</th>
-                <th>Farak / Discrepancy (+ / -)</th>
-                <th>Quick Reset</th>
+                <th>Expected Theoretical Stock</th>
+                <th>Physical Weighed Count</th>
+                <th>Portion Unit</th>
+                <th>Variance / Discrepancy</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
