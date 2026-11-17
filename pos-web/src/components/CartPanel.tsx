@@ -21,6 +21,13 @@ interface CartPanelProps {
   onCancelRunningOrder?: () => void;
   onPrintBill?: () => void;
   onPrintKot?: () => void;
+  isKotSent?: boolean;
+  onRequireManagerVoid?: (item: {
+    id: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+  }) => void;
 }
 
 export const CartPanel: React.FC<CartPanelProps> = ({
@@ -43,6 +50,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   onCancelRunningOrder,
   onPrintBill,
   onPrintKot,
+  isKotSent = false,
+  onRequireManagerVoid,
 }) => {
   const [localCustomerName, setLocalCustomerName] = useState('');
   const [localCustomerPhone, setLocalCustomerPhone] = useState('');
@@ -70,6 +79,48 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const tax = backendCalculation?.taxAmount ?? (subtotal * 0.05);
   const total = backendCalculation?.totalAmount ?? (subtotal - discount + tax);
 
+  // Strict KOT item removal / reduction guard (Anti-Fraud Manager Approval)
+  const isLocked = isKotSent || Boolean(runningOrderId);
+
+  const handleItemMinus = (item: CartItem) => {
+    if (isLocked && onRequireManagerVoid) {
+      onRequireManagerVoid({
+        id: item.id,
+        name: item.product.name,
+        quantity: 1,
+        unitPrice: item.unitPrice,
+      });
+      return;
+    }
+    onUpdateQuantity(item.id, -1);
+  };
+
+  const handleItemDelete = (item: CartItem) => {
+    if (isLocked && onRequireManagerVoid) {
+      onRequireManagerVoid({
+        id: item.id,
+        name: item.product.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      });
+      return;
+    }
+    onRemoveItem(item.id);
+  };
+
+  const handleCartClear = () => {
+    if (isLocked && items.length > 0 && onRequireManagerVoid) {
+      onRequireManagerVoid({
+        id: 'cart-all',
+        name: `All Dispatched Items (${items.length} dishes)`,
+        quantity: items.reduce((sum, i) => sum + i.quantity, 0),
+        unitPrice: estimatedSubtotal,
+      });
+      return;
+    }
+    onClearCart();
+  };
+
   return (
     <aside className="retail-cart-panel" aria-label="Current Order Cart">
       {/* Top Header */}
@@ -85,9 +136,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             <span className="counter-status-pill">
               {orderType === 'DINE_IN' ? '● Table Active' : '● Counter #01'}
             </span>
+            {isLocked && (
+              <span className="kot-locked-indicator" title="KOT Dispatched to Kitchen. Modifying items requires Manager PIN.">
+                🔒 KOT Active
+              </span>
+            )}
           </div>
           {items.length > 0 && (
-            <button type="button" className="cart-clear-btn" onClick={onClearCart}>
+            <button type="button" className="cart-clear-btn" onClick={handleCartClear}>
               Clear
             </button>
           )}
@@ -206,7 +262,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               <div key={item.id} className="retail-item-row">
                 <div className="item-details">
                   <div className="item-title-row">
-                    <span className="item-name">{item.product.name}</span>
+                    <span className="item-name">
+                      {item.product.name}
+                      {isLocked && (
+                        <span className="cart-badge-locked" title="Dispatched to Kitchen. Modifying requires Manager PIN.">
+                          🔒 Sent
+                        </span>
+                      )}
+                    </span>
                     <span className="item-line-total">₹{item.lineTotal.toFixed(2)}</span>
                   </div>
 
@@ -238,8 +301,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       <button
                         type="button"
                         className="qty-circle-btn"
-                        onClick={() => onUpdateQuantity(item.id, -1)}
+                        onClick={() => handleItemMinus(item)}
                         aria-label={`Decrease ${item.product.name} quantity`}
+                        title={isLocked ? 'Strict KOT: Manager PIN required to reduce quantity' : undefined}
                       >
                         −
                       </button>
@@ -255,9 +319,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       <button
                         type="button"
                         className="item-delete-btn"
-                        onClick={() => onRemoveItem(item.id)}
+                        onClick={() => handleItemDelete(item)}
                         aria-label={`Remove ${item.product.name} from cart`}
-                        title="Remove item"
+                        title={isLocked ? 'Strict KOT: Manager PIN required to void item' : 'Remove item'}
                       >
                         ✕
                       </button>
@@ -355,11 +419,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
         <div className="cart-secondary-actions">
           <button
             type="button"
-            className="btn-secondary-tool"
+            className={`btn-secondary-tool ${isLocked ? 'kot-sent-active' : ''}`}
             onClick={onPrintKot || onReviewOrder}
-            title="Preview / Print Kitchen Order Ticket"
+            title={isKotSent ? 'Reprint duplicate KOT copy (Anti-fraud watermark logged)' : 'Send order ticket to kitchen'}
           >
-            👨‍🍳 Print KOT
+            {isKotSent ? '👨‍🍳 Reprint KOT (Duplicate)' : '👨‍🍳 Send KOT to Kitchen'}
           </button>
           <button
             type="button"

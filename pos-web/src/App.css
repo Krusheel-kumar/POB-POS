@@ -1492,3 +1492,45 @@
   from { opacity: 0; transform: translateY(-3px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Anti-Fraud KOT Lock & Status Indicators */
+.kot-locked-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  animation: pulseLock 2s infinite ease-in-out;
+}
+
+@keyframes pulseLock {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+
+.cart-badge-locked {
+  display: inline-flex;
+  align-items: center;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.btn-secondary-tool.kot-sent-active {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border-color: #fcd34d !important;
+  font-weight: 700 !important;
+}
+

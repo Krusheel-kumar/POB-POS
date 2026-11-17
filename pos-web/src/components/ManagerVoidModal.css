@@ -1,0 +1,240 @@
+/* Manager Void Authorization Modal Styles */
+.void-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2100;
+  padding: 16px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.void-modal-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+  animation: scaleUp 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.void-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #ffffff;
+}
+
+.void-title-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.void-shield-icon {
+  font-size: 1.6rem;
+}
+
+.void-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+.void-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.void-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s;
+}
+
+.void-close-btn:hover {
+  color: #ffffff;
+}
+
+.void-modal-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.void-item-banner {
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.void-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.void-item-name {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.void-item-amt {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #dc2626;
+}
+
+.void-item-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: #64748b;
+  align-items: center;
+}
+
+.void-warning-callout {
+  display: flex;
+  gap: 10px;
+  background-color: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.callout-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.callout-text {
+  font-size: 0.78rem;
+  color: #9a3412;
+  line-height: 1.4;
+}
+
+.void-error-box {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+  color: #991b1b;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.void-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.void-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pin-hint {
+  font-size: 0.72rem;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.void-input,
+.void-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+  background-color: #ffffff;
+  transition: all 0.15s;
+}
+
+.void-input:focus,
+.void-select:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+.pin-input {
+  letter-spacing: 4px;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.void-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.void-btn-cancel {
+  padding: 9px 16px;
+  border: 1px solid #cbd5e1;
+  background-color: #f1f5f9;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.void-btn-cancel:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.void-btn-confirm {
+  padding: 9px 18px;
+  border: none;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+  transition: all 0.15s;
+}
+
+.void-btn-confirm:hover {
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+}

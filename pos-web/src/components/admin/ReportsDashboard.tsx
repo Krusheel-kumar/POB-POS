@@ -35,7 +35,7 @@ import {
   MOCK_DAILY_SUMMARY,
   MOCK_HOURLY_SALES,
   MOCK_ITEM_MATRIX,
-  MOCK_VOID_AUDIT_LOG,
+  getVoidAuditLogs,
   formatINR,
   type ItemMatrixRecord,
 } from '../../lib/mockReportsData';
@@ -670,84 +670,94 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
           </div>
 
           {/* Quick Void Metrics */}
-          <div className="kpi-grid" style={{ marginBottom: '1.5rem' }}>
-            <div className="kpi-card" style={{ borderLeft: '4px solid #dc2626' }}>
-              <div className="kpi-card-header">
-                <span className="kpi-card-title">Total Void Incidents</span>
-                <ShieldAlert size={18} color="#dc2626" />
-              </div>
-              <div className="kpi-card-value">{MOCK_VOID_AUDIT_LOG.length}</div>
-              <div className="kpi-card-subtitle">
-                <span>Authorized by manager PIN</span>
-              </div>
-            </div>
+          {(() => {
+            const voidLogs = getVoidAuditLogs();
+            const totalVoidValue = voidLogs.reduce((sum, item) => sum + item.amount, 0);
+            const highestVoid = voidLogs.length > 0 ? Math.max(...voidLogs.map((i) => i.amount)) : 0;
 
-            <div className="kpi-card" style={{ borderLeft: '4px solid #ef4444' }}>
-              <div className="kpi-card-header">
-                <span className="kpi-card-title">Total Voided Value</span>
-                <TrendingDown size={18} color="#ef4444" />
-              </div>
-              <div className="kpi-card-value">
-                {formatINR(MOCK_VOID_AUDIT_LOG.reduce((sum, item) => sum + item.amount, 0))}
-              </div>
-              <div className="kpi-card-subtitle">
-                <span>1.2% of daily gross turnover</span>
-              </div>
-            </div>
+            return (
+              <>
+                <div className="kpi-grid" style={{ marginBottom: '1.5rem' }}>
+                  <div className="kpi-card" style={{ borderLeft: '4px solid #dc2626' }}>
+                    <div className="kpi-card-header">
+                      <span className="kpi-card-title">Total Void Incidents</span>
+                      <ShieldAlert size={18} color="#dc2626" />
+                    </div>
+                    <div className="kpi-card-value">{voidLogs.length}</div>
+                    <div className="kpi-card-subtitle">
+                      <span>Authorized by manager PIN</span>
+                    </div>
+                  </div>
 
-            <div className="kpi-card" style={{ borderLeft: '4px solid #f59e0b' }}>
-              <div className="kpi-card-header">
-                <span className="kpi-card-title">Highest Void</span>
-                <Flame size={18} color="#f59e0b" />
-              </div>
-              <div className="kpi-card-value">₹720</div>
-              <div className="kpi-card-subtitle">
-                <span>Takeaway Left Without Pick</span>
-              </div>
-            </div>
-          </div>
+                  <div className="kpi-card" style={{ borderLeft: '4px solid #ef4444' }}>
+                    <div className="kpi-card-header">
+                      <span className="kpi-card-title">Total Voided Value</span>
+                      <TrendingDown size={18} color="#ef4444" />
+                    </div>
+                    <div className="kpi-card-value">
+                      {formatINR(totalVoidValue)}
+                    </div>
+                    <div className="kpi-card-subtitle">
+                      <span>1.2% of daily gross turnover</span>
+                    </div>
+                  </div>
 
-          {/* Audit Data Table */}
-          <div className="data-table-wrapper">
-            <table className="reports-data-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Order / Ref</th>
-                  <th>Item Cancelled</th>
-                  <th>Qty & Value</th>
-                  <th>Original Waiter</th>
-                  <th>Authorizing Manager</th>
-                  <th>Cancellation Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_VOID_AUDIT_LOG.map((record) => (
-                  <tr key={record.id}>
-                    <td style={{ fontWeight: 600, color: '#475569', fontSize: '0.8125rem' }}>
-                      {record.time}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{record.orderNumber}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{record.tableNumber}</div>
-                    </td>
-                    <td style={{ fontWeight: 600, color: '#b91c1c' }}>{record.item}</td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: '#0f172a' }}>{formatINR(record.amount)}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Qty: {record.qty}</div>
-                    </td>
-                    <td style={{ color: '#334155', fontWeight: 500 }}>{record.originalWaiter}</td>
-                    <td>
-                      <span className="pin-masked-tag">PIN: {record.managerPin}</span>
-                    </td>
-                    <td>
-                      <span className="reason-tag">{record.reason}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  <div className="kpi-card" style={{ borderLeft: '4px solid #f59e0b' }}>
+                    <div className="kpi-card-header">
+                      <span className="kpi-card-title">Highest Void</span>
+                      <Flame size={18} color="#f59e0b" />
+                    </div>
+                    <div className="kpi-card-value">₹{highestVoid}</div>
+                    <div className="kpi-card-subtitle">
+                      <span>Highest single cancelled item</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audit Data Table */}
+                <div className="data-table-wrapper">
+                  <table className="reports-data-table">
+                    <thead>
+                      <tr>
+                        <th>Timestamp</th>
+                        <th>Order / Ref</th>
+                        <th>Item Cancelled</th>
+                        <th>Qty & Value</th>
+                        <th>Original Waiter</th>
+                        <th>Authorizing Manager</th>
+                        <th>Cancellation Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {voidLogs.map((record) => (
+                        <tr key={record.id}>
+                          <td style={{ fontWeight: 600, color: '#475569', fontSize: '0.8125rem' }}>
+                            {record.time}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{record.orderNumber}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{record.tableNumber}</div>
+                          </td>
+                          <td style={{ fontWeight: 600, color: '#b91c1c' }}>{record.item}</td>
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{formatINR(record.amount)}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Qty: {record.qty}</div>
+                          </td>
+                          <td style={{ color: '#334155', fontWeight: 500 }}>{record.originalWaiter}</td>
+                          <td>
+                            <span className="pin-masked-tag">PIN: {record.managerPin}</span>
+                          </td>
+                          <td>
+                            <span className="reason-tag">{record.reason}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 

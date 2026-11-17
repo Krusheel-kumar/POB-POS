@@ -197,3 +197,52 @@ export const formatINR = (value: number, includeDecimals = false): string => {
     minimumFractionDigits: includeDecimals ? 2 : 0,
   }).format(value);
 };
+
+const STORAGE_VOID_KEY = 'pob_void_audit_logs';
+
+export function getVoidAuditLogs(): VoidAuditRecord[] {
+  if (typeof window === 'undefined') return MOCK_VOID_AUDIT_LOG;
+  try {
+    const raw = localStorage.getItem(STORAGE_VOID_KEY);
+    if (!raw) return MOCK_VOID_AUDIT_LOG;
+    return JSON.parse(raw);
+  } catch {
+    return MOCK_VOID_AUDIT_LOG;
+  }
+}
+
+export function recordVoidAuditLog(entry: {
+  item: string;
+  qty: number;
+  amount: number;
+  originalWaiter: string;
+  managerPin: string;
+  reason: string;
+  orderNumber: string;
+  tableNumber: string;
+}): VoidAuditRecord {
+  const current = getVoidAuditLogs();
+  const timeFormatted = new Date().toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const newRecord: VoidAuditRecord = {
+    id: `void-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    time: timeFormatted,
+    ...entry,
+    managerPin: `****${entry.managerPin.slice(-4) || '1234'}`,
+  };
+
+  const updated = [newRecord, ...current];
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_VOID_KEY, JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.warn('Failed to save void log to storage:', e);
+  }
+
+  return newRecord;
+}

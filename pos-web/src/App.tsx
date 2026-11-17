@@ -27,6 +27,8 @@ import { KitchenDisplay } from './components/KitchenDisplay';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { ReceiptModal } from './components/ReceiptModal';
 import { AddProductModal } from './components/AddProductModal';
+import { ManagerVoidModal, type VoidItemDetails } from './components/ManagerVoidModal';
+import { recordVoidAuditLog } from './lib/mockReportsData';
 import { posApiClient } from './api/posApiClient';
 import { mockStore } from './data/mockStore';
 import './App.css';
@@ -86,6 +88,10 @@ export function App() {
   const [isReviewOpen, setIsReviewOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [orderSuccessMessage, setOrderSuccessMessage] = useState<string | null>(null);
+
+  // Strict KOT Anti-Fraud Lock and Manager Void State
+  const [isKotSent, setIsKotSent] = useState<boolean>(false);
+  const [voidTarget, setVoidTarget] = useState<VoidItemDetails | null>(null);
 
   // Backend calculation state (null indicates fallback local estimate)
   const [backendCalculation, setBackendCalculation] = useState<CalculationResponse | null>(null);
@@ -241,6 +247,46 @@ export function App() {
     setCustomerPhone('');
     setBackendCalculation(null);
     setRunningOrder(null);
+    setIsKotSent(false);
+  };
+
+  const handleConfirmVoid = (reason: string, notes: string, managerPin: string) => {
+    if (!voidTarget) return;
+
+    if (voidTarget.id === 'cart-all') {
+      setCartItems([]);
+      setIsKotSent(false);
+    } else {
+      setCartItems((prev) =>
+        prev
+          .map((item) => {
+            if (item.id === voidTarget.id) {
+              const newQty = item.quantity - voidTarget.quantity;
+              return newQty > 0
+                ? { ...item, quantity: newQty, lineTotal: item.unitPrice * newQty }
+                : null;
+            }
+            return item;
+          })
+          .filter((item): item is CartItem => item !== null)
+      );
+    }
+
+    recordVoidAuditLog({
+      item: voidTarget.name,
+      qty: voidTarget.quantity,
+      amount: voidTarget.unitPrice * voidTarget.quantity,
+      originalWaiter: 'Cashier JD (POS-1)',
+      managerPin,
+      reason: notes ? `${reason} (${notes})` : reason,
+      orderNumber: lastPlacedOrder?.orderNumber || (runningOrder ? runningOrder.orderNumber : 'ORD-2026-LIVE'),
+      tableNumber: selectedTable ? `Table #${selectedTable.tableNumber}` : 'Counter Pickup',
+    });
+
+    const voidedName = voidTarget.name;
+    setVoidTarget(null);
+    setOrderSuccessMessage(`🛡️ Void authorized by Manager (PIN: ${managerPin}) for "${voidedName}". Logged to Anti-Fraud Audit.`);
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
   };
 
   // Table Selection & Actions
@@ -383,6 +429,7 @@ export function App() {
         setCustomerNotes('');
         setBackendCalculation(null);
         setRunningOrder(null);
+        setIsKotSent(false);
         await loadTables();
         setTimeout(() => setOrderSuccessMessage(null), 6000);
       } catch (err: unknown) {
@@ -422,6 +469,7 @@ export function App() {
       setCartItems([]);
       setCustomerNotes('');
       setBackendCalculation(null);
+      setIsKotSent(false);
       await loadTables();
 
       // Cashier flow: Pay First (COUNTER / TAKEAWAY / PAY_FIRST policy) opens payment immediately;
@@ -516,6 +564,7 @@ export function App() {
   };
 
   const handlePrintKot = async (orderId?: string) => {
+    setIsKotSent(true);
     let orderToPrint: Order | null = null;
     if (orderId) {
       try {
@@ -1080,6 +1129,8 @@ export function App() {
             selectedTableNumber={orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : null}
             runningOrderId={runningOrder ? runningOrder.id : null}
             onCancelRunningOrder={() => setRunningOrder(null)}
+            isKotSent={isKotSent}
+            onRequireManagerVoid={(details) => setVoidTarget(details)}
           />
         </div>
       )}
@@ -1146,6 +1197,14 @@ export function App() {
         onDeleteAddOn={handleDeleteAddOn}
         onClearCatalog={handleClearCatalog}
         onLoadSampleCatalog={handleLoadSampleCatalog}
+      />
+
+      {/* Strict Anti-Fraud Manager Approval Modal for Voiding KOT Items */}
+      <ManagerVoidModal
+        isOpen={Boolean(voidTarget)}
+        onClose={() => setVoidTarget(null)}
+        item={voidTarget}
+        onConfirmVoid={handleConfirmVoid}
       />
     </div>
   );
