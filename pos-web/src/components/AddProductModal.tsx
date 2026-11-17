@@ -25,6 +25,7 @@ export interface AddProductModalProps {
   onClearCatalog?: () => Promise<void>;
   onLoadSampleCatalog?: () => Promise<void>;
   initialTab?: 'category' | 'addons' | 'product';
+  initialCategoryId?: string;
 }
 
 const DEFAULT_MODIFIER_GROUPS = [
@@ -57,6 +58,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   onClearCatalog,
   onLoadSampleCatalog,
   initialTab = 'product',
+  initialCategoryId,
 }) => {
   const [activeTab, setActiveTab] = useState<'product' | 'category' | 'addons'>(
     categories.length === 0 ? 'category' : initialTab
@@ -68,7 +70,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   // --- Product Form State ---
   const [prodName, setProdName] = useState('');
   const [prodPrice, setProdPrice] = useState<number | ''>('');
-  const [selectedCatId, setSelectedCatId] = useState(categories[0]?.id || '');
+  const [selectedCatId, setSelectedCatId] = useState(
+    initialCategoryId || categories[0]?.id || ''
+  );
   const [selectedSubcat, setSelectedSubcat] = useState('');
   const [customSubcatInput, setCustomSubcatInput] = useState('');
   const [isAddingCustomSubcat, setIsAddingCustomSubcat] = useState(false);
@@ -105,6 +109,11 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     } else {
       setProdName('');
       setProdPrice('');
+      if (initialCategoryId && categories.some((c) => c.id === initialCategoryId)) {
+        setSelectedCatId(initialCategoryId);
+      } else if (categories.length > 0) {
+        setSelectedCatId(categories[0].id);
+      }
       setCustomSubcatInput('');
       setIsAddingCustomSubcat(false);
       setProdImageUrl('');
@@ -114,7 +123,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         setSelectedGroupNames(allGroups);
       }
     }
-  }, [editingProduct, isOpen]);
+  }, [editingProduct, isOpen, initialCategoryId]);
 
   // --- Category Form State ---
   const [catName, setCatName] = useState('');

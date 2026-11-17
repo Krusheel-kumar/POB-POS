@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import type { ProductCategory, Product, AddOn, CategoryRequest, ProductRequest, AddOnRequest } from '../../types/pos';
 import { AddProductModal } from '../AddProductModal';
+import './AdminMenuManagement.css';
 
 interface AdminMenuManagementProps {
   categories: ProductCategory[];
@@ -40,6 +41,12 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'addons'>('products');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Petpooja 2-column menu layout states
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('ALL');
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
+  const [hideEmptyCategories, setHideEmptyCategories] = useState(false);
 
   // Selected item for Edit modal
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -110,6 +117,66 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     if (filterAddOnCat === 'ALL') return addOns;
     return addOns.filter((a) => (a.category || 'Choice Of Size') === filterAddOnCat);
   }, [addOns, filterAddOnCat]);
+
+  // Petpooja: Count items per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    products.forEach((p) => {
+      const catId = p.category?.id || 'uncategorized';
+      counts[catId] = (counts[catId] || 0) + 1;
+    });
+    return counts;
+  }, [products]);
+
+  // Petpooja: Filtered categories respecting hideEmptyCategories
+  const visibleCategories = useMemo(() => {
+    if (!hideEmptyCategories) return categories;
+    return categories.filter((c) => (categoryCounts[c.id] || 0) > 0);
+  }, [categories, hideEmptyCategories, categoryCounts]);
+
+  // Petpooja: Active category object
+  const activeCategoryObj = useMemo(() => {
+    if (selectedCategoryId === 'ALL') return null;
+    return categories.find((c) => c.id === selectedCategoryId) || null;
+  }, [categories, selectedCategoryId]);
+
+  // Petpooja: Subcategories available in active category
+  const activeSubcategories = useMemo(() => {
+    if (!activeCategoryObj) {
+      const allSubcats = products
+        .map((p) => p.subcategory)
+        .filter((s): s is string => !!s);
+      return Array.from(new Set(allSubcats));
+    }
+    const fromCat = activeCategoryObj.subcategories || [];
+    const fromProds = products
+      .filter((p) => p.category?.id === activeCategoryObj.id && p.subcategory)
+      .map((p) => p.subcategory!);
+    return Array.from(new Set([...fromCat, ...fromProds]));
+  }, [activeCategoryObj, products]);
+
+  // Petpooja: Filtered products list for table
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedCategoryId !== 'ALL' && p.category?.id !== selectedCategoryId) {
+        return false;
+      }
+      if (selectedSubcategory !== 'ALL' && p.subcategory !== selectedSubcategory) {
+        return false;
+      }
+      if (menuSearchQuery.trim()) {
+        const q = menuSearchQuery.toLowerCase();
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchSku = p.sku?.toLowerCase().includes(q);
+        const matchDesc = p.description?.toLowerCase().includes(q);
+        const matchSubcat = p.subcategory?.toLowerCase().includes(q);
+        if (!matchName && !matchSku && !matchDesc && !matchSubcat) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [products, selectedCategoryId, selectedSubcategory, menuSearchQuery]);
 
   // Handlers
   const handleCreateCategory = async (e: React.FormEvent) => {
@@ -264,13 +331,16 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       {/* ========================================================
           PRODUCTS TAB
          ======================================================== */}
+      {/* ========================================================
+          PRODUCTS TAB (PETPOOJA 2-COLUMN CATEGORY & ITEM LAYOUT)
+         ======================================================== */}
       {activeTab === 'products' && (
-        <div className="admin-card">
+        <div className="admin-card" style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
               <h3 style={{ margin: 0 }}>Catalog Products</h3>
               <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                Manage menu items, sizes, and linked customization add-ons (Choice Of Size, Sweetness, Boba, etc.)
+                Select a category on the left to view or add items. Modifiers, toppings, and gapless billing are instantly synchronized.
               </p>
             </div>
             <div className="admin-header-actions">
@@ -290,132 +360,368 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
             </div>
           </div>
 
-          {isLoading ? (
-            <div className="loading-spinner">Loading products...</div>
-          ) : products.length === 0 ? (
-            <div className="empty-state">No products found. Click "+ Add Product" to add one.</div>
-          ) : (
-            <div className="admin-table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Category</th>
-                    <th>Base Price</th>
-                    <th>Variants</th>
-                    <th>Attached Choices & Add-ons</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {p.imageUrl ? (
-                            <img
-                              src={p.imageUrl}
-                              alt={p.name}
-                              style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, border: '1px solid #e2e8f0' }}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-                              🧋
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong>{p.name}</strong>
-                              {p.badge && (
-                                <span className="product-addon-mini-tag" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 600 }}>
-                                  {p.badge}
-                                </span>
-                              )}
-                            </div>
-                            {p.sku && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SKU: {p.sku}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div>{p.category?.name || '-'}</div>
-                        {p.subcategory && (
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{p.subcategory}</div>
-                        )}
-                      </td>
-                      <td>
-                        <strong style={{ color: '#0f172a' }}>₹{p.basePrice.toFixed(2)}</strong>
-                      </td>
-                      <td>{p.variants?.length ? `${p.variants.length} variant(s)` : 'None'}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div className="product-addon-badges">
-                            {p.addOns && p.addOns.length > 0 ? (
-                              p.addOns.slice(0, 3).map((a) => (
-                                <span key={a.id} className="product-addon-mini-tag" title={a.name}>
-                                  {a.name} ({a.price > 0 ? `+₹${a.price}` : '₹0'})
-                                </span>
-                              ))
-                            ) : (
-                              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>No choices linked</span>
-                            )}
-                            {p.addOns && p.addOns.length > 3 && (
-                              <span className="product-addon-mini-tag" style={{ background: '#e0e7ff', color: '#3730a3' }}>
-                                +{p.addOns.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                          {onUpdateProductAddOns && (
-                            <button
-                              type="button"
-                              className="btn-manage-addons"
-                              onClick={() => handleOpenProductAddOns(p)}
-                              title="Assign or remove size & add-on choices for this item"
-                            >
-                              ⚙️ Manage Add-ons ({p.addOns?.length || 0})
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`badge ${p.isActive ? 'badge-success' : 'badge-neutral'}`}>
-                          {p.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ fontWeight: 600, padding: '0.3rem 0.6rem' }}
-                            onClick={() => {
-                              setEditingProduct(p);
-                              setShowProductModal(true);
-                            }}
-                            title="Edit product name, price, toppings, and photo"
-                          >
-                            ✏️ Edit
-                          </button>
-                          {p.isActive && (
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              onClick={() => onDeactivateProduct(p.id)}
-                            >
-                              Deactivate
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="petpooja-menu-layout">
+            {/* LEFT: Categories Sidebar */}
+            <div className="petpooja-category-sidebar">
+              <div className="category-sidebar-header">
+                <div className="category-sidebar-title">
+                  <span>Categories</span>
+                  <span className="category-sidebar-count">{categories.length}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-add-category-mini"
+                  onClick={() => setShowCategoryModal(true)}
+                  title="Create a new Category"
+                >
+                  + Add Category
+                </button>
+              </div>
+
+              <div className="category-sidebar-toggle">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={hideEmptyCategories}
+                    onChange={(e) => setHideEmptyCategories(e.target.checked)}
+                  />
+                  <span>Hide empty categories</span>
+                </label>
+              </div>
+
+              <div className="category-sidebar-list">
+                <div
+                  className={`category-item-row ${selectedCategoryId === 'ALL' ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedCategoryId('ALL');
+                    setSelectedSubcategory('ALL');
+                  }}
+                >
+                  <span className="category-item-name">All Categories</span>
+                  <span className="category-item-badge">{products.length}</span>
+                </div>
+
+                {visibleCategories.map((c) => {
+                  const count = categoryCounts[c.id] || 0;
+                  const isSelected = selectedCategoryId === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      className={`category-item-row ${isSelected ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedCategoryId(c.id);
+                        setSelectedSubcategory('ALL');
+                      }}
+                      title={c.name}
+                    >
+                      <span className="category-item-name">{c.name}</span>
+                      <span className="category-item-badge">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )}
+
+            {/* RIGHT: Items & Actions Panel */}
+            <div className="petpooja-items-panel">
+              {/* Toolbar */}
+              <div className="petpooja-toolbar">
+                <div className="petpooja-toolbar-left">
+                  <div className="petpooja-search-box">
+                    <span>🔍</span>
+                    <input
+                      type="text"
+                      placeholder="Search items, SKU..."
+                      value={menuSearchQuery}
+                      onChange={(e) => setMenuSearchQuery(e.target.value)}
+                    />
+                    {menuSearchQuery && (
+                      <button
+                        type="button"
+                        className="btn-clear-search"
+                        onClick={() => setMenuSearchQuery('')}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+
+                  {activeSubcategories.length > 0 && (
+                    <div className="petpooja-subcat-pills">
+                      <button
+                        type="button"
+                        className={`subcat-pill ${selectedSubcategory === 'ALL' ? 'active' : ''}`}
+                        onClick={() => setSelectedSubcategory('ALL')}
+                      >
+                        All
+                      </button>
+                      {activeSubcategories.map((subcat) => (
+                        <button
+                          key={subcat}
+                          type="button"
+                          className={`subcat-pill ${selectedSubcategory === subcat ? 'active' : ''}`}
+                          onClick={() => setSelectedSubcategory(subcat)}
+                        >
+                          {subcat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="petpooja-toolbar-right">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm petpooja-add-btn"
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setShowProductModal(true);
+                    }}
+                  >
+                    + Add Items
+                  </button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="petpooja-table-wrapper">
+                {isLoading ? (
+                  <div className="loading-spinner">Loading items...</div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '3rem 1rem' }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#475569' }}>
+                      {selectedCategoryId === 'ALL'
+                        ? 'No products found. Click "+ Add Items" to add your first menu item!'
+                        : `No items in "${activeCategoryObj?.name || 'this category'}". Click "+ Add Items" to add items here.`}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm petpooja-add-btn"
+                      style={{ marginTop: '1rem', display: 'inline-flex' }}
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setShowProductModal(true);
+                      }}
+                    >
+                      + Add Item to {activeCategoryObj?.name || 'Menu'}
+                    </button>
+                  </div>
+                ) : (
+                  <table className="petpooja-table">
+                    <thead>
+                      <tr>
+                        <th>Name *</th>
+                        <th>Short Code *</th>
+                        <th>Price *</th>
+                        <th>Description</th>
+                        <th>Image</th>
+                        <th>Attached Choices</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((p) => {
+                        const isVeg = p.dietaryType === 'VEG' || p.dietaryType === 'VEGAN';
+                        const isNonVeg = p.dietaryType === 'NON_VEG';
+                        const hasVariants = (p.variants?.length || 0) > 0;
+                        const hasAddons = (p.addOns?.length || 0) > 0;
+
+                        return (
+                          <tr key={p.id}>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <span
+                                  className={
+                                    isVeg ? 'diet-dot-veg' : isNonVeg ? 'diet-dot-nonveg' : 'diet-dot-beverage'
+                                  }
+                                  title={p.dietaryType || 'BEVERAGE'}
+                                />
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <strong>{p.name}</strong>
+                                    {p.badge && (
+                                      <span
+                                        className="product-addon-mini-tag"
+                                        style={{ background: '#fef3c7', color: '#b45309', fontWeight: 600, fontSize: '0.7rem' }}
+                                      >
+                                        {p.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="petpooja-tags-row">
+                                    {hasVariants && <span className="petpooja-tag petpooja-tag-v" title="Item has size/sugar/ice variations">V+</span>}
+                                    {hasAddons && <span className="petpooja-tag petpooja-tag-a" title="Item has customizable add-on toppings">A</span>}
+                                    <span className="petpooja-tag petpooja-tag-o" title="Exposed in online ordering & POS">O</span>
+                                    {p.subcategory && (
+                                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>• {p.subcategory}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>
+                                {p.sku ? `SKU: ${p.sku}` : '-'}
+                              </span>
+                            </td>
+                            <td>
+                              <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
+                                ₹{p.basePrice.toFixed(2)}
+                              </strong>
+                            </td>
+                            <td style={{ maxWidth: '220px' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.8rem',
+                                  color: '#64748b',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                }}
+                                title={p.description || ''}
+                              >
+                                {p.description || '-'}
+                              </span>
+                            </td>
+                            <td>
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '6px',
+                                    objectFit: 'cover',
+                                    border: '1px solid #e2e8f0',
+                                  }}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: '38px',
+                                    height: '38px',
+                                    borderRadius: '6px',
+                                    background: '#f1f5f9',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '1.1rem',
+                                    border: '1px solid #e2e8f0',
+                                  }}
+                                >
+                                  🧋
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div className="product-addon-badges">
+                                  {p.addOns && p.addOns.length > 0 ? (
+                                    p.addOns.slice(0, 2).map((a) => (
+                                      <span key={a.id} className="product-addon-mini-tag" title={a.name}>
+                                        {a.name} ({a.price > 0 ? `+₹${a.price}` : '₹0'})
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>None linked</span>
+                                  )}
+                                  {p.addOns && p.addOns.length > 2 && (
+                                    <span
+                                      className="product-addon-mini-tag"
+                                      style={{ background: '#e0e7ff', color: '#3730a3' }}
+                                    >
+                                      +{p.addOns.length - 2} more
+                                    </span>
+                                  )}
+                                </div>
+                                {onUpdateProductAddOns && (
+                                  <button
+                                    type="button"
+                                    className="btn-manage-addons"
+                                    onClick={() => handleOpenProductAddOns(p)}
+                                    title="Assign or remove size & add-on choices for this item"
+                                  >
+                                    ⚙️ Add-ons ({p.addOns?.length || 0})
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`badge ${p.isActive ? 'badge-success' : 'badge-neutral'}`}>
+                                {p.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontWeight: 600, padding: '0.25rem 0.55rem', fontSize: '0.78rem' }}
+                                  onClick={() => {
+                                    setEditingProduct(p);
+                                    setShowProductModal(true);
+                                  }}
+                                  title="Edit product name, price, toppings, and photo"
+                                >
+                                  ✏️ Edit
+                                </button>
+                                {p.isActive && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    style={{ padding: '0.25rem 0.55rem', fontSize: '0.78rem' }}
+                                    onClick={() => onDeactivateProduct(p.id)}
+                                  >
+                                    Deactivate
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Petpooja Footer & Legend */}
+              <div className="petpooja-legend-footer">
+                <div className="petpooja-legend-items">
+                  <span style={{ fontWeight: 600, color: '#475569' }}>Legend:</span>
+                  <div className="petpooja-legend-item">
+                    <span className="petpooja-tag petpooja-tag-o">O</span>
+                    <span>Online & POS</span>
+                  </div>
+                  <div className="petpooja-legend-item">
+                    <span className="petpooja-tag petpooja-tag-v">V</span>
+                    <span>Variations</span>
+                  </div>
+                  <div className="petpooja-legend-item">
+                    <span className="petpooja-tag petpooja-tag-a">A</span>
+                    <span>Add-on Details</span>
+                  </div>
+                  <div className="petpooja-legend-item">
+                    <span className="diet-dot-veg" style={{ width: '10px', height: '10px' }} />
+                    <span>Veg</span>
+                  </div>
+                  <div className="petpooja-legend-item">
+                    <span className="diet-dot-nonveg" style={{ width: '10px', height: '10px' }} />
+                    <span>Non-Veg</span>
+                  </div>
+                </div>
+                <div>
+                  Showing {filteredProducts.length > 0 ? 1 : 0} to {filteredProducts.length} of {filteredProducts.length} records
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -863,8 +1169,12 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
         categories={categories}
         addOns={addOns}
         editingProduct={editingProduct}
+        initialCategoryId={selectedCategoryId !== 'ALL' ? selectedCategoryId : (categories[0]?.id || '')}
         onProductCreated={async (req) => {
           await onCreateProduct(req);
+          if (req.categoryId && req.categoryId !== selectedCategoryId && selectedCategoryId !== 'ALL') {
+            setSelectedCategoryId(req.categoryId);
+          }
           setSuccessMsg(`✓ Added "${req.name}" to menu`);
           setTimeout(() => setSuccessMsg(null), 4000);
         }}
