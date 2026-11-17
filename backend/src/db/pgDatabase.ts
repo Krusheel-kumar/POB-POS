@@ -66,6 +66,8 @@ export class PgDatabase {
 
     // Transform SQLite syntax to PostgreSQL where applicable
     sql = sql.replace(/datetime\('now'\)/gi, 'NOW()');
+    sql = sql.replace(/is_active\s*=\s*1\b/gi, 'is_active = true');
+    sql = sql.replace(/is_active\s*=\s*0\b/gi, 'is_active = false');
     sql = this.convertParamMarkers(sql);
 
     const res = await pool.query(sql, args);

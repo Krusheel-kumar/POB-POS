@@ -12,7 +12,11 @@ export async function catalogRoutes(fastify: FastifyInstance): Promise<void> {
       description: row.description ? String(row.description) : undefined,
       displayOrder: Number(row.display_order),
       isActive: Boolean(row.is_active),
-      subcategories: row.subcategories ? JSON.parse(String(row.subcategories)) : [],
+      subcategories: Array.isArray(row.subcategories)
+        ? row.subcategories
+        : (typeof row.subcategories === 'string' && row.subcategories.startsWith('[')
+            ? JSON.parse(row.subcategories)
+            : []),
     }));
     return reply.send(categories);
   });
@@ -84,7 +88,7 @@ export async function catalogRoutes(fastify: FastifyInstance): Promise<void> {
       const addonsRes = await db.execute({
         sql: `SELECT a.* FROM add_ons a
               INNER JOIN product_addons pa ON a.id = pa.addon_id
-              WHERE pa.product_id = ? AND a.is_active = 1`,
+              WHERE pa.product_id = ? AND a.is_active`,
         args: [row.id],
       });
 
