@@ -644,9 +644,26 @@ class MockStore {
     }
   }
 
+  public clearCatalog(): void {
+    if (typeof window === 'undefined') return;
+    this.setStorage('catalog_cleared', true);
+    this.setStorage('categories', []);
+    this.setStorage('products', []);
+    this.setStorage('addons', []);
+  }
+
+  public loadSampleCatalog(): void {
+    if (typeof window === 'undefined') return;
+    this.setStorage('catalog_cleared', false);
+    this.setStorage('categories', INITIAL_CATEGORIES);
+    this.setStorage('products', INITIAL_PRODUCTS);
+    this.setStorage('addons', INITIAL_ADDONS);
+  }
+
   // Categories
   public getCategories(): ProductCategory[] {
-    return this.getStorage('categories', INITIAL_CATEGORIES);
+    const isCleared = this.getStorage('catalog_cleared', false);
+    return this.getStorage('categories', isCleared ? [] : INITIAL_CATEGORIES);
   }
 
   public createCategory(name: string, description?: string, subcategories?: string[]): ProductCategory {
@@ -666,7 +683,11 @@ class MockStore {
 
   // Addons
   public getAddOns(): AddOn[] {
-    const list = this.getStorage('addons', INITIAL_ADDONS);
+    const isCleared = this.getStorage('catalog_cleared', false);
+    const list = this.getStorage('addons', isCleared ? [] : INITIAL_ADDONS);
+    if (isCleared) {
+      return list;
+    }
     let migrated = false;
 
     // Migrate existing add-ons to current categories and selectionTypes
@@ -753,7 +774,14 @@ class MockStore {
 
   // Products
   public getProducts(categoryId?: string): Product[] {
-    const list = this.getStorage('products', INITIAL_PRODUCTS);
+    const isCleared = this.getStorage('catalog_cleared', false);
+    const list = this.getStorage('products', isCleared ? [] : INITIAL_PRODUCTS);
+    if (isCleared) {
+      if (!categoryId || categoryId === 'cat-all') {
+        return list;
+      }
+      return list.filter((p) => p.category?.id === categoryId);
+    }
     const allAddons = this.getAddOns();
     let updated = false;
 

@@ -14,6 +14,8 @@ import type {
   Bill,
   PaymentMethod,
   Order,
+  AddOn,
+  AddOnRequest,
 } from './types/pos';
 import { ProductCard } from './components/ProductCard';
 import { ProductModal } from './components/ProductModal';
@@ -53,6 +55,7 @@ export function App() {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('cat-all');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -104,9 +107,10 @@ export function App() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const [catData, prodData] = await Promise.all([
+      const [catData, prodData, addOnData] = await Promise.all([
         posApiClient.getCategories(),
         posApiClient.getProducts(),
+        posApiClient.getAddOns(),
       ]);
       const allCategory: ProductCategory = {
         id: 'cat-all',
@@ -116,6 +120,7 @@ export function App() {
       };
       setCategories([allCategory, ...catData]);
       setProducts(prodData);
+      setAddOns(addOnData);
       await loadTables();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to connect to backend';
@@ -574,6 +579,36 @@ export function App() {
     setSelectedSubcategory('all');
     setOrderSuccessMessage(`📁 Category "${newCat.name}" created successfully!`);
     setTimeout(() => setOrderSuccessMessage(null), 5000);
+    return newCat;
+  };
+
+  const handleCreateAddOn = async (req: AddOnRequest) => {
+    const created = await posApiClient.createAddOn(req);
+    await loadCatalog();
+    return created;
+  };
+
+  const handleDeleteAddOn = async (id: string) => {
+    await posApiClient.deleteAddOn(id);
+    await loadCatalog();
+  };
+
+  const handleClearCatalog = async () => {
+    await posApiClient.clearCatalog();
+    await loadCatalog();
+    setSelectedCategoryId('cat-all');
+    setSelectedSubcategory('all');
+    setOrderSuccessMessage('🧹 Catalog cleared! Ready to add fresh categories, toppings & items.');
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
+  };
+
+  const handleLoadSampleCatalog = async () => {
+    await posApiClient.loadSampleCatalog();
+    await loadCatalog();
+    setSelectedCategoryId('cat-all');
+    setSelectedSubcategory('all');
+    setOrderSuccessMessage('📥 Sample demo catalog restored!');
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
   };
 
   useEffect(() => {
@@ -732,7 +767,29 @@ export function App() {
             style={{ background: '#ede9fe', color: '#6d28d9', borderColor: '#c4b5fd', fontWeight: 700 }}
             title="Create new menu items, categories, or subcategories"
           >
-            ✨ + Add Product
+            ✨ + Add Product / Menu Wizard
+          </button>
+          <button
+            type="button"
+            className="header-action-pill"
+            onClick={async () => {
+              if (window.confirm('Wipe all catalog items to start completely fresh for the demo?')) {
+                await handleClearCatalog();
+              }
+            }}
+            style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }}
+            title="Clear all catalog items to start fresh for demo"
+          >
+            🧹 Clean Slate
+          </button>
+          <button
+            type="button"
+            className="header-action-pill"
+            onClick={handleLoadSampleCatalog}
+            style={{ background: '#eef2ff', color: '#4f46e5', borderColor: '#c7d2fe', fontWeight: 700 }}
+            title="Restore sample demo catalog"
+          >
+            📥 Demo Menu
           </button>
           <span className="counter-active-badge">
             ● Counter #01
@@ -940,11 +997,37 @@ export function App() {
               </div>
             ) : filteredProducts.length === 0 ? (
               <div className="no-products-view">
-                <p>
-                  {apiError
-                    ? 'Unable to load catalog from server. Check backend connection.'
-                    : `No products found matching "${searchQuery}"`}
-                </p>
+                {categories.filter((c) => c.id !== 'cat-all').length === 0 ? (
+                  <div style={{ padding: '3rem 2rem', textAlign: 'center', background: '#ffffff', borderRadius: '18px', border: '2px dashed #cbd5e1', margin: '2rem auto', maxWidth: '580px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                    <div style={{ fontSize: '3.5rem', marginBottom: '0.85rem' }}>✨🧋</div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem' }}>Your POS Catalog is Empty (Clean Slate)</h3>
+                    <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '1.5rem' }}>
+                      Ready for the demo! Follow <strong>Operation Flow 1</strong> to create your Categories (e.g. <em>🧋 Boba Teas</em>), Topping Groups (e.g. <em>Choice of Size, Boba Toppings</em>), and Food Items live.
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddProductOpen(true)}
+                        style={{ background: '#6366f1', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '0.75rem 1.65rem', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)' }}
+                      >
+                        ✨ Launch 3-Step Setup Wizard
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLoadSampleCatalog}
+                        style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}
+                      >
+                        📥 Load Demo Menu
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p>
+                    {apiError
+                      ? 'Unable to load catalog from server. Check backend connection.'
+                      : `No products found matching "${searchQuery}"`}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="product-grid">
@@ -1040,13 +1123,18 @@ export function App() {
         customerPhone={receiptModal.customerPhone || customerPhone}
       />
 
-      {/* Add Product & Category Modal */}
+      {/* Add Product & Category Wizard Modal */}
       <AddProductModal
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         categories={categories.filter((c) => c.id !== 'cat-all')}
+        addOns={addOns}
         onProductCreated={handleCreateProduct}
         onCategoryCreated={handleCreateCategory}
+        onCreateAddOn={handleCreateAddOn}
+        onDeleteAddOn={handleDeleteAddOn}
+        onClearCatalog={handleClearCatalog}
+        onLoadSampleCatalog={handleLoadSampleCatalog}
       />
     </div>
   );

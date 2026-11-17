@@ -1,19 +1,33 @@
 import React, { useState } from 'react';
-import type { ProductCategory, DietaryType, ProductRequest, CategoryRequest } from '../types/pos';
+import type {
+  ProductCategory,
+  DietaryType,
+  ProductRequest,
+  CategoryRequest,
+  AddOn,
+  AddOnRequest,
+} from '../types/pos';
 import './AddProductModal.css';
 
-interface AddProductModalProps {
+export interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: ProductCategory[];
+  addOns?: AddOn[];
   onProductCreated: (req: ProductRequest) => Promise<void>;
-  onCategoryCreated: (req: CategoryRequest) => Promise<void>;
+  onCategoryCreated: (req: CategoryRequest) => Promise<ProductCategory>;
+  onCreateAddOn?: (req: AddOnRequest) => Promise<AddOn>;
+  onDeleteAddOn?: (id: string) => Promise<void>;
+  onClearCatalog?: () => Promise<void>;
+  onLoadSampleCatalog?: () => Promise<void>;
+  initialTab?: 'category' | 'addons' | 'product';
 }
 
 const PRESET_IMAGES = [
+  { label: '🧋 Boba Milk Tea', url: 'https://images.unsplash.com/photo-1558857563-b371f30ca6a5?w=500&auto=format&fit=crop&q=80' },
+  { label: '🧋 Taro Pearl Tea', url: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80' },
   { label: '🍔 Smash Burger', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&auto=format&fit=crop&q=80' },
   { label: '🍕 Wood Pizza', url: 'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=500&auto=format&fit=crop&q=80' },
-  { label: '🧋 Boba Milk Tea', url: 'https://images.unsplash.com/photo-1558857563-b371f30ca6a5?w=500&auto=format&fit=crop&q=80' },
   { label: '☕ Cold Coffee', url: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=500&auto=format&fit=crop&q=80' },
   { label: '🍟 Loaded Fries', url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&auto=format&fit=crop&q=80' },
   { label: '🍗 Spicy Wings', url: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500&auto=format&fit=crop&q=80' },
@@ -23,41 +37,82 @@ const PRESET_IMAGES = [
 
 const PRESET_BADGES = ['Bestseller', 'Chef Special', 'Festive', 'New Launch', 'Signature', 'Handcrafted', 'Popular'];
 
+const DEFAULT_TOPPING_GROUPS = [
+  'Choice Of Size',
+  'Choice Of Boba & Toppings',
+  'Choice Of Sweetness',
+  'Choice Of Ice Level',
+  'Choice Of Milk Base',
+  'Choice Of Dips & Cheeses',
+];
+
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
   categories,
+  addOns = [],
   onProductCreated,
   onCategoryCreated,
+  onCreateAddOn,
+  onDeleteAddOn,
+  onClearCatalog,
+  onLoadSampleCatalog,
+  initialTab = 'product',
 }) => {
-  const [activeTab, setActiveTab] = useState<'product' | 'category'>('product');
+  const [activeTab, setActiveTab] = useState<'category' | 'addons' | 'product'>(
+    categories.length === 0 ? 'category' : initialTab
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
-  // Tab 1: Product Form State
+  // --- Step 1: Category State ---
+  const [catName, setCatName] = useState('');
+  const [catDesc, setCatDesc] = useState('');
+  const [subcatList, setSubcatList] = useState<string[]>(['Milk Teas', 'Fruit Teas', 'Cheese Foam']);
+  const [newSubcatInput, setNewSubcatInput] = useState('');
+
+  // --- Step 2: Topping Groups & Choices State ---
+  const [groupNameInput, setGroupNameInput] = useState('Choice Of Size');
+  const [customGroupName, setCustomGroupName] = useState('');
+  const [groupSelectionType, setGroupSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE');
+  const [choiceName, setChoiceName] = useState('');
+  const [choicePrice, setChoicePrice] = useState<number | ''>(0);
+
+  // --- Step 3: Product Form State ---
   const [prodName, setProdName] = useState('');
   const [prodPrice, setProdPrice] = useState<number | ''>('');
   const [selectedCatId, setSelectedCatId] = useState(categories[0]?.id || '');
   const [selectedSubcat, setSelectedSubcat] = useState('');
   const [customSubcat, setCustomSubcat] = useState('');
-  const [dietaryType, setDietaryType] = useState<DietaryType>('VEG');
+  const [dietaryType, setDietaryType] = useState<DietaryType>('BEVERAGE');
   const [prodDesc, setProdDesc] = useState('');
   const [prodSku, setProdSku] = useState('');
   const [badge, setBadge] = useState('Bestseller');
-  const [prepTime, setPrepTime] = useState(8);
+  const [prepTime, setPrepTime] = useState(5);
   const [imageUrl, setImageUrl] = useState(PRESET_IMAGES[0].url);
-
-  // Tab 2: Category Form State
-  const [catName, setCatName] = useState('');
-  const [catDesc, setCatDesc] = useState('');
-  const [subcatList, setSubcatList] = useState<string[]>(['Signature', 'Classic', 'Specialty']);
-  const [newSubcatInput, setNewSubcatInput] = useState('');
+  // Group selection mapping: which topping groups are mapped to this product
+  const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>(['Choice Of Size', 'Choice Of Boba & Toppings']);
 
   if (!isOpen) return null;
+
+  // Group add-ons by their category name
+  const existingGroupNames = Array.from(
+    new Set([
+      ...DEFAULT_TOPPING_GROUPS,
+      ...addOns.map((a) => a.category || 'Choice Of Size'),
+    ])
+  );
+
+  const addOnsByGroup: Record<string, AddOn[]> = {};
+  existingGroupNames.forEach((grp) => {
+    addOnsByGroup[grp] = addOns.filter((a) => a.category === grp);
+  });
 
   const currentCategory = categories.find((c) => c.id === selectedCatId) || categories[0];
   const availableSubcategories = currentCategory?.subcategories || [];
 
+  // Add subcategory tag
   const handleAddSubcatTag = () => {
     const trimmed = newSubcatInput.trim();
     if (trimmed && !subcatList.includes(trimmed)) {
@@ -70,9 +125,96 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     setSubcatList(subcatList.filter((s) => s !== tag));
   };
 
+  // Submit Category
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessNotice(null);
+
+    if (!catName.trim()) {
+      setErrorMsg('Category name is required (e.g. 🧋 Boba Teas, 🍔 Burgers)');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const created = await onCategoryCreated({
+        name: catName.trim(),
+        description: catDesc.trim() || undefined,
+        subcategories: subcatList.length > 0 ? subcatList : undefined,
+      });
+
+      setSelectedCatId(created.id);
+      setSuccessNotice(`✅ Category "${created.name}" created with ${subcatList.length} subcategories!`);
+      setCatName('');
+      setCatDesc('');
+      setSubcatList(['Classic', 'Specialty']);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create category');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Submit Choice into a Topping Group
+  const handleAddChoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessNotice(null);
+
+    const targetGroup = customGroupName.trim() || groupNameInput.trim();
+    if (!targetGroup) {
+      setErrorMsg('Please specify a Topping / Add-on Category name');
+      return;
+    }
+    if (!choiceName.trim()) {
+      setErrorMsg('Choice name is required (e.g. Regular 300ml, Large 500ml, Tapioca Pearls)');
+      return;
+    }
+
+    if (!onCreateAddOn) {
+      setErrorMsg('Add-on creation is not supported in this view');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await onCreateAddOn({
+        name: choiceName.trim(),
+        price: Number(choicePrice) || 0,
+        category: targetGroup,
+        selectionType: groupSelectionType,
+      });
+
+      // Auto-include in mapped groups for step 3
+      if (!selectedGroupNames.includes(targetGroup)) {
+        setSelectedGroupNames([...selectedGroupNames, targetGroup]);
+      }
+
+      setSuccessNotice(`✅ Added choice "${res.name}" (+₹${res.price}) to group "${targetGroup}"!`);
+      setChoiceName('');
+      setChoicePrice(0);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to add choice');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Toggle Topping Group mapping for Product
+  const toggleGroupMapping = (group: string) => {
+    if (selectedGroupNames.includes(group)) {
+      setSelectedGroupNames(selectedGroupNames.filter((g) => g !== group));
+    } else {
+      setSelectedGroupNames([...selectedGroupNames, group]);
+    }
+  };
+
+  // Submit Product
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setSuccessNotice(null);
 
     if (!prodName.trim()) {
       setErrorMsg('Item name is required');
@@ -83,9 +225,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       return;
     }
     if (!selectedCatId) {
-      setErrorMsg('Please select a category');
+      setErrorMsg('Please select a Category from Step 1');
       return;
     }
+
+    // Resolve all addOn IDs from mapped groups
+    const resolvedAddOnIds = addOns
+      .filter((a) => a.category && selectedGroupNames.includes(a.category))
+      .map((a) => a.id);
 
     const subcat = customSubcat.trim() || selectedSubcat || undefined;
 
@@ -102,48 +249,20 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         imageUrl: imageUrl.trim() || undefined,
         badge: badge.trim() || undefined,
         prepTimeMinutes: Number(prepTime) || 5,
+        addOnIds: resolvedAddOnIds,
       });
 
-      // Reset product form
+      setSuccessNotice(`🎉 Item "${prodName.trim()}" successfully created and ready in POS!`);
       setProdName('');
       setProdPrice('');
       setProdDesc('');
       setProdSku('');
       setCustomSubcat('');
-      onClose();
+      setTimeout(() => {
+        onClose();
+      }, 1200);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create product';
-      setErrorMsg(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCategorySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (!catName.trim()) {
-      setErrorMsg('Category name is required');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await onCategoryCreated({
-        name: catName.trim(),
-        description: catDesc.trim() || undefined,
-        subcategories: subcatList.length > 0 ? subcatList : undefined,
-      });
-
-      // Reset category form
-      setCatName('');
-      setCatDesc('');
-      setSubcatList(['Classic', 'Specialty']);
-      setActiveTab('product'); // Switch back to item tab to use newly created category
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create category';
-      setErrorMsg(msg);
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create product');
     } finally {
       setIsSubmitting(false);
     }
@@ -151,33 +270,57 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   return (
     <div className="add-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="add-modal-content" onClick={(e) => e.stopPropagation()}>
+      <div className="add-modal-content wide-wizard-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="add-modal-header">
           <div className="add-modal-title-area">
             <div className="add-modal-icon-badge">✨</div>
             <div>
-              <h3 className="add-modal-title">Menu & Catalog Manager</h3>
-              <p className="add-modal-subtitle">Add new food items, categories, or subcategories to your live POS</p>
+              <h3 className="add-modal-title">Live Menu & Catalog Wizard</h3>
+              <p className="add-modal-subtitle">
+                3-Step Setup: <strong>1. Categories</strong> ➔ <strong>2. Topping Groups</strong> ➔ <strong>3. Item Mapping</strong>
+              </p>
             </div>
           </div>
-          <button className="add-modal-close-btn" onClick={onClose} aria-label="Close modal">
-            ✕
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {onClearCatalog && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Wipe entire catalog to start with a fresh clean slate for the demo?')) {
+                    await onClearCatalog();
+                    setActiveTab('category');
+                    setSuccessNotice('🧹 Catalog cleared! Ready to add fresh categories, toppings & items.');
+                  }
+                }}
+                className="wizard-btn-ghost text-red-600"
+                title="Wipe mock catalog to start completely fresh"
+              >
+                🧹 Clean Slate
+              </button>
+            )}
+            {onLoadSampleCatalog && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await onLoadSampleCatalog();
+                  setSuccessNotice('📥 Sample catalog restored successfully!');
+                }}
+                className="wizard-btn-ghost text-indigo-600"
+                title="Restore default sample menu"
+              >
+                📥 Load Demo Menu
+              </button>
+            )}
+            <button className="add-modal-close-btn" onClick={onClose} aria-label="Close modal">
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="add-modal-tabs">
-          <button
-            type="button"
-            className={`add-modal-tab ${activeTab === 'product' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('product');
-              setErrorMsg(null);
-            }}
-          >
-            🍔 ➕ Add Food / Drink Item
-          </button>
+        {/* Wizard Step Navigation */}
+        <div className="add-modal-tabs wizard-tabs">
           <button
             type="button"
             className={`add-modal-tab ${activeTab === 'category' ? 'active' : ''}`}
@@ -186,43 +329,434 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               setErrorMsg(null);
             }}
           >
-            📁 🏷️ Create Category & Subcategories
+            <span className="step-num-pill">1</span>
+            📁 Category & Subcategories
+            <span className="tab-count-tag">{categories.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`add-modal-tab ${activeTab === 'addons' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('addons');
+              setErrorMsg(null);
+            }}
+          >
+            <span className="step-num-pill">2</span>
+            🍬 Topping Groups & Choices
+            <span className="tab-count-tag">{addOns.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`add-modal-tab ${activeTab === 'product' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('product');
+              setErrorMsg(null);
+            }}
+          >
+            <span className="step-num-pill">3</span>
+            🍔 Add Item & Map Toppings
           </button>
         </div>
 
+        {/* Global Notices */}
         {errorMsg && (
-          <div style={{ margin: '0.75rem 1.5rem 0', padding: '0.6rem 0.9rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#b91c1c', fontSize: '0.85rem' }}>
+          <div className="wizard-alert-error">
             ⚠️ {errorMsg}
           </div>
         )}
+        {successNotice && (
+          <div className="wizard-alert-success">
+            {successNotice}
+          </div>
+        )}
 
-        {/* Tab 1: Product Form */}
+        {/* ================= STEP 1: CATEGORY & SUBCATEGORIES ================= */}
+        {activeTab === 'category' && (
+          <div className="add-modal-body">
+            <div className="wizard-step-info-card">
+              <h4>Step 1: Set Up Your Menu Categories & Subcategories</h4>
+              <p>
+                Categories group your POS items (e.g., <strong>🧋 Boba Teas</strong>, <strong>🍔 Gourmet Burgers</strong>, <strong>☕ Coffee & Brews</strong>). Subcategories divide each category into fast navigation tabs (e.g. <em>Milk Teas, Fruit Teas, Cheese Foam</em>).
+              </p>
+            </div>
+
+            <form onSubmit={handleCategorySubmit} className="wizard-form-box">
+              <div className="form-grid-2">
+                <div className="form-group">
+                  <label className="form-label">
+                    Category Name <span className="req">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input font-semibold"
+                    placeholder="e.g. 🧋 Boba Teas, 🍔 Burgers, 🍕 Wood Pizza..."
+                    value={catName}
+                    onChange={(e) => setCatName(e.target.value)}
+                    required
+                  />
+                  <span className="form-hint">Tip: Use an emoji prefix to make buttons pop on the POS touch display</span>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Description (Optional)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Fresh brewed tea leaves with tapioca pearls"
+                    value={catDesc}
+                    onChange={(e) => setCatDesc(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Subcategories Tags Input */}
+              <div className="form-group" style={{ marginTop: '0.75rem' }}>
+                <label className="form-label">
+                  Subcategories (Fast Filter Tabs)
+                </label>
+                <div className="tag-input-wrapper">
+                  <div className="tags-container">
+                    {subcatList.map((tag) => (
+                      <span key={tag} className="subcat-chip">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubcatTag(tag)}
+                          className="chip-remove"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Add subcategory tag (e.g. Milk Teas, Fruit Teas)..."
+                      value={newSubcatInput}
+                      onChange={(e) => setNewSubcatInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddSubcatTag();
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddSubcatTag}
+                      className="wizard-btn-secondary"
+                    >
+                      + Add Tag
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="wizard-actions-row">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !catName.trim()}
+                  className="wizard-btn-primary"
+                >
+                  {isSubmitting ? 'Saving...' : '✨ Save Category'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('addons')}
+                  className="wizard-btn-next"
+                >
+                  Continue to Step 2: Toppings & Sizes ➔
+                </button>
+              </div>
+            </form>
+
+            {/* Existing Categories List */}
+            <div className="existing-items-section">
+              <h5 className="section-title">Active Categories ({categories.length})</h5>
+              {categories.length === 0 ? (
+                <div className="empty-catalog-callout">
+                  No categories created yet. Fill the form above and click <strong>"Save Category"</strong> to start fresh!
+                </div>
+              ) : (
+                <div className="categories-grid-preview">
+                  {categories.map((c) => (
+                    <div key={c.id} className="category-card-preview">
+                      <div className="cat-card-header">
+                        <span className="cat-card-title">{c.name}</span>
+                        <span className="cat-card-badge">{c.subcategories?.length || 0} Subcats</span>
+                      </div>
+                      {c.description && <p className="cat-card-desc">{c.description}</p>}
+                      <div className="cat-chips-list">
+                        {(c.subcategories || []).map((sc) => (
+                          <span key={sc} className="mini-subcat-chip">{sc}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================= STEP 2: TOPPING GROUPS & CHOICES ================= */}
+        {activeTab === 'addons' && (
+          <div className="add-modal-body">
+            <div className="wizard-step-info-card">
+              <h4>Step 2: Create Topping Groups (e.g., Choice Of Size, Choice Of Boba)</h4>
+              <p>
+                Each <strong>Topping Category</strong> groups customizable options. For example, <strong>Choice Of Size</strong> (Single selection: <em>Regular 300ml, Large 500ml</em>) or <strong>Choice Of Boba & Toppings</strong> (Multi selection: <em>Mango Popping Boba +₹40, Tapioca Pearls +₹35</em>).
+              </p>
+            </div>
+
+            {/* Add Choice Form */}
+            <form onSubmit={handleAddChoice} className="wizard-form-box">
+              <div className="form-grid-3">
+                <div className="form-group">
+                  <label className="form-label">
+                    Topping Group / Category <span className="req">*</span>
+                  </label>
+                  <select
+                    className="form-select font-semibold"
+                    value={groupNameInput}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setGroupNameInput(val);
+                      if (val.toLowerCase().includes('size') || val.toLowerCase().includes('sweetness') || val.toLowerCase().includes('ice')) {
+                        setGroupSelectionType('SINGLE');
+                      } else {
+                        setGroupSelectionType('MULTI');
+                      }
+                    }}
+                  >
+                    {existingGroupNames.map((grp) => (
+                      <option key={grp} value={grp}>
+                        {grp}
+                      </option>
+                    ))}
+                    <option value="CUSTOM">-- + New Custom Group Name --</option>
+                  </select>
+                  {groupNameInput === 'CUSTOM' && (
+                    <input
+                      type="text"
+                      className="form-input mt-1"
+                      placeholder="e.g. Choice Of Flavour, Crust Type..."
+                      value={customGroupName}
+                      onChange={(e) => setCustomGroupName(e.target.value)}
+                      required
+                    />
+                  )}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Choice / Item Name <span className="req">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input font-medium"
+                    placeholder="e.g. Regular (300ml), Large (500ml), Mango Popping..."
+                    value={choiceName}
+                    onChange={(e) => setChoiceName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Extra Price (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="form-input"
+                    placeholder="0"
+                    value={choicePrice}
+                    onChange={(e) => setChoicePrice(e.target.value === '' ? '' : Number(e.target.value))}
+                  />
+                  <span className="form-hint">Set ₹0 for base sizes/sweetness</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.75rem' }}>
+                <span className="form-label" style={{ marginBottom: 0 }}>Selection Mode:</span>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="groupSelectionType"
+                    value="SINGLE"
+                    checked={groupSelectionType === 'SINGLE'}
+                    onChange={() => setGroupSelectionType('SINGLE')}
+                  />
+                  <span>Single Choice (Radio, e.g. Size, Sweetness)</span>
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="groupSelectionType"
+                    value="MULTI"
+                    checked={groupSelectionType === 'MULTI'}
+                    onChange={() => setGroupSelectionType('MULTI')}
+                  />
+                  <span>Multiple Choices (Checkbox, e.g. Toppings)</span>
+                </label>
+              </div>
+
+              <div className="wizard-actions-row">
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !choiceName.trim()}
+                  className="wizard-btn-primary"
+                >
+                  {isSubmitting ? 'Adding...' : '➕ Add Choice to Group'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('product')}
+                  className="wizard-btn-next"
+                >
+                  Continue to Step 3: Add Food Item & Map Toppings ➔
+                </button>
+              </div>
+            </form>
+
+            {/* Visual Overview of Created Groups */}
+            <div className="existing-items-section">
+              <h5 className="section-title">Defined Topping Groups ({existingGroupNames.filter((g) => addOnsByGroup[g]?.length > 0).length})</h5>
+              <div className="topping-groups-grid">
+                {existingGroupNames.map((grp) => {
+                  const items = addOnsByGroup[grp] || [];
+                  const isSingle = items[0]?.selectionType === 'SINGLE' || grp.toLowerCase().includes('size');
+                  return (
+                    <div key={grp} className={`topping-group-card ${items.length > 0 ? 'has-items' : 'empty-group'}`}>
+                      <div className="tg-card-header">
+                        <div>
+                          <span className="tg-group-name">{grp}</span>
+                          <span className={`tg-type-badge ${isSingle ? 'badge-single' : 'badge-multi'}`}>
+                            {isSingle ? 'Single Select (1)' : 'Multi Select'}
+                          </span>
+                        </div>
+                        <span className="tg-count-badge">{items.length} choices</span>
+                      </div>
+
+                      <div className="tg-choices-container">
+                        {items.length === 0 ? (
+                          <span className="text-muted text-xs italic">No choices yet. Add one above!</span>
+                        ) : (
+                          items.map((item) => (
+                            <span key={item.id} className="tg-choice-pill">
+                              <span className="choice-name">{item.name}</span>
+                              <span className="choice-price">
+                                {item.price > 0 ? `+₹${item.price}` : 'Free'}
+                              </span>
+                              {onDeleteAddOn && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    await onDeleteAddOn(item.id);
+                                  }}
+                                  className="choice-del-btn"
+                                  title="Delete choice"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= STEP 3: ADD ITEM & MAP TOPPINGS ================= */}
         {activeTab === 'product' && (
           <form onSubmit={handleProductSubmit} className="add-modal-body">
+            <div className="wizard-step-info-card">
+              <h4>Step 3: Add Food / Drink Item & Map Topping Groups</h4>
+              <p>
+                Name your dish, select the Category & Subcategory, set the Base Price, and simply check which <strong>Topping Groups</strong> (Size, Boba Toppings, Sweetness) should appear when cashiers ring up this item!
+              </p>
+            </div>
+
+            <div className="form-grid-2">
+              <div className="form-group">
+                <label className="form-label">
+                  Item / Beverage Name <span className="req">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-input font-bold"
+                  placeholder="e.g. Authentic Brown Sugar Boba Tea, Truffle Burger..."
+                  value={prodName}
+                  onChange={(e) => setProdName(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  Base Price (₹) <span className="req">*</span>
+                </label>
+                <div className="currency-input-wrapper">
+                  <span className="currency-symbol">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    className="form-input"
+                    placeholder="240"
+                    value={prodPrice}
+                    onChange={(e) => setProdPrice(e.target.value === '' ? '' : Number(e.target.value))}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="form-grid-2">
               <div className="form-group">
                 <label className="form-label">
                   Select Category <span className="req">*</span>
                 </label>
-                <select
-                  className="form-select"
-                  value={selectedCatId}
-                  onChange={(e) => {
-                    setSelectedCatId(e.target.value);
-                    setSelectedSubcat('');
-                  }}
-                  required
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                {categories.length === 0 ? (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <span className="text-red-500 text-sm font-semibold">No category available.</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('category')}
+                      className="text-indigo-600 font-bold underline text-sm"
+                    >
+                      + Create Category in Step 1
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    className="form-select font-semibold"
+                    value={selectedCatId}
+                    onChange={(e) => {
+                      setSelectedCatId(e.target.value);
+                      setSelectedSubcat('');
+                    }}
+                    required
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Subcategory / Grouping</label>
+                <label className="form-label">Subcategory / Menu Section</label>
                 {availableSubcategories.length > 0 ? (
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <select
@@ -244,14 +778,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                       placeholder="Or custom..."
                       value={customSubcat}
                       onChange={(e) => setCustomSubcat(e.target.value)}
-                      style={{ width: '120px' }}
+                      style={{ width: '130px' }}
                     />
                   </div>
                 ) : (
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Sourdough, Iced, Hot..."
+                    placeholder="e.g. Milk Teas, Specialty Brews..."
                     value={customSubcat}
                     onChange={(e) => setCustomSubcat(e.target.value)}
                   />
@@ -259,251 +793,138 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
             </div>
 
-            <div className="form-grid-2">
-              <div className="form-group">
-                <label className="form-label">
-                  Item Name <span className="req">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Truffle Burrata Croissant"
-                  value={prodName}
-                  onChange={(e) => setProdName(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  Base Price (₹) <span className="req">*</span>
-                </label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="e.g. 280"
-                  min="1"
-                  step="0.01"
-                  value={prodPrice}
-                  onChange={(e) => setProdPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-grid-2">
+            {/* Dietary Type & Badge */}
+            <div className="form-grid-3">
               <div className="form-group">
                 <label className="form-label">Dietary Type</label>
                 <div className="dietary-selector">
-                  <button
-                    type="button"
-                    className={`dietary-btn ${dietaryType === 'VEG' ? 'active' : ''}`}
-                    onClick={() => setDietaryType('VEG')}
-                  >
-                    🟢 Veg
-                  </button>
-                  <button
-                    type="button"
-                    className={`dietary-btn ${dietaryType === 'NON_VEG' ? 'active' : ''}`}
-                    onClick={() => setDietaryType('NON_VEG')}
-                  >
-                    🔴 Non-Veg
-                  </button>
-                  <button
-                    type="button"
-                    className={`dietary-btn ${dietaryType === 'BEVERAGE' ? 'active' : ''}`}
-                    onClick={() => setDietaryType('BEVERAGE')}
-                  >
-                    🥤 Beverage
-                  </button>
-                  <button
-                    type="button"
-                    className={`dietary-btn ${dietaryType === 'VEGAN' ? 'active' : ''}`}
-                    onClick={() => setDietaryType('VEGAN')}
-                  >
-                    🌱 Vegan
-                  </button>
+                  {(['VEG', 'NON_VEG', 'VEGAN', 'BEVERAGE'] as DietaryType[]).map((dt) => (
+                    <button
+                      key={dt}
+                      type="button"
+                      className={`dietary-btn ${dietaryType === dt ? 'selected ' + dt.toLowerCase() : ''}`}
+                      onClick={() => setDietaryType(dt)}
+                    >
+                      {dt === 'VEG' ? '🟢 Veg' : dt === 'NON_VEG' ? '🔴 Non-Veg' : dt === 'VEGAN' ? '🌱 Vegan' : '🧋 Drink'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Prep Time & Code (SKU)</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input
-                    type="number"
-                    className="form-input"
-                    placeholder="Mins"
-                    title="Prep time in minutes"
-                    min="1"
-                    max="60"
-                    value={prepTime}
-                    onChange={(e) => setPrepTime(Number(e.target.value))}
-                    style={{ width: '80px' }}
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="SKU (e.g. CROIS-01)"
-                    value={prodSku}
-                    onChange={(e) => setProdSku(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                </div>
+                <label className="form-label">Promotional Badge</label>
+                <select
+                  className="form-select"
+                  value={badge}
+                  onChange={(e) => setBadge(e.target.value)}
+                >
+                  <option value="">None</option>
+                  {PRESET_BADGES.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Prep Time (Mins)</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={prepTime}
+                  onChange={(e) => setPrepTime(Number(e.target.value))}
+                />
               </div>
             </div>
 
-            {/* Badge Selection */}
+            {/* Item Image Presets */}
             <div className="form-group">
-              <label className="form-label">Highlight Tag / Badge</label>
-              <div className="badge-chips">
-                {PRESET_BADGES.map((b) => (
-                  <button
-                    key={b}
-                    type="button"
-                    className={`badge-chip-opt ${badge === b ? 'active' : ''}`}
-                    onClick={() => setBadge(badge === b ? '' : b)}
-                  >
-                    ★ {b}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Food Image Selector with Instant Presets */}
-            <div className="form-group">
-              <label className="form-label">Food Photo / Image URL</label>
-              <div className="preset-chips">
+              <label className="form-label">Visual Card Image</label>
+              <div className="image-preset-scroll">
                 {PRESET_IMAGES.map((img) => (
                   <button
                     key={img.label}
                     type="button"
-                    className={`preset-chip ${imageUrl === img.url ? 'active' : ''}`}
+                    className={`image-preset-pill ${imageUrl === img.url ? 'active' : ''}`}
                     onClick={() => setImageUrl(img.url)}
                   >
-                    {img.label}
+                    <img src={img.url} alt={img.label} className="preset-thumb" />
+                    <span>{img.label}</span>
                   </button>
                 ))}
               </div>
-              <div className="image-preview-row">
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  style={{ flex: 1 }}
-                />
-                {imageUrl && (
-                  <img
-                    src={imageUrl}
-                    alt="Preview"
-                    className="image-preview-thumb"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = PRESET_IMAGES[0].url;
-                    }}
-                  />
-                )}
+            </div>
+
+            {/* ================= CRUCIAL: TOPPING GROUPS MAPPING SECTION ================= */}
+            <div className="toppings-mapping-section">
+              <div className="toppings-mapping-header">
+                <div>
+                  <h5 className="mapping-title">🍬 Map Customization & Topping Groups</h5>
+                  <p className="mapping-subtitle">
+                    Select which groups apply to this dish. Cashiers will see these size choices and add-ons during billing!
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    className="wizard-btn-ghost text-xs"
+                    onClick={() => setSelectedGroupNames(existingGroupNames)}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    className="wizard-btn-ghost text-xs"
+                    onClick={() => setSelectedGroupNames([])}
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="form-group">
-              <label className="form-label">Short Description</label>
-              <textarea
-                className="form-textarea"
-                rows={2}
-                placeholder="Delicious artisanal preparation made fresh to order..."
-                value={prodDesc}
-                onChange={(e) => setProdDesc(e.target.value)}
-              />
-            </div>
-
-            <div className="add-modal-footer">
-              <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
-                Cancel
-              </button>
-              <button type="submit" className="btn-submit-action" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving Item...' : '✨ Add Item to Live Menu'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Tab 2: Category & Subcategories Form */}
-        {activeTab === 'category' && (
-          <form onSubmit={handleCategorySubmit} className="add-modal-body">
-            <div className="form-group">
-              <label className="form-label">
-                Category Name <span className="req">*</span>
-              </label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. 🥟 Dim Sum & Dumplings or 🍹 Mocktails"
-                value={catName}
-                onChange={(e) => setCatName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Category Description</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Freshly handcrafted dumplings steamed in bamboo baskets"
-                value={catDesc}
-                onChange={(e) => setCatDesc(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Subcategories & Groups</label>
-              <div className="subcat-chips-list">
-                {subcatList.map((tag) => (
-                  <span key={tag} className="subcat-tag">
-                    🏷️ {tag}
-                    <button
-                      type="button"
-                      className="subcat-remove"
-                      onClick={() => handleRemoveSubcatTag(tag)}
-                      aria-label={`Remove ${tag}`}
+              <div className="mapping-checkbox-grid">
+                {existingGroupNames.map((grp) => {
+                  const items = addOnsByGroup[grp] || [];
+                  const isChecked = selectedGroupNames.includes(grp);
+                  return (
+                    <label
+                      key={grp}
+                      className={`mapping-checkbox-card ${isChecked ? 'checked' : ''}`}
                     >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-                {subcatList.length === 0 && (
-                  <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No subcategories added yet.</span>
-                )}
-              </div>
-
-              <div className="add-subcat-row">
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Type subcategory (e.g. Steamed, Fried, Cold Brew...)"
-                  value={newSubcatInput}
-                  onChange={(e) => setNewSubcatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddSubcatTag();
-                    }
-                  }}
-                  style={{ flex: 1 }}
-                />
-                <button type="button" className="btn-add-subcat" onClick={handleAddSubcatTag}>
-                  + Add Tag
-                </button>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleGroupMapping(grp)}
+                      />
+                      <div className="mapping-card-content">
+                        <span className="mapping-grp-name">{grp}</span>
+                        <span className="mapping-grp-desc">
+                          {items.length > 0
+                            ? items.map((i) => i.name).slice(0, 3).join(', ') + (items.length > 3 ? '...' : '')
+                            : 'No choices added yet'}
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="add-modal-footer">
-              <button type="button" className="btn-cancel" onClick={onClose} disabled={isSubmitting}>
-                Cancel
+            {/* Modal Actions */}
+            <div className="wizard-submit-bar">
+              <button
+                type="button"
+                onClick={() => setActiveTab('addons')}
+                className="wizard-btn-secondary"
+              >
+                ⬅ Back to Toppings
               </button>
-              <button type="submit" className="btn-submit-action" disabled={isSubmitting}>
-                {isSubmitting ? 'Creating Category...' : '📁 Save Category & Subcategories'}
+              <button
+                type="submit"
+                disabled={isSubmitting || !prodName.trim() || !prodPrice || categories.length === 0}
+                className="wizard-btn-save-final"
+              >
+                {isSubmitting ? '✨ Creating...' : '✨ Create Item & Add to Live POS Menu'}
               </button>
             </div>
           </form>

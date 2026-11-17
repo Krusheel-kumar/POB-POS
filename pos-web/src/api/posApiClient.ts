@@ -927,6 +927,20 @@ export class PosApiClient {
       return mockStore.updatePaymentPolicy(policy);
     }
   }
+
+  /**
+   * Clear all catalog items (for fresh demo setup)
+   */
+  public async clearCatalog(): Promise<void> {
+    mockStore.clearCatalog();
+  }
+
+  /**
+   * Load standard sample catalog items
+   */
+  public async loadSampleCatalog(): Promise<void> {
+    mockStore.loadSampleCatalog();
+  }
 }
 
 export const posApiClient = new PosApiClient();
