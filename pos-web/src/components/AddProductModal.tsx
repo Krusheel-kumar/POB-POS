@@ -87,6 +87,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const activeCategory = categories.find((c) => c.id === selectedCatId) || categories[0];
   const activeSubcats = activeCategory?.subcategories || [];
 
+  // Auto-sync all modifier groups by default so newly added topping groups are pre-checked
+  useEffect(() => {
+    if (addOns.length > 0) {
+      const allGroups = Array.from(new Set(addOns.map((a) => a.category || 'Choice Of Boba & Toppings')));
+      setSelectedGroupNames((prev) => Array.from(new Set([...prev, ...allGroups])));
+    }
+  }, [addOns]);
+
   useEffect(() => {
     if (activeSubcats.length > 0) {
       if (!selectedSubcat || !activeSubcats.includes(selectedSubcat)) {
@@ -135,10 +143,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       ? customSubcatInput.trim() || undefined
       : selectedSubcat || undefined;
 
-    // Collect add-on IDs for checked modifier groups
-    const mappedAddOnIds = addOns
+    // Collect add-on IDs for checked modifier groups (falls back to all available if none explicitly selected)
+    let mappedAddOnIds = addOns
       .filter((a) => a.category && selectedGroupNames.includes(a.category))
       .map((a) => a.id);
+    if (mappedAddOnIds.length === 0 && addOns.length > 0) {
+      mappedAddOnIds = addOns.map((a) => a.id);
+    }
 
     setIsSubmitting(true);
     try {

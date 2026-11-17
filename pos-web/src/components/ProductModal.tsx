@@ -4,6 +4,7 @@ import './ProductModal.css';
 
 interface ProductModalProps {
   product: Product;
+  availableAddOns?: AddOn[];
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (item: Omit<CartItem, 'id' | 'lineTotal'>) => void;
@@ -11,6 +12,7 @@ interface ProductModalProps {
 
 export const ProductModal: React.FC<ProductModalProps> = ({
   product,
+  availableAddOns,
   isOpen,
   onClose,
   onAddToCart,
@@ -39,16 +41,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     );
   };
 
-  // Group add-ons by category
+  // Group add-ons by category (falls back to store toppings if product has none attached)
+  const effectiveAddOns = useMemo(() => {
+    if (product.addOns && product.addOns.length > 0) {
+      return product.addOns;
+    }
+    return availableAddOns || [];
+  }, [product.addOns, availableAddOns]);
+
   const groupedProductAddOns = useMemo(() => {
     const map: Record<string, AddOn[]> = {};
-    (product.addOns || []).forEach((a) => {
+    effectiveAddOns.forEach((a) => {
       const cat = a.category || 'Choice Of Add-ons';
       if (!map[cat]) map[cat] = [];
       map[cat].push(a);
     });
     return map;
-  }, [product.addOns]);
+  }, [effectiveAddOns]);
 
   // Pre-select first choice for mandatory single-select groups (Size, Sugar, Ice, Milk) on open
   useEffect(() => {

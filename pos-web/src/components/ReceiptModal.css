@@ -472,15 +472,27 @@
 .kot-addons {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 2px;
+  gap: 3px;
+  margin-top: 4px;
 }
 
 .kot-addon-line {
-  font-size: 0.86rem;
-  font-weight: 800;
-  color: #6d28d9;
-  padding-left: 4px;
+  font-size: 0.94rem;
+  font-weight: 900;
+  color: #1e1b4b;
+  background: #f5f3ff;
+  border-left: 3.5px solid #7c3aed;
+  padding: 3px 8px;
+  border-radius: 0 4px 4px 0;
+  letter-spacing: 0.3px;
+}
+
+.kot-addon-none {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  font-style: italic;
+  margin-top: 2px;
 }
 
 .kot-instruction {

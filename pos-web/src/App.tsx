@@ -506,9 +506,7 @@ export function App() {
       }
     }
     if (!orderToPrint) {
-      if (lastPlacedOrder) {
-        orderToPrint = lastPlacedOrder;
-      } else if (cartItems.length > 0) {
+      if (cartItems.length > 0) {
         const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
         const estDiscount = backendCalculation?.discountAmount ?? 0;
         const estTaxable = estSubtotal - estDiscount;
@@ -542,10 +540,13 @@ export function App() {
               unitPriceSnapshot: ci.unitPrice,
               lineTotalSnapshot: ci.lineTotal,
               itemNotes: ci.itemNotes,
+              addOns: ci.selectedAddOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
             };
           }),
           createdAt: new Date().toISOString(),
         };
+      } else if (lastPlacedOrder) {
+        orderToPrint = lastPlacedOrder;
       } else {
         const seedBills = mockStore.getBills();
         if (seedBills.length > 0 && seedBills[0].order) {
@@ -574,9 +575,7 @@ export function App() {
       }
     }
     if (!orderToPrint) {
-      if (lastPlacedOrder) {
-        orderToPrint = lastPlacedOrder;
-      } else if (cartItems.length > 0) {
+      if (cartItems.length > 0) {
         const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
         orderToPrint = {
           id: `temp-kot-${Date.now()}`,
@@ -605,10 +604,13 @@ export function App() {
               unitPriceSnapshot: ci.unitPrice,
               lineTotalSnapshot: ci.lineTotal,
               itemNotes: ci.itemNotes,
+              addOns: ci.selectedAddOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
             };
           }),
           createdAt: new Date().toISOString(),
         };
+      } else if (lastPlacedOrder) {
+        orderToPrint = lastPlacedOrder;
       } else {
         const seedOrders = mockStore.getOrders();
         if (seedOrders.length > 0) {
@@ -1139,6 +1141,7 @@ export function App() {
       {activeModalProduct && (
         <ProductModal
           product={activeModalProduct}
+          availableAddOns={addOns}
           isOpen={Boolean(activeModalProduct)}
           onClose={() => setActiveModalProduct(null)}
           onAddToCart={handleAddToCart}

@@ -249,6 +249,7 @@ export interface OrderItem {
   unitPriceSnapshot: number;
   lineTotalSnapshot: number;
   itemNotes?: string;
+  addOns?: { id?: string; name?: string; addOnNameSnapshot?: string; price?: number }[];
 }
 
 export interface Order {

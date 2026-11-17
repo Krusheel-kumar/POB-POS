@@ -852,6 +852,7 @@ class MockStore {
 
     const cat = categories.find((c) => c.id === req.categoryId);
     const selectedAddons = allAddons.filter((a) => req.addOnIds?.includes(a.id));
+    const finalAddons = selectedAddons.length > 0 ? selectedAddons : allAddons;
 
     const newProd: Product = {
       id: `prod-${Date.now()}`,
@@ -873,7 +874,7 @@ class MockStore {
         price: v.price,
         isActive: true,
       })),
-      addOns: selectedAddons,
+      addOns: finalAddons,
     };
 
     list.unshift(newProd); // place at top of catalog so newly added items are immediately prominent
@@ -1015,14 +1016,20 @@ class MockStore {
       const lineTotal = lineUnit * it.quantity;
       subtotal += lineTotal;
 
+      const addOnNames = addOns.map((a) => a.name).join(', ');
+      const fullVariant = variantName
+        ? (addOnNames ? `${variantName} • +${addOnNames}` : variantName)
+        : (addOnNames ? `+${addOnNames}` : undefined);
+
       return {
         id: `oi-${orderId}-${i}`,
         productNameSnapshot: prod?.name || 'Item',
-        variantNameSnapshot: variantName,
+        variantNameSnapshot: fullVariant,
         quantity: it.quantity,
         unitPriceSnapshot: lineUnit,
         lineTotalSnapshot: lineTotal,
         itemNotes: it.itemNotes,
+        addOns: addOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
       };
     });
 
@@ -1135,14 +1142,20 @@ class MockStore {
       const lineTotal = lineUnit * it.quantity;
       additionalSubtotal += lineTotal;
 
+      const addOnNames = addOns.map((a) => a.name).join(', ');
+      const fullVariant = variantName
+        ? (addOnNames ? `${variantName} • +${addOnNames}` : variantName)
+        : (addOnNames ? `+${addOnNames}` : undefined);
+
       return {
         id: `oi-${orderId}-addon-${Date.now()}-${i}`,
         productNameSnapshot: prod?.name || 'Item',
-        variantNameSnapshot: variantName,
+        variantNameSnapshot: fullVariant,
         quantity: it.quantity,
         unitPriceSnapshot: lineUnit,
         lineTotalSnapshot: lineTotal,
         itemNotes: it.itemNotes,
+        addOns: addOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
       };
     });
 

@@ -346,25 +346,49 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 {(() => {
                   const kotItems =
                     ticket?.items && ticket.items.length > 0
-                      ? ticket.items.map((it) => ({
-                          name: it.productNameSnapshot,
-                          variant: it.variantNameSnapshot,
-                          quantity: it.quantity,
-                          addOns: it.addOns?.map((a) => a.addOnNameSnapshot) || [],
-                          notes: it.itemNotesSnapshot,
-                        }))
+                      ? ticket.items.map((it) => {
+                          const addOns = (it.addOns && it.addOns.length > 0)
+                            ? it.addOns.map((a) => a.addOnNameSnapshot)
+                            : [];
+                          return {
+                            name: it.productNameSnapshot,
+                            variant: it.variantNameSnapshot,
+                            quantity: it.quantity,
+                            addOns,
+                            notes: it.itemNotesSnapshot,
+                          };
+                        })
                       : order?.items && order.items.length > 0
                       ? order.items.map((it) => {
                           let variant = it.variantNameSnapshot;
                           let addOns: string[] = [];
-                          if (variant && variant.includes('• +')) {
-                            const parts = variant.split('• +');
-                            variant = parts[0].trim();
-                            addOns = parts[1].split(',').map((s) => s.trim());
-                          } else if (variant && variant.startsWith('+')) {
-                            addOns = variant.substring(1).split(',').map((s) => s.trim());
-                            variant = undefined;
+
+                          // Check explicit addOns field first
+                          if (it.addOns && Array.isArray(it.addOns) && it.addOns.length > 0) {
+                            addOns = it.addOns
+                              .map((a: any) => typeof a === 'string' ? a : (a.name || a.addOnNameSnapshot || ''))
+                              .filter(Boolean);
                           }
+
+                          // If variant contains toppings formatted with bullet or plus
+                          if (variant) {
+                            if (variant.includes('• +')) {
+                              const parts = variant.split('• +');
+                              variant = parts[0].trim();
+                              const extracted = parts[1].split(',').map((s) => s.trim()).filter(Boolean);
+                              if (addOns.length === 0) addOns = extracted;
+                            } else if (variant.includes('•')) {
+                              const parts = variant.split('•');
+                              variant = parts[0].trim();
+                              const extracted = parts.slice(1).map((s) => s.replace(/^\+/, '').trim()).filter(Boolean);
+                              if (addOns.length === 0) addOns = extracted;
+                            } else if (variant.startsWith('+')) {
+                              const extracted = variant.substring(1).split(',').map((s) => s.trim()).filter(Boolean);
+                              if (addOns.length === 0) addOns = extracted;
+                              variant = undefined;
+                            }
+                          }
+
                           return {
                             name: it.productNameSnapshot,
                             variant,
@@ -392,14 +416,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                           {it.variant && (
                             <div className="kot-variant">▸ Size: {it.variant}</div>
                           )}
-                          {it.addOns && it.addOns.length > 0 && (
+                          {it.addOns && it.addOns.length > 0 ? (
                             <div className="kot-addons">
                               {it.addOns.map((add, aIdx) => (
                                 <div key={aIdx} className="kot-addon-line">
-                                  ✦ Topping: {add}
+                                  ✦ TOPPING: {add}
                                 </div>
                               ))}
                             </div>
+                          ) : (
+                            <div className="kot-addon-none">• Toppings: None (Standard / Plain)</div>
                           )}
                           {it.notes && (
                             <div className="kot-instruction">👉 Note: {it.notes}</div>
