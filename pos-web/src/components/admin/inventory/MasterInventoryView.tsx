@@ -102,10 +102,10 @@ export const MasterInventoryView: React.FC = () => {
         <div>
           <h3 className="inv-card-title">
             <Boxes size={22} color="#0284c7" />
-            Central Master Inventory (Commissary & Main Warehouse)
+            Central Master Inventory (Commissary & Main Warehouse) — Main Godown Bulk Stock
           </h3>
           <p className="inv-card-subtitle">
-            The single source of truth for all bulk raw materials before distribution to cafe branch outlets
+            Main Godown bulk stock for all raw materials before dispatch to retail cafe outlets
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export const MasterInventoryView: React.FC = () => {
           onClick={() => setIsNewMaterialOpen(true)}
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
         >
-          <Plus size={16} /> ➕ Add New Raw Material
+          <Plus size={16} /> ➕ Add New Raw Material / Item
         </button>
       </div>
 
@@ -123,18 +123,18 @@ export const MasterInventoryView: React.FC = () => {
       <div className="kpi-grid" style={{ marginBottom: '1.5rem' }}>
         <div className="kpi-card" style={{ borderLeft: '4px solid #0284c7' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Total Master Materials</span>
+            <span className="kpi-card-title">Total Godown Items</span>
             <Boxes size={18} color="#0284c7" />
           </div>
           <div className="kpi-card-value">{totalItemsCount} Catalog Items</div>
           <div className="kpi-card-subtitle">
-            <span>Dairy, Boba, Tea Base & Cups</span>
+            <span>Dairy, Boba, Tea Base & Packaging</span>
           </div>
         </div>
 
         <div className="kpi-card" style={{ borderLeft: '4px solid #16a34a' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Bulk Milk in Central</span>
+            <span className="kpi-card-title">Main Milk Reserve (Godown)</span>
             <TrendingUp size={18} color="#16a34a" />
           </div>
           <div className="kpi-card-value">
@@ -147,7 +147,7 @@ export const MasterInventoryView: React.FC = () => {
 
         <div className="kpi-card" style={{ borderLeft: '4px solid #f59e0b' }}>
           <div className="kpi-card-header">
-            <span className="kpi-card-title">Low Master Reserves</span>
+            <span className="kpi-card-title">Khatam Hone Wala (Low Alert)</span>
             <AlertTriangle size={18} color="#f59e0b" />
           </div>
           <div className="kpi-card-value">{lowMasterItems.length} Low Alert</div>
@@ -195,14 +195,14 @@ export const MasterInventoryView: React.FC = () => {
         <table className="inv-data-table">
           <thead>
             <tr>
-              <th>Raw Material Name</th>
+              <th>Raw Material / Ingredient</th>
               <th>Category</th>
-              <th>Central Master Bulk Stock</th>
-              <th>Consumption Unit</th>
-              <th>Purchase Cost</th>
-              <th>Cost / Serving Unit</th>
-              <th>Stock Health</th>
-              <th>Quick Restock</th>
+              <th>Godown Bulk Stock (Central Master)</th>
+              <th>Portion Unit (Kitchen)</th>
+              <th>Purchase Rate (Vendor)</th>
+              <th>Cost per Cup / Portion</th>
+              <th>Stock Status</th>
+              <th>Maal Inward (Restock)</th>
             </tr>
           </thead>
           <tbody>

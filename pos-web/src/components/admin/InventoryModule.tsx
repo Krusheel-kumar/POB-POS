@@ -61,10 +61,10 @@ export const InventoryModule: React.FC = () => {
           <div className="inventory-header-title">
             <h2>
               <Boxes size={24} color="#0284c7" />
-              Central Master Inventory, Size-Based Recipes & Multi-Outlet Stock
+              Central Godown & Multi-Branch Inventory Management
             </h2>
             <p>
-              Central Commissary bulk stock, Size-variant BOM recipes (Regular vs Large), and real-time outlet billing auto-depletion
+              Godown bulk stock, Drink & Food BOM Recipes (Regular vs Large), Branch transfers, and Sham Ka Hisaab (Daily Closing)
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('master')}
           >
             <Boxes size={16} />
-            1. Central Master Inventory
+            1. Central Master Inventory (Godown Bulk Maal)
           </button>
 
           <button
@@ -116,7 +116,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('recipes')}
           >
             <Utensils size={16} />
-            2. Size-Based Recipes (BOM)
+            2. Size-Based Recipes & BOM (Per Cup Formula)
           </button>
 
           <button
@@ -125,7 +125,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('multi-outlet')}
           >
             <Store size={16} />
-            3. Multi-Outlet Comparison & Billing
+            3. Multi-Outlet Comparison & Live Billing (Branch Stock)
           </button>
 
           <button
@@ -134,7 +134,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('transfers')}
           >
             <Truck size={16} />
-            4. Stock Indents & Pipeline
+            4. Stock Indents & Challan (Godown to Branch Transfer)
           </button>
 
           <button
@@ -143,7 +143,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('stock-take')}
           >
             <Scale size={16} />
-            5. End-of-Day Stock Take
+            5. Sham Ka Hisaab (End-of-Day Stock Take)
           </button>
 
           <button
@@ -152,7 +152,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('variance')}
           >
             <AlertTriangle size={16} />
-            6. Variance Report (&gt;3% Alert)
+            6. Variance Report & Wastage (Nuksan / Chori Check &gt;3%)
           </button>
 
           <button
@@ -161,7 +161,7 @@ export const InventoryModule: React.FC = () => {
             onClick={() => setActiveTab('ledger')}
           >
             <ListOrdered size={16} />
-            7. Immutable Stock Ledger ({ledger.length})
+            7. Immutable Stock Ledger (Audit Khata) ({ledger.length})
           </button>
         </div>
       </div>

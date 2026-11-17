@@ -164,16 +164,16 @@ export const VarianceReportView: React.FC = () => {
         <table className="inv-data-table">
           <thead>
             <tr>
-              <th>Raw Material</th>
-              <th>Opening Stock</th>
-              <th>Received (GRN)</th>
-              <th>POS Consumption</th>
-              <th>Expected Stock</th>
-              <th>Actual Weighed</th>
-              <th>Missing Qty</th>
-              <th>Cost Loss</th>
+              <th>Raw Material / Ingredient</th>
+              <th>Opening Stock (Subah)</th>
+              <th>Received (Maal Aaya)</th>
+              <th>Bikri / POS Usage</th>
+              <th>Expected (Hisaab)</th>
+              <th>Physical Count (Asli)</th>
+              <th>Shortage (Kam Hua)</th>
+              <th>Nuksan Value (₹)</th>
               <th>Variance %</th>
-              <th>Audit Status</th>
+              <th>Audit Status (Nazar)</th>
             </tr>
           </thead>
           <tbody>
