@@ -584,10 +584,16 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  if (currentPath === '/admin' || currentPath === '/admin/reports') {
+  if (currentPath === '/admin' || currentPath === '/admin/reports' || currentPath === '/admin/inventory') {
     return (
       <AdminLayout
-        initialTab={currentPath === '/admin/reports' ? 'reports' : 'dashboard'}
+        initialTab={
+          currentPath === '/admin/reports'
+            ? 'reports'
+            : currentPath === '/admin/inventory'
+            ? 'inventory'
+            : 'dashboard'
+        }
         onBackToPos={() => {
           window.history.pushState({}, '', '/');
           setCurrentPath('/');
@@ -692,6 +698,24 @@ export function App() {
             title="Open Live Analytics & Reports Dashboard"
           >
             📊 Reports & Analytics
+          </button>
+          <button
+            type="button"
+            className="header-action-pill"
+            onClick={() => {
+              window.history.pushState({}, '', '/admin/inventory');
+              setCurrentPath('/admin/inventory');
+            }}
+            style={{
+              background: '#0284c7',
+              color: '#ffffff',
+              borderColor: '#0284c7',
+              fontWeight: 700,
+              boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
+            }}
+            title="Open Advanced Inventory, Recipes (BOM), Central Transfers & Variance Report"
+          >
+            📦 Inventory & BOM
           </button>
           <button
             type="button"

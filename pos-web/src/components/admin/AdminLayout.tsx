@@ -16,9 +16,10 @@ import { AdminMenuManagement } from './AdminMenuManagement';
 import { AdminOrdersView } from './AdminOrdersView';
 import { AdminBillingView } from './AdminBillingView';
 import { ReportsDashboard } from './ReportsDashboard';
+import { InventoryModule } from './InventoryModule';
 import './Admin.css';
 
-type AdminTab = 'dashboard' | 'reports' | 'menu' | 'orders' | 'billing';
+type AdminTab = 'dashboard' | 'reports' | 'inventory' | 'menu' | 'orders' | 'billing';
 
 export interface AdminLayoutProps {
   initialTab?: AdminTab;
@@ -181,6 +182,13 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
           </button>
           <button
             type="button"
+            className={`admin-nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}
+          >
+            <span>📦</span> Inventory & Recipes
+          </button>
+          <button
+            type="button"
             className={`admin-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
             onClick={() => setActiveTab('menu')}
           >
@@ -243,6 +251,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
             <h1>
               {activeTab === 'dashboard' && 'Restaurant Dashboard'}
               {activeTab === 'reports' && 'Reports & Analytics'}
+              {activeTab === 'inventory' && 'Inventory, Recipe (BOM) & Warehouse Management'}
               {activeTab === 'menu' && 'Menu & Catalog Management'}
               {activeTab === 'orders' && 'Order Management'}
               {activeTab === 'billing' && 'Billing & Payment Records'}
@@ -300,6 +309,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
           )}
 
           {activeTab === 'reports' && <ReportsDashboard />}
+
+          {activeTab === 'inventory' && <InventoryModule />}
 
           {activeTab === 'menu' && (
             <AdminMenuManagement
