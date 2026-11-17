@@ -13,8 +13,8 @@ const mockAddOns: AddOn[] = [
   { id: 'add-3', name: 'Mango Popping Boba', price: 40, isActive: true, category: 'Choice Of Boba & Toppings', selectionType: 'MULTI' },
 ];
 
-describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
-  it('renders wizard tabs with step numbers and counts', () => {
+describe('AddProductModal Component (Minimal Production UI)', () => {
+  it('renders clean navigation tabs and primary fields', () => {
     render(
       <AddProductModal
         isOpen={true}
@@ -27,13 +27,13 @@ describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
       />
     );
 
-    expect(screen.getByText(/Live Menu & Catalog Wizard/i)).toBeInTheDocument();
-    expect(screen.getByText(/Category & Subcategories/i)).toBeInTheDocument();
-    expect(screen.getByText(/Topping Groups & Choices/i)).toBeInTheDocument();
-    expect(screen.getByText(/Add Item & Map Toppings/i)).toBeInTheDocument();
+    expect(screen.getByText('+ Add Menu Item')).toBeInTheDocument();
+    expect(screen.getByText(/Categories \(1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Modifiers & Sizes \(3\)/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. Authentic Brown Sugar Boba Tea/i)).toBeInTheDocument();
   });
 
-  it('switches to Step 1 and supports adding subcategory tags', async () => {
+  it('supports creating a new category with comma-separated subcategories', async () => {
     const handleCategoryCreated = vi.fn().mockResolvedValue({
       id: 'cat-new',
       name: '🍕 Artisan Pizzas',
@@ -52,36 +52,26 @@ describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
       />
     );
 
-    // Switch to category tab
-    const catTab = screen.getByRole('button', { name: /Category & Subcategories/i });
-    fireEvent.click(catTab);
-
-    expect(screen.getByText(/Step 1: Set Up Your Menu Categories/i)).toBeInTheDocument();
-
-    const nameInput = screen.getByPlaceholderText(/e\.g\. 🧋 Boba Teas/i);
+    const nameInput = screen.getByPlaceholderText(/e\.g\. 🧋 Boba Teas, 🍔 Burgers/i);
     fireEvent.change(nameInput, { target: { value: '🍕 Artisan Pizzas' } });
 
-    // Add subcategory tag
-    const subcatInput = screen.getByPlaceholderText(/Add subcategory tag/i);
-    fireEvent.change(subcatInput, { target: { value: 'Wood Fired' } });
-    const addTagBtn = screen.getByRole('button', { name: /\+ Add Tag/i });
-    fireEvent.click(addTagBtn);
+    const subcatsInput = screen.getByPlaceholderText(/e\.g\. Milk Teas, Fruit Teas/i);
+    fireEvent.change(subcatsInput, { target: { value: 'Wood Fired, Calzones' } });
 
-    expect(screen.getByText('Wood Fired')).toBeInTheDocument();
-
-    const saveBtn = screen.getByRole('button', { name: /Save Category/i });
+    const saveBtn = screen.getByRole('button', { name: /\+ Save Category/i });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
       expect(handleCategoryCreated).toHaveBeenCalledWith(
         expect.objectContaining({
           name: '🍕 Artisan Pizzas',
+          subcategories: ['Wood Fired', 'Calzones'],
         })
       );
     });
   });
 
-  it('switches to Step 2 and adds a choice into Choice Of Size group', async () => {
+  it('supports adding a modifier option under Modifiers & Sizes tab', async () => {
     const handleCreateAddOn = vi.fn().mockResolvedValue({
       id: 'addon-new',
       name: 'Jumbo (700ml)',
@@ -104,16 +94,14 @@ describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
       />
     );
 
-    expect(screen.getByText(/Step 2: Create Topping Groups/i)).toBeInTheDocument();
-
-    const choiceInput = screen.getByPlaceholderText(/e\.g\. Regular \(300ml\)/i);
-    fireEvent.change(choiceInput, { target: { value: 'Jumbo (700ml)' } });
+    const nameInput = screen.getByPlaceholderText(/e\.g\. Regular \(300ml\), Boba Pearls/i);
+    fireEvent.change(nameInput, { target: { value: 'Jumbo (700ml)' } });
 
     const priceInput = screen.getByPlaceholderText('0');
     fireEvent.change(priceInput, { target: { value: '70' } });
 
-    const addChoiceBtn = screen.getByRole('button', { name: /Add Choice to Group/i });
-    fireEvent.click(addChoiceBtn);
+    const addBtn = screen.getByRole('button', { name: /\+ Add Option/i });
+    fireEvent.click(addBtn);
 
     await waitFor(() => {
       expect(handleCreateAddOn).toHaveBeenCalledWith(
@@ -127,7 +115,7 @@ describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
     });
   });
 
-  it('submits a product with mapped topping groups in Step 3', async () => {
+  it('submits a product with selected category, subcategory and mapped modifiers', async () => {
     const handleProductCreated = vi.fn().mockResolvedValue(undefined);
 
     render(
@@ -143,21 +131,21 @@ describe('AddProductModal Component (Operation Flow 1 Wizard)', () => {
     );
 
     const prodNameInput = screen.getByPlaceholderText(/e\.g\. Authentic Brown Sugar Boba Tea/i);
-    fireEvent.change(prodNameInput, { target: { value: 'Authentic Brown Sugar Boba' } });
+    fireEvent.change(prodNameInput, { target: { value: 'Signature Taro Milk Tea' } });
 
     const priceInput = screen.getByPlaceholderText('240');
-    fireEvent.change(priceInput, { target: { value: '260' } });
+    fireEvent.change(priceInput, { target: { value: '250' } });
 
-    // Submit button
-    const submitBtn = screen.getByRole('button', { name: /Create Item & Add to Live POS Menu/i });
+    const submitBtn = screen.getByRole('button', { name: /Save & Add to POS/i });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(handleProductCreated).toHaveBeenCalledWith(
         expect.objectContaining({
-          name: 'Authentic Brown Sugar Boba',
-          basePrice: 260,
+          name: 'Signature Taro Milk Tea',
+          basePrice: 250,
           categoryId: 'cat-1',
+          subcategory: 'Milk Teas',
           dietaryType: 'BEVERAGE',
         })
       );

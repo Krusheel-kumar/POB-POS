@@ -764,32 +764,32 @@ export function App() {
             type="button"
             className="header-action-pill"
             onClick={() => setIsAddProductOpen(true)}
-            style={{ background: '#ede9fe', color: '#6d28d9', borderColor: '#c4b5fd', fontWeight: 700 }}
-            title="Create new menu items, categories, or subcategories"
+            style={{ background: '#0f172a', color: '#ffffff', borderColor: '#0f172a', fontWeight: 600 }}
+            title="Create new menu items, categories, or modifiers"
           >
-            ✨ + Add Product / Menu Wizard
+            + Add Item
           </button>
           <button
             type="button"
             className="header-action-pill"
             onClick={async () => {
-              if (window.confirm('Wipe all catalog items to start completely fresh for the demo?')) {
+              if (window.confirm('Wipe catalog items to start clean?')) {
                 await handleClearCatalog();
               }
             }}
-            style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }}
-            title="Clear all catalog items to start fresh for demo"
+            style={{ color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }}
+            title="Clear all catalog items"
           >
-            🧹 Clean Slate
+            Clean Slate
           </button>
           <button
             type="button"
             className="header-action-pill"
             onClick={handleLoadSampleCatalog}
-            style={{ background: '#eef2ff', color: '#4f46e5', borderColor: '#c7d2fe', fontWeight: 700 }}
-            title="Restore sample demo catalog"
+            style={{ color: '#475569', borderColor: '#cbd5e1' }}
+            title="Restore sample menu catalog"
           >
-            📥 Demo Menu
+            Reset Demo
           </button>
           <span className="counter-active-badge">
             ● Counter #01
@@ -998,26 +998,25 @@ export function App() {
             ) : filteredProducts.length === 0 ? (
               <div className="no-products-view">
                 {categories.filter((c) => c.id !== 'cat-all').length === 0 ? (
-                  <div style={{ padding: '3rem 2rem', textAlign: 'center', background: '#ffffff', borderRadius: '18px', border: '2px dashed #cbd5e1', margin: '2rem auto', maxWidth: '580px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-                    <div style={{ fontSize: '3.5rem', marginBottom: '0.85rem' }}>✨🧋</div>
-                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: '0 0 0.5rem' }}>Your POS Catalog is Empty (Clean Slate)</h3>
-                    <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '1.5rem' }}>
-                      Ready for the demo! Follow <strong>Operation Flow 1</strong> to create your Categories (e.g. <em>🧋 Boba Teas</em>), Topping Groups (e.g. <em>Choice of Size, Boba Toppings</em>), and Food Items live.
+                  <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '2rem auto', maxWidth: '420px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.4rem' }}>No Menu Items</h3>
+                    <p style={{ color: '#64748b', fontSize: '0.84rem', margin: '0 0 1.25rem' }}>
+                      Add a category and item to get started.
                     </p>
-                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
                       <button
                         type="button"
                         onClick={() => setIsAddProductOpen(true)}
-                        style={{ background: '#6366f1', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '0.75rem 1.65rem', fontWeight: 800, fontSize: '0.92rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)' }}
+                        style={{ background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '0.55rem 1.15rem', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer' }}
                       >
-                        ✨ Launch 3-Step Setup Wizard
+                        + Add Item
                       </button>
                       <button
                         type="button"
                         onClick={handleLoadSampleCatalog}
-                        style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}
+                        style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.55rem 1rem', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer' }}
                       >
-                        📥 Load Demo Menu
+                        Load Sample Menu
                       </button>
                     </div>
                   </div>
