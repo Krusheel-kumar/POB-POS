@@ -139,15 +139,26 @@ async function formatBillResponse(row: any): Promise<any> {
   const paymentsRes = await db.execute({ sql: 'SELECT * FROM payments WHERE bill_id = ?', args: [row.id] });
   const orderRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [row.order_id] });
 
+  const itemsRes = await db.execute({ sql: 'SELECT * FROM order_items WHERE order_id = ?', args: [row.order_id] });
+
   let orderSnapshot = undefined;
   if (orderRes.rows.length > 0) {
     const o = orderRes.rows[0];
     orderSnapshot = {
       id: String(o.id),
       orderNumber: String(o.order_number),
+      orderType: o.order_type ? String(o.order_type) : undefined,
       customerName: o.customer_name ? String(o.customer_name) : undefined,
       customerPhone: o.customer_phone ? String(o.customer_phone) : undefined,
       tableNumber: o.table_number ? String(o.table_number) : undefined,
+      items: itemsRes.rows.map((r) => ({
+        id: String(r.id),
+        productId: String(r.product_id),
+        productNameSnapshot: String(r.product_name_snapshot),
+        unitPriceSnapshot: Number(r.unit_price_snapshot),
+        quantity: Number(r.quantity),
+        lineTotalSnapshot: Number(r.line_total_snapshot),
+      })),
     };
   }
 

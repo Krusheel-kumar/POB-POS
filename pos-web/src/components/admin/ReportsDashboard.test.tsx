@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ReportsDashboard } from './ReportsDashboard';
+import type { Bill } from '../../types/pos';
 
 // Mock recharts responsive container for jsdom test environment
 vi.mock('recharts', async () => {
@@ -15,45 +16,106 @@ vi.mock('recharts', async () => {
   };
 });
 
+const sampleTestBills: Bill[] = [
+  {
+    id: 'bill-test-1',
+    orderId: 'ord-test-1',
+    invoiceNumber: 'POB-TEST-001',
+    subtotal: 940,
+    discountAmount: 0,
+    taxableAmount: 940,
+    cgstAmount: 23.5,
+    sgstAmount: 23.5,
+    taxAmount: 47,
+    totalAmount: 987,
+    paidAmount: 987,
+    status: 'PAID',
+    customerName: 'Ananya Sharma',
+    customerPhone: '98450 12345',
+    payments: [
+      {
+        id: 'pmt-1',
+        amount: 987,
+        paymentMethod: 'UPI',
+        status: 'SUCCESSFUL',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    order: {
+      id: 'ord-test-1',
+      orderNumber: 'ORD-TEST-001',
+      orderType: 'DINE_IN',
+      customerName: 'Ananya Sharma',
+      customerPhone: '98450 12345',
+      tableNumber: 'T4',
+      items: [
+        {
+          id: 'item-1',
+          productId: 'prod-boba-1',
+          productNameSnapshot: 'Tiger Brown Sugar Boba',
+          quantity: 2,
+          unitPriceSnapshot: 350,
+          lineTotalSnapshot: 700,
+        },
+        {
+          id: 'item-2',
+          productId: 'prod-croissant',
+          productNameSnapshot: 'Butter Croissant',
+          quantity: 1,
+          unitPriceSnapshot: 240,
+          lineTotalSnapshot: 240,
+        },
+      ],
+    },
+    createdAt: new Date().toISOString(),
+  },
+];
+
 describe('ReportsDashboard Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders View A: The Z-Report by default with KPI cards and payment breakdown', () => {
-    render(<ReportsDashboard />);
+  it('renders View A: The Z-Report with real KPI cards and payment breakdown from live bills', () => {
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Title
     expect(screen.getByText(/Reports & Analytics/i)).toBeInTheDocument();
 
     // Check KPI Cards
     expect(screen.getByText(/Gross Revenue/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/₹1,68,450/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('342')).toBeInTheDocument();
+    expect(screen.getAllByText(/₹940/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText(/Average Order Value/i)).toBeInTheDocument();
     expect(screen.getByText(/Tax Collected \(GST 5%\)/i)).toBeInTheDocument();
 
     // Payment Settlement Breakdown
     expect(screen.getByText(/Payment Settlement Breakdown/i)).toBeInTheDocument();
     expect(screen.getByText(/UPI \/ QR Scan/i)).toBeInTheDocument();
-    expect(screen.getByText(/Swiggy Online/i)).toBeInTheDocument();
   });
 
-  it('navigates to View B: Hourly Sales & Rush Heatmap and displays peak rush callouts', () => {
-    render(<ReportsDashboard />);
+  it('renders clean zero state when no bills are checked out yet', () => {
+    render(<ReportsDashboard bills={[]} />);
+
+    expect(screen.getByText(/Gross Revenue/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/₹0/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('navigates to View B: Hourly Sales & Rush Heatmap and displays dynamic hour callouts', () => {
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Click Hourly tab
     const hourlyTabBtn = screen.getByRole('button', { name: /Hourly Sales/i });
     fireEvent.click(hourlyTabBtn);
 
-    expect(screen.getByText(/Peak Lunch Rush/i)).toBeInTheDocument();
-    expect(screen.getByText(/01:00 PM - 02:00 PM/i)).toBeInTheDocument();
-    expect(screen.getByText(/Evening Boba Peak/i)).toBeInTheDocument();
-    expect(screen.getByText(/08:00 PM - 09:00 PM/i)).toBeInTheDocument();
+    expect(screen.getByText(/Peak Revenue Hour/i)).toBeInTheDocument();
+    expect(screen.getByText(/Order Volume Velocity/i)).toBeInTheDocument();
+    expect(screen.getByText(/Highest Average Ticket/i)).toBeInTheDocument();
   });
 
-  it('navigates to View C: Menu Item Sales Matrix and supports search and badges', () => {
-    render(<ReportsDashboard />);
+  it('navigates to View C: Menu Item Sales Matrix and supports search from real checked-out items', () => {
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Click Item Matrix tab
     const itemMatrixTabBtn = screen.getByRole('button', { name: /Item Sales/i });
@@ -61,21 +123,20 @@ describe('ReportsDashboard Component', () => {
 
     expect(screen.getByText(/The Menu Matrix/i)).toBeInTheDocument();
 
-    // Check Top Seller badge for Tiger Brown Sugar Boba
+    // Check items from real checked-out order
     expect(screen.getByText(/Tiger Brown Sugar Boba/i)).toBeInTheDocument();
-    const topSellerBadges = screen.getAllByText(/Top Seller/i);
-    expect(topSellerBadges.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Butter Croissant/i)).toBeInTheDocument();
 
     // Search filter test
     const searchInput = screen.getByPlaceholderText(/Search items by name or category/i);
     fireEvent.change(searchInput, { target: { value: 'Croissant' } });
 
     expect(screen.getByText(/Butter Croissant/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Chicken Tikka Roll/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tiger Brown Sugar Boba/i)).not.toBeInTheDocument();
   });
 
-  it('navigates to View D: Anti-Fraud Void Audit Log and displays security warnings', () => {
-    render(<ReportsDashboard />);
+  it('navigates to View D: Anti-Fraud Void Audit Log and displays security banner', () => {
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Click Void Log tab
     const voidLogTabBtn = screen.getByRole('button', { name: /Void Audit/i });
@@ -83,12 +144,10 @@ describe('ReportsDashboard Component', () => {
 
     expect(screen.getByText(/Security & Loss Prevention Audit Trail/i)).toBeInTheDocument();
     expect(screen.getByText(/Total Void Incidents/i)).toBeInTheDocument();
-    expect(screen.getByText(/Customer Changed Mind/i)).toBeInTheDocument();
-    expect(screen.getByText(/Wrong Item Punched on POS/i)).toBeInTheDocument();
   });
 
   it('navigates to View E: GST & CA Export Module and triggers CSV export with Toast', () => {
-    render(<ReportsDashboard />);
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Mock URL.createObjectURL and URL.revokeObjectURL
     const mockCreateObjectURL = vi.fn().mockReturnValue('blob:mock-url');
@@ -114,8 +173,8 @@ describe('ReportsDashboard Component', () => {
     expect(screen.getByText(/GSTR-1 Table 7 \(B2C Consolidated\) CSV Downloaded/i)).toBeInTheDocument();
   });
 
-  it('navigates to Settled Invoices & Sales Register, tests timeline filtering and omni-search', () => {
-    render(<ReportsDashboard />);
+  it('navigates to Settled Invoices & Sales Register, tests timeline filtering, reprint button, and omni-search', () => {
+    render(<ReportsDashboard bills={sampleTestBills} />);
 
     // Click Sales Register tab
     const salesTabBtn = screen.getByRole('button', { name: /Sales Register/i });
@@ -134,15 +193,14 @@ describe('ReportsDashboard Component', () => {
 
     // Switch timeline to All Time
     fireEvent.click(screen.getByRole('button', { name: 'All Time' }));
-    expect(screen.getByText(/INV-2026-095/i)).toBeInTheDocument();
+    expect(screen.getByText(/POB-TEST-001/i)).toBeInTheDocument();
 
     // Test Search input
     const searchInput = screen.getByPlaceholderText(/Search invoice #/i);
     fireEvent.change(searchInput, { target: { value: 'Ananya' } });
     expect(screen.getByText(/Ananya Sharma/i)).toBeInTheDocument();
 
-    // Verify slip view button exists
-    expect(screen.getAllByRole('button', { name: /View Slip/i }).length).toBeGreaterThanOrEqual(1);
+    // Verify Reprint invoice button exists
+    expect(screen.getByRole('button', { name: /Reprint/i })).toBeInTheDocument();
   });
 });
-

@@ -349,7 +349,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
             />
           )}
 
-          {activeTab === 'reports' && <ReportsDashboard />}
+          {activeTab === 'reports' && (
+            <ReportsDashboard
+              bills={bills}
+              orders={orders}
+              outletId={selectedOutletId}
+              onRefresh={loadAdminData}
+            />
+          )}
 
           {activeTab === 'inventory' && <InventoryModule />}
 

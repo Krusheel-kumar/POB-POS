@@ -598,51 +598,7 @@ export const INITIAL_ORDERS: Order[] = [
   },
 ];
 
-export const INITIAL_BILLS: Bill[] = [
-  {
-    id: 'bill-seed-01',
-    invoiceNumber: 'INV-2026-081',
-    status: 'PAID',
-    subtotal: 480,
-    discountAmount: 0,
-    taxableAmount: 480,
-    taxAmount: 24,
-    totalAmount: 504,
-    paidAmount: 504,
-    order: {
-      id: 'ord-seed-01',
-      orderNumber: 'ORD-2026-0035',
-    },
-    payments: [
-      {
-        id: 'pmt-seed-01',
-        paymentMethod: 'UPI',
-        status: 'SUCCESSFUL',
-        amount: 504,
-        transactionReference: 'UPI-984381048',
-        createdAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-      },
-    ],
-    createdAt: new Date(Date.now() - 92 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'bill-seed-03',
-    invoiceNumber: 'INV-2026-082',
-    status: 'ISSUED',
-    subtotal: 1180,
-    discountAmount: 0,
-    taxableAmount: 1180,
-    taxAmount: 59,
-    totalAmount: 1239,
-    paidAmount: 0,
-    order: {
-      id: 'ord-seed-03',
-      orderNumber: 'ORD-2026-0038',
-    },
-    payments: [],
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-  },
-];
+export const INITIAL_BILLS: Bill[] = [];
 
 /**
  * Self-contained Mock Storage Engine

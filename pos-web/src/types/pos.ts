@@ -256,6 +256,7 @@ export interface CreateOrderRequest {
 
 export interface OrderItem {
   id: string;
+  productId?: string;
   productNameSnapshot: string;
   variantNameSnapshot?: string;
   quantity: number;
@@ -294,6 +295,7 @@ export interface Payment {
 
 export interface Bill {
   id: string;
+  orderId?: string;
   invoiceNumber: string;
   status: BillStatus;
   customerName?: string;
@@ -301,14 +303,20 @@ export interface Bill {
   subtotal: number;
   discountAmount: number;
   taxableAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
   taxAmount: number;
   totalAmount: number;
   paidAmount: number;
+  notes?: string;
   order?: {
     id: string;
     orderNumber: string;
     orderType?: OrderType;
     table?: RestaurantTable;
+    tableNumber?: string;
+    customerName?: string;
+    customerPhone?: string;
     items?: OrderItem[];
     customerNotes?: string;
   };

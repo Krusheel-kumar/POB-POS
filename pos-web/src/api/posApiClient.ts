@@ -1005,18 +1005,59 @@ export class PosApiClient {
   }
 
   /**
-   * Clear all catalog items (for fresh demo setup)
+   * Fetch Real Sales Report directly from PostgreSQL Backend
    */
+  public async getSalesReport(outletId?: string, from?: string, to?: string): Promise<SalesReportResponse> {
+    const targetOutletId = outletId || this.config.outletId;
+    const url = new URL(`${this.config.baseUrl}/api/v1/reports/sales`);
+    if (targetOutletId) url.searchParams.set('outletId', targetOutletId);
+    if (from) url.searchParams.set('from', from);
+    if (to) url.searchParams.set('to', to);
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to load sales report: ${res.status}`);
+    }
+
+    return res.json();
+  }
+
   public async clearCatalog(): Promise<void> {
     mockStore.clearCatalog();
   }
 
-  /**
-   * Load standard sample catalog items
-   */
   public async loadSampleCatalog(): Promise<void> {
     mockStore.loadSampleCatalog();
   }
+}
+
+export interface SalesReportResponse {
+  summary: {
+    totalRevenue: number;
+    totalGrossSales: number;
+    totalDiscount: number;
+    totalNetTaxable: number;
+    totalCgst: number;
+    totalSgst: number;
+    totalOrdersCount: number;
+    averageOrderValue: number;
+  };
+  paymentBreakdown: Record<string, { count: number; amount: number }>;
+  itemWiseSales: Array<{ id: string; name: string; quantity: number; revenue: number }>;
+  categoryWiseSales: Array<{ name: string; quantity: number; revenue: number; percentage: number }>;
+  hourlyHeatmap: Array<{ hour: string; orders: number; revenue: number }>;
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    status: string;
+    createdAt: string;
+  }>;
 }
 
 export const posApiClient = new PosApiClient();
