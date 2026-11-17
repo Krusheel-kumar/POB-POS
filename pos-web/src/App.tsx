@@ -481,15 +481,21 @@ export function App() {
           totalAmount: estTotal,
           table: selectedTable ? selectedTable : undefined,
           customerNotes,
-          items: cartItems.map((ci) => ({
-            id: ci.id,
-            productNameSnapshot: ci.product.name,
-            variantNameSnapshot: ci.selectedVariant?.name,
-            quantity: ci.quantity,
-            unitPriceSnapshot: ci.unitPrice,
-            lineTotalSnapshot: ci.lineTotal,
-            itemNotes: ci.itemNotes,
-          })),
+          items: cartItems.map((ci) => {
+            const addOnNames = ci.selectedAddOns.map((a) => a.name).join(', ');
+            const fullVariant = ci.selectedVariant?.name
+              ? (addOnNames ? `${ci.selectedVariant.name} • +${addOnNames}` : ci.selectedVariant.name)
+              : (addOnNames ? `+${addOnNames}` : undefined);
+            return {
+              id: ci.id,
+              productNameSnapshot: ci.product.name,
+              variantNameSnapshot: fullVariant,
+              quantity: ci.quantity,
+              unitPriceSnapshot: ci.unitPrice,
+              lineTotalSnapshot: ci.lineTotal,
+              itemNotes: ci.itemNotes,
+            };
+          }),
           createdAt: new Date().toISOString(),
         };
       } else {
@@ -537,15 +543,21 @@ export function App() {
           totalAmount: estSubtotal,
           table: selectedTable ? selectedTable : undefined,
           customerNotes,
-          items: cartItems.map((ci) => ({
-            id: ci.id,
-            productNameSnapshot: ci.product.name,
-            variantNameSnapshot: ci.selectedVariant?.name,
-            quantity: ci.quantity,
-            unitPriceSnapshot: ci.unitPrice,
-            lineTotalSnapshot: ci.lineTotal,
-            itemNotes: ci.itemNotes,
-          })),
+          items: cartItems.map((ci) => {
+            const addOnNames = ci.selectedAddOns.map((a) => a.name).join(', ');
+            const fullVariant = ci.selectedVariant?.name
+              ? (addOnNames ? `${ci.selectedVariant.name} • +${addOnNames}` : ci.selectedVariant.name)
+              : (addOnNames ? `+${addOnNames}` : undefined);
+            return {
+              id: ci.id,
+              productNameSnapshot: ci.product.name,
+              variantNameSnapshot: fullVariant,
+              quantity: ci.quantity,
+              unitPriceSnapshot: ci.unitPrice,
+              lineTotalSnapshot: ci.lineTotal,
+              itemNotes: ci.itemNotes,
+            };
+          }),
           createdAt: new Date().toISOString(),
         };
       } else {

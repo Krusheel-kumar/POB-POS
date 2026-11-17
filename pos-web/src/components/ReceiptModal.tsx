@@ -98,13 +98,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="thermal-bill">
               <div className="thermal-header">
                 <h2 className="brand-name">POP O' BOB</h2>
-                <div className="brand-sub">ARTISAN BOBA TEA & CAFE BISTRO</div>
-                <div className="brand-contact">142 Central Avenue, Food District</div>
-                <div className="brand-tax-info">
-                  <span>GSTIN: 07AABCS1429B1Z8</span>
-                  <span>FSSAI Lic: 10021011000492</span>
+                <div className="brand-sub">Speciality Bubble Tea</div>
+                <div className="brand-contact">
+                  407, Mezzanine, Road No. 81, Film Nagar, Hyderabad, Telangana
                 </div>
-                <div className="slip-divider">================================</div>
+                <div className="brand-tax-info">
+                  <span className="brand-gstin">GSTIN: 36AABCP1234A1Z9</span>
+                </div>
+                <div className="slip-divider">========================================</div>
                 {isDuplicate ? (
                   <div className="duplicate-alert-banner">
                     <div className="dup-title">*** DUPLICATE TAX INVOICE ***</div>
@@ -122,60 +123,65 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <div className="slip-title">TAX INVOICE / CASH BILL</div>
                   </>
                 )}
-                <div className="slip-divider">================================</div>
+                <div className="slip-divider">========================================</div>
               </div>
 
               <div className="thermal-meta">
                 <div className="meta-row">
-                  <span>Invoice: {bill?.invoiceNumber || 'INV-2026-089'}</span>
-                  <span>Date: {formattedDate.split(',')[0]}</span>
+                  <span className="meta-bold">Invoice:</span>
+                  <span>{bill?.invoiceNumber || (order?.orderNumber ? order.orderNumber.replace('ORD', 'INV') : 'INV-2026-089')}</span>
                 </div>
                 <div className="meta-row">
-                  <span>Order: #{order?.orderNumber || bill?.order?.orderNumber || 'ORD-2026-042'}</span>
-                  <span>Time: {formattedDate.split(',')[1]}</span>
+                  <span className="meta-bold">Date & Time:</span>
+                  <span>{formattedDate}</span>
                 </div>
                 <div className="meta-row">
-                  <span>Type: {order?.orderType ? order.orderType.replace('_', ' ') : 'DINE IN'}</span>
+                  <span className="meta-bold">Order No:</span>
+                  <span>#{order?.orderNumber || bill?.order?.orderNumber || 'ORD-2026-4095'}</span>
+                </div>
+                <div className="meta-row">
+                  <span className="meta-bold">Order Type:</span>
                   <span>
-                    {order?.table ? `Table: ${order.table.tableNumber}` : 'Counter Pickup'}
+                    {order?.orderType ? order.orderType.replace('_', ' ') : 'DINE IN'}
+                    {order?.table ? ` (Table ${order.table.tableNumber})` : ' (Counter Pickup)'}
                   </span>
                 </div>
                 {(activeCustomerName || activeCustomerPhone) && (
-                  <div className="meta-row" style={{ fontWeight: 700, color: '#000' }}>
-                    <span>Customer: {activeCustomerName || 'Walk-in Guest'}</span>
-                    <span>{activeCustomerPhone ? `+91 ${activeCustomerPhone}` : ''}</span>
+                  <div className="meta-row customer-row">
+                    <span className="meta-bold">Customer:</span>
+                    <span>{activeCustomerName || 'Walk-in Guest'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}</span>
                   </div>
                 )}
                 <div className="meta-row">
-                  <span>Cashier: POS Terminal #1</span>
-                  <span>Server: Team</span>
+                  <span className="meta-bold">Cashier:</span>
+                  <span>POS Terminal #1 (JD)</span>
                 </div>
               </div>
 
-              <div className="slip-divider">--------------------------------</div>
+              <div className="slip-divider">----------------------------------------</div>
               <div className="thermal-items-header">
                 <span className="col-desc">ITEM</span>
                 <span className="col-qty">QTY</span>
                 <span className="col-rate">RATE</span>
                 <span className="col-amt">AMT</span>
               </div>
-              <div className="slip-divider">--------------------------------</div>
+              <div className="slip-divider">----------------------------------------</div>
 
               <div className="thermal-items-list">
                 {order?.items && order.items.length > 0 ? (
                   order.items.map((item, idx) => (
                     <div key={idx} className="thermal-item-entry">
                       <div className="item-main-row">
-                        <span className="item-title">
-                          {item.productNameSnapshot}
-                          {item.variantNameSnapshot ? ` (${item.variantNameSnapshot})` : ''}
-                        </span>
+                        <span className="item-title">{item.productNameSnapshot}</span>
                         <span className="item-qty">{item.quantity}</span>
                         <span className="item-rate">
                           ₹{(item.lineTotalSnapshot / item.quantity).toFixed(2)}
                         </span>
                         <span className="item-amount">₹{item.lineTotalSnapshot.toFixed(2)}</span>
                       </div>
+                      {item.variantNameSnapshot && (
+                        <div className="item-sub-addon">• {item.variantNameSnapshot}</div>
+                      )}
                       {item.itemNotes && (
                         <div className="item-sub-note">* Note: {item.itemNotes}</div>
                       )}
@@ -184,40 +190,41 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 ) : (
                   <div className="thermal-item-entry">
                     <div className="item-main-row">
-                      <span className="item-title">Assorted F&B Items</span>
+                      <span className="item-title">AUTHENTIC MILK TEA</span>
                       <span className="item-qty">1</span>
-                      <span className="item-rate">₹{bill?.subtotal.toFixed(2) || '590.00'}</span>
-                      <span className="item-amount">₹{bill?.subtotal.toFixed(2) || '590.00'}</span>
+                      <span className="item-rate">₹249.00</span>
+                      <span className="item-amount">₹249.00</span>
                     </div>
+                    <div className="item-sub-addon">• Regular (350ml)</div>
                   </div>
                 )}
               </div>
 
-              <div className="slip-divider">--------------------------------</div>
+              <div className="slip-divider">----------------------------------------</div>
 
               <div className="thermal-totals">
                 <div className="calc-row">
                   <span>Item Subtotal:</span>
-                  <span>₹{(bill?.subtotal || order?.subtotal || 590).toFixed(2)}</span>
+                  <span>₹{(bill?.subtotal || order?.subtotal || 249).toFixed(2)}</span>
                 </div>
                 <div className="calc-row">
                   <span>CGST @ 2.5%:</span>
-                  <span>₹{((bill?.taxAmount || order?.taxAmount || 29.5) / 2).toFixed(2)}</span>
+                  <span>₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</span>
                 </div>
                 <div className="calc-row">
                   <span>SGST @ 2.5%:</span>
-                  <span>₹{((bill?.taxAmount || order?.taxAmount || 29.5) / 2).toFixed(2)}</span>
+                  <span>₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</span>
                 </div>
-                <div className="slip-divider">================================</div>
+                <div className="slip-divider">========================================</div>
                 <div className="calc-row grand-total">
                   <span>NET TOTAL:</span>
-                  <span>₹{(bill?.totalAmount || order?.totalAmount || 619.5).toFixed(2)}</span>
+                  <span className="grand-val">₹{(bill?.totalAmount || order?.totalAmount || 261.45).toFixed(2)}</span>
                 </div>
-                <div className="slip-divider">================================</div>
+                <div className="slip-divider">========================================</div>
                 <div className="calc-row">
                   <span>Settled Amount:</span>
                   <span className="paid-tag">
-                    ₹{(bill?.paidAmount || order?.totalAmount || 619.5).toFixed(2)}
+                    ₹{(bill?.paidAmount || order?.totalAmount || 261.45).toFixed(2)}
                   </span>
                 </div>
                 <div className="calc-row">
@@ -230,12 +237,21 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </div>
               </div>
 
+              {/* Bill Ending: FSSAI Licence & Thank You */}
               <div className="slip-footer">
+                <div className="slip-divider">----------------------------------------</div>
+                <div className="footer-fssai-box">
+                  <span className="fssai-title">FSSAI Lic. No:</span>{' '}
+                  <strong className="fssai-number">13622011000492</strong>
+                </div>
+                <div className="slip-divider">----------------------------------------</div>
+
                 <div className="qr-box">
                   <div className="simulated-qr">▦ ▣ ▤ ▥ ▦</div>
                   <span>Scan to pay or leave feedback</span>
                 </div>
                 <p className="thank-you-msg">*** THANK YOU FOR VISITING POP O' BOB! ***</p>
+                <p className="visit-again-sub">Speciality Bubble Tea • Have A Bobaful Day!</p>
                 <p className="footer-software">Powered by POP O' BOB Cloud POS</p>
               </div>
             </div>
