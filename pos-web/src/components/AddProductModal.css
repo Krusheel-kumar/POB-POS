@@ -466,22 +466,75 @@
   gap: 1rem;
   align-items: flex-start;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.min-image-upload-section.dragging {
+  border-color: #6366f1;
+  background: #eef2ff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .min-image-preview-box {
-  width: 80px;
-  height: 80px;
+  width: 86px;
+  height: 86px;
   border-radius: 8px;
   overflow: hidden;
-  background: #e2e8f0;
+  background: #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   border: 1px solid #cbd5e1;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.min-image-preview-box.clickable {
+  cursor: pointer;
+}
+
+.min-image-preview-box.clickable:hover {
+  border-color: #6366f1;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+}
+
+.min-preview-inner-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.min-preview-hint {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.min-preview-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border-radius: 7px;
+}
+
+.min-image-preview-box.clickable:hover .min-preview-hover-overlay {
+  opacity: 1;
 }
 
 .min-image-preview-img {
@@ -499,7 +552,83 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.45rem;
+}
+
+.min-image-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.min-btn-upload-file {
+  background: #ffffff;
+  color: #4338ca;
+  border: 1.5px dashed #6366f1;
+  border-radius: 7px;
+  padding: 0.42rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.min-btn-upload-file:hover {
+  background: #eef2ff;
+  border-color: #4f46e5;
+  color: #312e81;
+  transform: translateY(-1px);
+}
+
+.min-upload-icon {
+  font-size: 0.95rem;
+}
+
+.min-upload-filename-pill {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.min-pill-clear-btn {
+  background: transparent;
+  border: none;
+  color: #4338ca;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.min-pill-clear-btn:hover {
+  color: #dc2626;
+}
+
+.min-drag-hint-text {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.min-url-input {
+  font-size: 0.78rem !important;
+  padding: 0.38rem 0.65rem !important;
 }
 
 .min-image-chips {

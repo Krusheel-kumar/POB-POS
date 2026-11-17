@@ -45,6 +45,9 @@ describe('Frontend–Backend Integration (Cashier POS)', () => {
       tenantId: '11111111-1111-1111-1111-111111111111',
       outletId: '22222222-2222-2222-2222-222222222222',
     });
+    vi.spyOn(posApiClient, 'getOutlets').mockResolvedValue([{ id: '22222222-2222-2222-2222-222222222222', name: 'Test Outlet', paymentPolicy: 'FLEXIBLE' }]);
+    vi.spyOn(posApiClient, 'getTables').mockResolvedValue([]);
+    vi.spyOn(posApiClient, 'getAddOns').mockResolvedValue([]);
   });
 
   it('loads and renders categories and products from backend API', async () => {

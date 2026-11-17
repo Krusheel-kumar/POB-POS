@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type {
   Product,
   ProductCategory,
@@ -87,11 +87,80 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isAddingCustomSubcat, setIsAddingCustomSubcat] = useState(false);
   const [dietaryType, setDietaryType] = useState<DietaryType>('BEVERAGE');
   const [prodImageUrl, setProdImageUrl] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [prodBadge, setProdBadge] = useState('');
   const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([
     'Choice Of Size',
     'Choice Of Boba & Toppings',
   ]);
+
+  const processImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please select a valid image file (.png, .jpg, .jpeg, .webp, .svg)');
+      return;
+    }
+
+    setUploadedFileName(file.name);
+    setErrorMsg(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (!result) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setProdImageUrl(compressedDataUrl);
+        } else {
+          setProdImageUrl(result);
+        }
+      };
+      img.onerror = () => {
+        setProdImageUrl(result);
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
 
   // Synchronize when editingProduct changes or modal opens
   useEffect(() => {
@@ -126,6 +195,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setCustomSubcatInput('');
       setIsAddingCustomSubcat(false);
       setProdImageUrl('');
+      setUploadedFileName(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setProdBadge('');
       if (addOns.length > 0) {
         const allGroups = Array.from(new Set(addOns.map((a) => a.category || 'Choice Of Boba & Toppings')));
@@ -291,6 +362,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setCustomSubcatInput('');
       setIsAddingCustomSubcat(false);
       setProdImageUrl('');
+      setUploadedFileName(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setProdBadge('');
 
       setTimeout(() => {
@@ -728,9 +801,30 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         {/* TAB 1: ADD / EDIT MENU ITEM */}
         {activeTab === 'product' && (
           <form onSubmit={handleSaveProduct} className="min-modal-body">
-            {/* Image Preview & URL Row */}
-            <div className="min-image-upload-section">
-              <div className="min-image-preview-box">
+            {/* Image Preview & Local Folder Upload Row */}
+            <div
+              className={`min-image-upload-section ${isDragging ? 'dragging' : ''}`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
+              {/* Hidden Native File Input for Folder Selection */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+
+              <div
+                className="min-image-preview-box clickable"
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to choose a photo from your laptop or system folder"
+              >
                 {prodImageUrl ? (
                   <img
                     src={prodImageUrl}
@@ -741,29 +835,79 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     }}
                   />
                 ) : (
-                  <span className="min-image-preview-placeholder">🧋</span>
+                  <div className="min-preview-inner-empty">
+                    <span className="min-image-preview-placeholder">🧋</span>
+                    <span className="min-preview-hint">Choose File</span>
+                  </div>
                 )}
+                <div className="min-preview-hover-overlay">
+                  <span>📷 Browse</span>
+                </div>
               </div>
+
               <div className="min-image-inputs">
                 <div className="min-label-row">
-                  <label className="min-label">Item Photo / Image URL</label>
+                  <label className="min-label">Item Photo / Image</label>
                   {prodImageUrl && (
                     <button
                       type="button"
                       className="min-field-action-link"
-                      onClick={() => setProdImageUrl('')}
+                      onClick={() => {
+                        setProdImageUrl('');
+                        setUploadedFileName(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
                     >
                       Clear
                     </button>
                   )}
                 </div>
+
+                {/* Primary Button: Browse Folder from Laptop / System */}
+                <div className="min-image-actions-row">
+                  <button
+                    type="button"
+                    className="min-btn-upload-file"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Open file picker to select a photo from your laptop folders"
+                  >
+                    <span className="min-upload-icon">📁</span>
+                    <span>Choose from Folder / Computer</span>
+                  </button>
+
+                  {uploadedFileName ? (
+                    <span className="min-upload-filename-pill" title={uploadedFileName}>
+                      <span>📷 {uploadedFileName}</span>
+                      <button
+                        type="button"
+                        className="min-pill-clear-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUploadedFileName(null);
+                          setProdImageUrl('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="min-drag-hint-text">or drag and drop photo here</span>
+                  )}
+                </div>
+
+                {/* Secondary Option: Paste URL */}
                 <input
                   type="url"
-                  className="min-input"
-                  placeholder="https://... photo url or click quick preset below"
-                  value={prodImageUrl}
-                  onChange={(e) => setProdImageUrl(e.target.value)}
+                  className="min-input min-url-input"
+                  placeholder="...or paste photo web link (https://...)"
+                  value={prodImageUrl.startsWith('data:') ? '' : prodImageUrl}
+                  onChange={(e) => {
+                    setUploadedFileName(null);
+                    setProdImageUrl(e.target.value);
+                  }}
                 />
+
                 <div className="min-image-chips">
                   <span style={{ fontSize: '0.72rem', color: '#64748b', marginRight: '4px' }}>Sample Photos:</span>
                   {SAMPLE_BOBA_IMAGES.map((sample) => (
@@ -771,7 +915,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                       key={sample.label}
                       type="button"
                       className="min-image-chip"
-                      onClick={() => setProdImageUrl(sample.url)}
+                      onClick={() => {
+                        setUploadedFileName(null);
+                        setProdImageUrl(sample.url);
+                      }}
                     >
                       {sample.label}
                     </button>
