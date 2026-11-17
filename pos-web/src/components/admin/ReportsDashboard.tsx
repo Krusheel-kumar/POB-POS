@@ -17,7 +17,6 @@ import {
   Layers,
   Sparkles,
   DollarSign,
-  Calendar,
   Eye,
   RefreshCw,
 } from 'lucide-react';
@@ -275,14 +274,14 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
         <div className="reports-header-top">
           <div className="reports-header-title-box">
             <h2>
-              <Sparkles size={24} color="#4f46e5" />
-              Reports & Business Intelligence
+              <Sparkles size={20} color="#4f46e5" />
+              Reports & Analytics
             </h2>
-            <p>Audited End-of-Day statistics, hourly rushes, menu profitability & statutory GST logs</p>
+            <p>Sales summary, transaction register, hourly trends, and tax reports</p>
           </div>
           <div className="reports-date-badge">
-            <Clock size={16} />
-            <span>Today: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} (Live Audit)</span>
+            <Clock size={14} />
+            <span>Today: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
           </div>
         </div>
 
@@ -293,48 +292,48 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
             className={`reports-tab-btn ${activeTab === 'z-report' ? 'active' : ''}`}
             onClick={() => setActiveTab('z-report')}
           >
-            <Receipt size={16} />
-            The Z-Report (End of Day)
+            <Receipt size={15} />
+            Summary
           </button>
           <button
             type="button"
             className={`reports-tab-btn ${activeTab === 'sales-report' ? 'active' : ''}`}
             onClick={() => setActiveTab('sales-report')}
           >
-            <DollarSign size={16} />
-            Settled Invoices & Sales Register
+            <DollarSign size={15} />
+            Sales Register
           </button>
           <button
             type="button"
             className={`reports-tab-btn ${activeTab === 'hourly' ? 'active' : ''}`}
             onClick={() => setActiveTab('hourly')}
           >
-            <Clock size={16} />
-            Hourly Sales & Rush Heatmap
+            <Clock size={15} />
+            Hourly Sales
           </button>
           <button
             type="button"
             className={`reports-tab-btn ${activeTab === 'item-matrix' ? 'active' : ''}`}
             onClick={() => setActiveTab('item-matrix')}
           >
-            <ShoppingBag size={16} />
-            Menu Item Sales Matrix
+            <ShoppingBag size={15} />
+            Item Sales
           </button>
           <button
             type="button"
             className={`reports-tab-btn tab-danger ${activeTab === 'void-log' ? 'active' : ''}`}
             onClick={() => setActiveTab('void-log')}
           >
-            <ShieldAlert size={16} />
-            Anti-Fraud Void Audit Log
+            <ShieldAlert size={15} />
+            Void Audit
           </button>
           <button
             type="button"
             className={`reports-tab-btn ${activeTab === 'gst-export' ? 'active' : ''}`}
             onClick={() => setActiveTab('gst-export')}
           >
-            <FileSpreadsheet size={16} />
-            GST & CA Export Module
+            <FileSpreadsheet size={15} />
+            Tax (GST)
           </button>
         </div>
       </div>
@@ -501,16 +500,19 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
       {/* =========================================================================
           VIEW: SETTLED INVOICES & REAL-TIME SALES REGISTER (TIMELINE & SEARCH)
           ========================================================================= */}
+      {/* =========================================================================
+          VIEW: SETTLED INVOICES & REAL-TIME SALES REGISTER
+          ========================================================================= */}
       {activeTab === 'sales-report' && (
         <div className="report-card">
           <div className="report-card-header">
             <div>
               <h3 className="report-card-title">
-                <DollarSign size={20} color="#059669" />
-                Settled Invoices & Real-Time Sales Register
+                <DollarSign size={18} color="#059669" />
+                Sales Register
               </h3>
               <p className="report-card-subtitle">
-                Live transactional sales ledger with authentic invoice numbers, payment modes, time audits & customer breakdown
+                Live transactional sales ledger with invoice numbers, payment modes, and order history
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -518,29 +520,26 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                 type="button"
                 className="btn btn-sm btn-secondary"
                 onClick={refreshSettledInvoices}
-                title="Refresh live settled transactions"
+                title="Refresh live transactions"
                 style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
               >
-                <RefreshCw size={14} /> Refresh
+                <RefreshCw size={13} /> Refresh
               </button>
               <button
                 type="button"
                 className="btn-export-download"
-                style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
+                style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }}
                 onClick={handleExportSalesReportCSV}
               >
-                <Download size={15} /> Export Filtered CSV
+                <Download size={14} /> Export CSV
               </button>
             </div>
           </div>
 
           {/* Timeline & Filter Controls Bar */}
           <div className="sales-filter-control-panel">
-            {/* Row 1: Timeline Presets & Custom Range */}
+            {/* Row 1: Timeline Presets */}
             <div className="sales-timeline-row">
-              <span className="filter-group-label">
-                <Calendar size={15} /> Timeline:
-              </span>
               <div className="sales-preset-group">
                 {(['TODAY', 'YESTERDAY', 'LAST_7_DAYS', 'THIS_MONTH', 'ALL', 'CUSTOM'] as const).map((t) => {
                   const labels = {
@@ -549,7 +548,7 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                     LAST_7_DAYS: 'Last 7 Days',
                     THIS_MONTH: 'This Month',
                     ALL: 'All Time',
-                    CUSTOM: 'Custom Range 📅',
+                    CUSTOM: 'Custom',
                   };
                   return (
                     <button
@@ -593,10 +592,10 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
             <div className="sales-search-filter-row">
               {/* Omni Search Input */}
               <div className="sales-search-box">
-                <Search size={16} className="sales-search-icon" />
+                <Search size={15} className="sales-search-icon" />
                 <input
                   type="search"
-                  placeholder="Search Invoice # (e.g. INV-2026), Order #, Customer, Mobile, Table..."
+                  placeholder="Search invoice #, order #, customer, table..."
                   value={salesSearch}
                   onChange={(e) => setSalesSearch(e.target.value)}
                   className="sales-search-input"
@@ -619,7 +618,7 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                     className={`sales-toggle-pill ${salesPaymentFilter === m ? 'active' : ''}`}
                     onClick={() => setSalesPaymentFilter(m)}
                   >
-                    {m === 'ALL' ? 'All Modes' : m === 'UPI' ? '📱 UPI' : m === 'CASH' ? '💵 Cash' : '💳 Card'}
+                    {m === 'ALL' ? 'All' : m === 'UPI' ? 'UPI' : m === 'CASH' ? 'Cash' : 'Card'}
                   </button>
                 ))}
               </div>
@@ -634,44 +633,44 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                     className={`sales-toggle-pill ${salesChannelFilter === ch ? 'active' : ''}`}
                     onClick={() => setSalesChannelFilter(ch)}
                   >
-                    {ch === 'ALL' ? 'All Channels' : ch === 'DINE_IN' ? '🪑 Dine In' : ch === 'TAKEAWAY' ? '🛍️ Takeaway' : '⚡ Counter'}
+                    {ch === 'ALL' ? 'All' : ch === 'DINE_IN' ? 'Dine In' : ch === 'TAKEAWAY' ? 'Takeaway' : 'Counter'}
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Dynamic KPI Summary Ribbon */}
+          {/* Minimal Production KPI Metrics */}
           <div className="sales-kpi-ribbon">
-            <div className="sales-kpi-pill primary">
+            <div className="sales-kpi-pill">
               <span className="kpi-label">Filtered Revenue</span>
               <strong className="kpi-value">{formatINR(salesMetrics.totalRevenue)}</strong>
-              <span className="kpi-sub">GST Taxable + Tax</span>
+              <span className="kpi-sub">Tax: {formatINR(salesMetrics.totalTax)}</span>
             </div>
             <div className="sales-kpi-pill">
               <span className="kpi-label">Total Invoices</span>
               <strong className="kpi-value">{salesMetrics.count}</strong>
               <span className="kpi-sub">Settled Orders</span>
             </div>
-            <div className="sales-kpi-pill upi">
-              <span className="kpi-label">UPI QR Total</span>
-              <strong className="kpi-value">{formatINR(salesMetrics.upiTotal)}</strong>
-              <span className="kpi-sub">Instant Settled</span>
-            </div>
-            <div className="sales-kpi-pill cash">
-              <span className="kpi-label">Cash Collected</span>
-              <strong className="kpi-value">{formatINR(salesMetrics.cashTotal)}</strong>
-              <span className="kpi-sub">Drawer Cash</span>
-            </div>
-            <div className="sales-kpi-pill card">
-              <span className="kpi-label">Card POS Total</span>
-              <strong className="kpi-value">{formatINR(salesMetrics.cardTotal)}</strong>
-              <span className="kpi-sub">EDC Terminal</span>
-            </div>
             <div className="sales-kpi-pill">
               <span className="kpi-label">Average Bill</span>
               <strong className="kpi-value">{formatINR(salesMetrics.avgTicket)}</strong>
-              <span className="kpi-sub">Per Customer</span>
+              <span className="kpi-sub">Per order</span>
+            </div>
+            <div className="sales-kpi-pill">
+              <span className="kpi-label">UPI</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.upiTotal)}</strong>
+              <span className="kpi-sub">Digital</span>
+            </div>
+            <div className="sales-kpi-pill">
+              <span className="kpi-label">Cash</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.cashTotal)}</strong>
+              <span className="kpi-sub">Drawer</span>
+            </div>
+            <div className="sales-kpi-pill">
+              <span className="kpi-label">Card</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.cardTotal)}</strong>
+              <span className="kpi-sub">Terminal</span>
             </div>
           </div>
 
@@ -679,11 +678,11 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
           <div className="table-responsive" style={{ marginTop: '1rem' }}>
             {filteredSettledInvoices.length === 0 ? (
               <div className="sales-empty-state">
-                <Receipt size={42} color="#94a3b8" />
+                <Receipt size={40} color="#94a3b8" />
                 <h4>No Settled Invoices Found</h4>
                 <p>
                   No transactions match the selected date timeline (
-                  {salesTimeline}) or search filter. Settle an order in the POS or adjust your filters above.
+                  {salesTimeline}) or search filter.
                 </p>
                 {(salesSearch || salesTimeline !== 'ALL' || salesPaymentFilter !== 'ALL' || salesChannelFilter !== 'ALL') && (
                   <button
@@ -705,11 +704,11 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
               <table className="reports-table sales-ledger-table">
                 <thead>
                   <tr>
-                    <th>Invoice No & Time</th>
+                    <th>Invoice & Time</th>
                     <th>Order & Table</th>
                     <th>Customer</th>
-                    <th>Items & Customizations</th>
-                    <th>Payment Mode</th>
+                    <th>Items</th>
+                    <th>Payment</th>
                     <th style={{ textAlign: 'right' }}>Tax (5%)</th>
                     <th style={{ textAlign: 'right' }}>Total Amount</th>
                     <th style={{ textAlign: 'center' }}>Slip</th>
@@ -731,7 +730,7 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                       <td>
                         <div className="inv-cust-name">{inv.customerName}</div>
                         {inv.customerPhone && (
-                          <div className="inv-cust-phone">📱 {inv.customerPhone}</div>
+                          <div className="inv-cust-phone">{inv.customerPhone}</div>
                         )}
                       </td>
                       <td>
@@ -741,7 +740,7 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
                       </td>
                       <td>
                         <span className={`payment-pill-tag tag-${inv.paymentMethod.toLowerCase()}`}>
-                          {inv.paymentMethod === 'UPI' ? '📱 UPI' : inv.paymentMethod === 'CASH' ? '💵 Cash' : '💳 Card'}
+                          {inv.paymentMethod}
                         </span>
                         <div className="inv-ref-sub">{inv.transactionReference}</div>
                       </td>

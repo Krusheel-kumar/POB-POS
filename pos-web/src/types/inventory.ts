@@ -15,6 +15,9 @@ export interface InventoryOutlet {
   id: string;
   name: string;
   code: string;
+  address?: string;
+  phone?: string;
+  managerName?: string;
   isCentralMaster?: boolean;
 }
 

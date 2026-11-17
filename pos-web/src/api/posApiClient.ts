@@ -9,6 +9,7 @@ import type {
   KitchenTicketStatus,
   PageResponse,
   Outlet,
+  CreateOutletRequest,
   CategoryRequest,
   ProductRequest,
   AddOn,
@@ -366,6 +367,31 @@ export class PosApiClient {
       return res.json();
     } catch {
       return mockStore.getOutlets();
+    }
+  }
+
+  /**
+   * Create new outlet branch
+   */
+  public async createOutlet(req: CreateOutletRequest): Promise<Outlet> {
+    if (this.demoMode) {
+      return mockStore.createOutlet(req);
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/outlets`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(req),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to create outlet: ${res.status}`);
+      }
+
+      return res.json();
+    } catch {
+      return mockStore.createOutlet(req);
     }
   }
 

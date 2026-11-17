@@ -14,9 +14,10 @@ import type {
 
 export const OUTLETS_LIST: InventoryOutlet[] = [
   { id: 'warehouse-central', name: 'Central Master Commissary', code: 'CENTRAL-HQ', isCentralMaster: true },
-  { id: 'outlet-01', name: 'Outlet 1 - Jubilee Hills Flagship', code: 'OUTLET-01' },
-  { id: 'outlet-02', name: 'Outlet 2 - Madhapur Express', code: 'OUTLET-02' },
-  { id: 'outlet-03', name: 'Outlet 3 - Hitech City Cyber Towers', code: 'OUTLET-03' },
+  { id: 'outlet-demo-flagship', name: "Flagship Film Nagar (HQ Branch)", code: 'POB-FN-01', address: '407, Mezzanine, Film Nagar, Hyderabad' },
+  { id: 'outlet-01', name: 'Outlet 1 - Jubilee Hills Flagship', code: 'OUTLET-01', address: 'Plot 72, Road 36, Jubilee Hills, Hyderabad' },
+  { id: 'outlet-02', name: 'Outlet 2 - Madhapur Express', code: 'OUTLET-02', address: 'Inorbit Mall Road, Madhapur, Hyderabad' },
+  { id: 'outlet-03', name: 'Outlet 3 - Hitech City Cyber Towers', code: 'OUTLET-03', address: 'Cyber Towers, Hitech City, Hyderabad' },
 ];
 
 export const INITIAL_RAW_MATERIALS: RawMaterial[] = [
@@ -352,6 +353,15 @@ interface InventoryStoreState {
 
   // Navigation / Outlet Selection
   setSelectedOutletId: (outletId: string) => void;
+  createOutlet: (newOutletData: {
+    id?: string;
+    name: string;
+    code?: string;
+    address?: string;
+    phone?: string;
+    managerName?: string;
+    initialStockAllocation?: 'EMPTY' | 'STARTER_PACK';
+  }) => InventoryOutlet;
 
   // Screen 1: Master Inventory Actions
   addRawMaterial: (material: Omit<RawMaterial, 'id' | 'costPerConsumptionUom' | 'warehouseStock' | 'branchStock'>) => void;
@@ -404,6 +414,57 @@ export const useInventoryStore = create<InventoryStoreState>((set, get) => ({
   },
 
   setSelectedOutletId: (outletId: string) => set({ selectedOutletId: outletId }),
+
+  createOutlet: (data) => {
+    const { outlets, rawMaterials, ledger } = get();
+    const newId = data.id || `outlet-${Date.now()}`;
+    const newOutlet: InventoryOutlet = {
+      id: newId,
+      name: data.name.trim(),
+      code: data.code?.trim() || `OUTLET-0${outlets.length}`,
+      address: data.address?.trim() || 'Hyderabad, Telangana',
+      phone: data.phone?.trim() || '+91 98765 00000',
+      managerName: data.managerName?.trim() || 'Branch Manager',
+    };
+
+    const isStarterPack = data.initialStockAllocation === 'STARTER_PACK';
+
+    const updatedMaterials = rawMaterials.map((mat) => {
+      const allocatedQty = isStarterPack ? Math.floor(mat.reorderThreshold * 0.5) : 0;
+      const newMasterStock = isStarterPack ? Math.max(0, mat.masterStock - allocatedQty) : mat.masterStock;
+      return {
+        ...mat,
+        masterStock: newMasterStock,
+        warehouseStock: newMasterStock,
+        outletStocks: {
+          ...mat.outletStocks,
+          [newId]: allocatedQty,
+        },
+      };
+    });
+
+    const newLedgerEntry: InventoryLedgerEntry = {
+      id: `led-${Date.now()}`,
+      outletId: newId,
+      rawMaterialId: 'all',
+      rawMaterialName: 'New Branch Onboarding',
+      transactionType: 'OUTLET_TRANSFER_IN',
+      quantityChange: isStarterPack ? 500 : 0,
+      uom: 'STARTER_PACK',
+      referenceId: newOutlet.code,
+      createdAt: 'Just now',
+      notes: `Branch ${newOutlet.name} (${newOutlet.code}) created.${isStarterPack ? ' Starter pack allocated from Central Commissary.' : ' Ready for replenishment transfer.'}`,
+    };
+
+    set({
+      outlets: [...outlets, newOutlet],
+      rawMaterials: updatedMaterials,
+      ledger: [newLedgerEntry, ...ledger],
+      selectedOutletId: newId,
+    });
+
+    return newOutlet;
+  },
 
   // 1. MASTER INVENTORY ACTIONS
   addRawMaterial: (newMatData) => {

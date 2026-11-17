@@ -11,6 +11,19 @@ export type PaymentStatus = 'PENDING' | 'SUCCESSFUL' | 'FAILED' | 'REFUNDED';
 export interface Outlet {
   id: string;
   name: string;
+  code?: string;
+  address?: string;
+  phone?: string;
+  managerName?: string;
+  paymentPolicy?: PaymentPolicy;
+}
+
+export interface CreateOutletRequest {
+  name: string;
+  code?: string;
+  address?: string;
+  phone?: string;
+  managerName?: string;
   paymentPolicy?: PaymentPolicy;
 }
 

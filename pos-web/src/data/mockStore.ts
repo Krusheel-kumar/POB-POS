@@ -8,6 +8,7 @@ import type {
   KitchenTicketItem,
   Payment,
   Outlet,
+  CreateOutletRequest,
   AddOn,
   CalculationResponse,
   CreateOrderRequest,
@@ -21,11 +22,46 @@ import type {
 
 const STORAGE_KEY_PREFIX = 'pob_pos_demo_';
 
-export const INITIAL_OUTLET: Outlet = {
-  id: 'outlet-demo-flagship',
-  name: "POP O' BOB - Flagship Tea & Cafe",
-  paymentPolicy: 'FLEXIBLE',
-};
+export const INITIAL_OUTLETS: Outlet[] = [
+  {
+    id: 'outlet-demo-flagship',
+    name: "POP O' BOB - Flagship Film Nagar",
+    code: 'POB-FN-01',
+    address: '407, Mezzanine, Road No 81, Film Nagar, Hyderabad, Telangana 500096',
+    phone: '+91 98765 43210',
+    managerName: 'Arjun Varma',
+    paymentPolicy: 'FLEXIBLE',
+  },
+  {
+    id: 'outlet-01',
+    name: "POP O' BOB - Jubilee Hills Flagship",
+    code: 'OUTLET-01',
+    address: 'Plot 72, Road 36, Jubilee Hills, Hyderabad',
+    phone: '+91 91234 56780',
+    managerName: 'Pooja Reddy',
+    paymentPolicy: 'FLEXIBLE',
+  },
+  {
+    id: 'outlet-02',
+    name: "POP O' BOB - Madhapur Express",
+    code: 'OUTLET-02',
+    address: 'Ground Floor, Inorbit Mall Road, Madhapur, Hyderabad',
+    phone: '+91 91234 56781',
+    managerName: 'Vikram Singh',
+    paymentPolicy: 'PAY_FIRST',
+  },
+  {
+    id: 'outlet-03',
+    name: "POP O' BOB - Hitech City Cyber Towers",
+    code: 'OUTLET-03',
+    address: 'Cyber Towers Concourse, Hitech City, Hyderabad',
+    phone: '+91 91234 56782',
+    managerName: 'Sneha Patel',
+    paymentPolicy: 'FLEXIBLE',
+  },
+];
+
+export const INITIAL_OUTLET: Outlet = INITIAL_OUTLETS[0];
 
 export const INITIAL_CATEGORIES: ProductCategory[] = [
   {
@@ -1385,12 +1421,33 @@ class MockStore {
 
   // Outlets
   public getOutlets(): Outlet[] {
-    return [INITIAL_OUTLET];
+    return this.getStorage<Outlet[]>('outlets', INITIAL_OUTLETS);
   }
 
-  public updatePaymentPolicy(policy: PaymentPolicy): Outlet {
+  public createOutlet(req: CreateOutletRequest): Outlet {
+    const outlets = this.getOutlets();
+    const newId = `outlet-${Date.now()}`;
+    const newOutlet: Outlet = {
+      id: newId,
+      name: req.name.trim(),
+      code: req.code?.trim() || `OUTLET-0${outlets.length + 1}`,
+      address: req.address?.trim() || 'Hyderabad, Telangana',
+      phone: req.phone?.trim() || '+91 98765 00000',
+      managerName: req.managerName?.trim() || 'Store Manager',
+      paymentPolicy: req.paymentPolicy || 'FLEXIBLE',
+    };
+    const updated = [...outlets, newOutlet];
+    this.setStorage('outlets', updated);
+    return newOutlet;
+  }
+
+  public updatePaymentPolicy(policy: PaymentPolicy, outletId?: string): Outlet {
+    const outlets = this.getOutlets();
+    const targetId = outletId || outlets[0]?.id || INITIAL_OUTLET.id;
+    const updated = outlets.map((o) => (o.id === targetId ? { ...o, paymentPolicy: policy } : o));
+    this.setStorage('outlets', updated);
     INITIAL_OUTLET.paymentPolicy = policy;
-    return INITIAL_OUTLET;
+    return updated.find((o) => o.id === targetId) || { ...INITIAL_OUTLET, paymentPolicy: policy };
   }
 }
 

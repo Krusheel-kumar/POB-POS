@@ -24,7 +24,7 @@ describe('ReportsDashboard Component', () => {
     render(<ReportsDashboard />);
 
     // Title
-    expect(screen.getByText(/Reports & Business Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText(/Reports & Analytics/i)).toBeInTheDocument();
 
     // Check KPI Cards
     expect(screen.getByText(/Gross Revenue/i)).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe('ReportsDashboard Component', () => {
     render(<ReportsDashboard />);
 
     // Click Item Matrix tab
-    const itemMatrixTabBtn = screen.getByRole('button', { name: /Menu Item Sales Matrix/i });
+    const itemMatrixTabBtn = screen.getByRole('button', { name: /Item Sales/i });
     fireEvent.click(itemMatrixTabBtn);
 
     expect(screen.getByText(/The Menu Matrix/i)).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('ReportsDashboard Component', () => {
     render(<ReportsDashboard />);
 
     // Click Void Log tab
-    const voidLogTabBtn = screen.getByRole('button', { name: /Anti-Fraud Void/i });
+    const voidLogTabBtn = screen.getByRole('button', { name: /Void Audit/i });
     fireEvent.click(voidLogTabBtn);
 
     expect(screen.getByText(/Security & Loss Prevention Audit Trail/i)).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('ReportsDashboard Component', () => {
     window.URL.revokeObjectURL = mockRevokeObjectURL;
 
     // Click GST tab
-    const gstTabBtn = screen.getByRole('button', { name: /GST & CA Export/i });
+    const gstTabBtn = screen.getByRole('button', { name: /Tax \(GST\)/i });
     fireEvent.click(gstTabBtn);
 
     expect(screen.getByText(/GST Statutory Returns/i)).toBeInTheDocument();
@@ -118,10 +118,10 @@ describe('ReportsDashboard Component', () => {
     render(<ReportsDashboard />);
 
     // Click Sales Register tab
-    const salesTabBtn = screen.getByRole('button', { name: /Settled Invoices/i });
+    const salesTabBtn = screen.getByRole('button', { name: /Sales Register/i });
     fireEvent.click(salesTabBtn);
 
-    expect(screen.getByText(/Settled Invoices & Real-Time Sales Register/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Sales Register/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Filtered Revenue/i)).toBeInTheDocument();
     expect(screen.getByText(/Total Invoices/i)).toBeInTheDocument();
 
@@ -137,7 +137,7 @@ describe('ReportsDashboard Component', () => {
     expect(screen.getByText(/INV-2026-095/i)).toBeInTheDocument();
 
     // Test Search input
-    const searchInput = screen.getByPlaceholderText(/Search Invoice #/i);
+    const searchInput = screen.getByPlaceholderText(/Search invoice #/i);
     fireEvent.change(searchInput, { target: { value: 'Ananya' } });
     expect(screen.getByText(/Ananya Sharma/i)).toBeInTheDocument();
 
