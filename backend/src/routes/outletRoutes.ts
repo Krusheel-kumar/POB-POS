@@ -72,7 +72,7 @@ export async function outletRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   // --- RESTAURANT TABLES ---
-  fastify.get('/api/v1/tables/outlet/:outletId', async (req: FastifyRequest<{ Params: { outletId: string } }>, reply: FastifyReply) => {
+  const handleGetTables = async (req: FastifyRequest<{ Params: { outletId: string } }>, reply: FastifyReply) => {
     const { outletId } = req.params;
     const res = await db.execute({
       sql: 'SELECT * FROM tables WHERE outlet_id = ? ORDER BY table_number ASC',
@@ -89,7 +89,10 @@ export async function outletRoutes(fastify: FastifyInstance): Promise<void> {
     }));
 
     return reply.send(tables);
-  });
+  };
+
+  fastify.get('/api/v1/tables/outlet/:outletId', handleGetTables);
+  fastify.get('/api/v1/outlets/:outletId/tables', handleGetTables);
 
   fastify.post('/api/v1/tables', async (req: FastifyRequest<{
     Body: { tableNumber: string; capacity?: number; outletId?: string }
