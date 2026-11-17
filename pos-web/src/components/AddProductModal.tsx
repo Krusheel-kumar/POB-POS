@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type {
+  Product,
   ProductCategory,
   DietaryType,
   ProductRequest,
@@ -14,7 +15,10 @@ export interface AddProductModalProps {
   onClose: () => void;
   categories: ProductCategory[];
   addOns?: AddOn[];
+  editingProduct?: Product | null;
   onProductCreated: (req: ProductRequest) => Promise<void>;
+  onProductUpdated?: (id: string, req: ProductRequest) => Promise<void>;
+  onProductDeleted?: (id: string) => Promise<void>;
   onCategoryCreated: (req: CategoryRequest) => Promise<ProductCategory>;
   onCreateAddOn?: (req: AddOnRequest) => Promise<AddOn>;
   onDeleteAddOn?: (id: string) => Promise<void>;
@@ -30,12 +34,23 @@ const DEFAULT_MODIFIER_GROUPS = [
   'Choice Of Ice Level',
 ];
 
+export const SAMPLE_BOBA_IMAGES = [
+  { label: '🧋 Brown Sugar Boba', url: 'https://images.unsplash.com/photo-1558857563-b371f30ca6a5?w=500&auto=format&fit=crop&q=80' },
+  { label: '🍵 Matcha Latte', url: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=500&auto=format&fit=crop&q=80' },
+  { label: '🍓 Berry Fruit Tea', url: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=500&auto=format&fit=crop&q=80' },
+  { label: '🥭 Mango Slush', url: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=500&auto=format&fit=crop&q=80' },
+  { label: '🍠 Taro Milk Tea', url: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80' },
+];
+
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
   categories,
   addOns = [],
+  editingProduct = null,
   onProductCreated,
+  onProductUpdated,
+  onProductDeleted,
   onCategoryCreated,
   onCreateAddOn,
   onDeleteAddOn,
@@ -58,10 +73,48 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [customSubcatInput, setCustomSubcatInput] = useState('');
   const [isAddingCustomSubcat, setIsAddingCustomSubcat] = useState(false);
   const [dietaryType, setDietaryType] = useState<DietaryType>('BEVERAGE');
+  const [prodImageUrl, setProdImageUrl] = useState('');
+  const [prodBadge, setProdBadge] = useState('');
   const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([
     'Choice Of Size',
     'Choice Of Boba & Toppings',
   ]);
+
+  // Synchronize when editingProduct changes or modal opens
+  useEffect(() => {
+    if (editingProduct) {
+      setProdName(editingProduct.name);
+      setProdPrice(editingProduct.basePrice);
+      setSelectedCatId(editingProduct.category?.id || categories[0]?.id || '');
+      setSelectedSubcat(editingProduct.subcategory || '');
+      setCustomSubcatInput('');
+      setIsAddingCustomSubcat(false);
+      setDietaryType(editingProduct.dietaryType || 'BEVERAGE');
+      setProdImageUrl(editingProduct.imageUrl || '');
+      setProdBadge(editingProduct.badge || '');
+
+      const mappedGroups: string[] = Array.from(
+        new Set<string>(editingProduct.addOns?.map((a: AddOn) => a.category || 'Choice Of Size') || [])
+      );
+      setSelectedGroupNames(
+        mappedGroups.length > 0
+          ? mappedGroups
+          : ['Choice Of Size', 'Choice Of Boba & Toppings', 'Choice Of Sweetness', 'Choice Of Ice Level']
+      );
+      setActiveTab('product');
+    } else {
+      setProdName('');
+      setProdPrice('');
+      setCustomSubcatInput('');
+      setIsAddingCustomSubcat(false);
+      setProdImageUrl('');
+      setProdBadge('');
+      if (addOns.length > 0) {
+        const allGroups = Array.from(new Set(addOns.map((a) => a.category || 'Choice Of Boba & Toppings')));
+        setSelectedGroupNames(allGroups);
+      }
+    }
+  }, [editingProduct, isOpen]);
 
   // --- Category Form State ---
   const [catName, setCatName] = useState('');
@@ -87,23 +140,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const activeCategory = categories.find((c) => c.id === selectedCatId) || categories[0];
   const activeSubcats = activeCategory?.subcategories || [];
 
-  // Auto-sync all modifier groups by default so newly added topping groups are pre-checked
   useEffect(() => {
-    if (addOns.length > 0) {
-      const allGroups = Array.from(new Set(addOns.map((a) => a.category || 'Choice Of Boba & Toppings')));
-      setSelectedGroupNames((prev) => Array.from(new Set([...prev, ...allGroups])));
-    }
-  }, [addOns]);
-
-  useEffect(() => {
-    if (activeSubcats.length > 0) {
+    if (!editingProduct && activeSubcats.length > 0) {
       if (!selectedSubcat || !activeSubcats.includes(selectedSubcat)) {
         setSelectedSubcat(activeSubcats[0]);
       }
-    } else {
-      setSelectedSubcat('');
     }
-  }, [selectedCatId, activeSubcats, selectedSubcat]);
+  }, [selectedCatId, activeSubcats, selectedSubcat, editingProduct]);
 
   if (!isOpen) return null;
 
@@ -121,7 +164,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   });
 
   // Handlers
-  const handleCreateProduct = async (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -143,7 +186,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       ? customSubcatInput.trim() || undefined
       : selectedSubcat || undefined;
 
-    // Collect add-on IDs for checked modifier groups (falls back to all available if none explicitly selected)
+    // Collect add-on IDs for checked modifier groups
     let mappedAddOnIds = addOns
       .filter((a) => a.category && selectedGroupNames.includes(a.category))
       .map((a) => a.id);
@@ -153,26 +196,38 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onProductCreated({
+      const payload: ProductRequest = {
         name: prodName.trim(),
         basePrice: Number(prodPrice),
         categoryId: selectedCatId,
         subcategory: subcat,
         dietaryType,
+        imageUrl: prodImageUrl.trim() || undefined,
+        badge: prodBadge.trim() || undefined,
         addOnIds: mappedAddOnIds,
         prepTimeMinutes: 5,
-      });
+      };
 
-      setSuccessMsg(`✓ "${prodName.trim()}" added to menu`);
+      if (editingProduct && onProductUpdated) {
+        await onProductUpdated(editingProduct.id, payload);
+        setSuccessMsg(`✓ Updated "${prodName.trim()}"`);
+      } else {
+        await onProductCreated(payload);
+        setSuccessMsg(`✓ "${prodName.trim()}" added to menu`);
+      }
+
       setProdName('');
       setProdPrice('');
       setCustomSubcatInput('');
       setIsAddingCustomSubcat(false);
+      setProdImageUrl('');
+      setProdBadge('');
+
       setTimeout(() => {
         onClose();
       }, 700);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to create product');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to save product');
     } finally {
       setIsSubmitting(false);
     }
@@ -273,7 +328,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 setErrorMsg(null);
               }}
             >
-              + Add Menu Item
+              {editingProduct ? `✏️ Edit: ${editingProduct.name.slice(0, 20)}` : '+ Add Menu Item'}
             </button>
             <button
               type="button"
@@ -333,9 +388,61 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         {errorMsg && <div className="min-banner-error">{errorMsg}</div>}
         {successMsg && <div className="min-banner-success">{successMsg}</div>}
 
-        {/* TAB 1: ADD MENU ITEM */}
+        {/* TAB 1: ADD / EDIT MENU ITEM */}
         {activeTab === 'product' && (
-          <form onSubmit={handleCreateProduct} className="min-modal-body">
+          <form onSubmit={handleSaveProduct} className="min-modal-body">
+            {/* Image Preview & URL Row */}
+            <div className="min-image-upload-section">
+              <div className="min-image-preview-box">
+                {prodImageUrl ? (
+                  <img
+                    src={prodImageUrl}
+                    alt="Preview"
+                    className="min-image-preview-img"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span className="min-image-preview-placeholder">🧋</span>
+                )}
+              </div>
+              <div className="min-image-inputs">
+                <div className="min-label-row">
+                  <label className="min-label">Item Photo / Image URL</label>
+                  {prodImageUrl && (
+                    <button
+                      type="button"
+                      className="min-field-action-link"
+                      onClick={() => setProdImageUrl('')}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="url"
+                  className="min-input"
+                  placeholder="https://... photo url or click quick preset below"
+                  value={prodImageUrl}
+                  onChange={(e) => setProdImageUrl(e.target.value)}
+                />
+                <div className="min-image-chips">
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginRight: '4px' }}>Sample Photos:</span>
+                  {SAMPLE_BOBA_IMAGES.map((sample) => (
+                    <button
+                      key={sample.label}
+                      type="button"
+                      className="min-image-chip"
+                      onClick={() => setProdImageUrl(sample.url)}
+                    >
+                      {sample.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Row 1: Category & Subcategory */}
             <div className="min-form-row-2">
               <div className="min-field-group">
@@ -460,41 +567,59 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               </div>
             </div>
 
-            {/* Row 3: Dietary Selection */}
-            <div className="min-field-group">
-              <label className="min-label">Type</label>
-              <div className="min-segmented-control">
-                {(['BEVERAGE', 'VEG', 'NON_VEG', 'VEGAN'] as DietaryType[]).map((dt) => (
-                  <button
-                    key={dt}
-                    type="button"
-                    className={`min-segment-btn ${dietaryType === dt ? 'active' : ''}`}
-                    onClick={() => setDietaryType(dt)}
-                  >
-                    {dt === 'BEVERAGE'
-                      ? '🧋 Beverage'
-                      : dt === 'VEG'
-                      ? '🟢 Veg'
-                      : dt === 'NON_VEG'
-                      ? '🔴 Non-Veg'
-                      : '🌱 Vegan'}
-                  </button>
-                ))}
+            {/* Row 3: Dietary Selection & Badge */}
+            <div className="min-form-row-2">
+              <div className="min-field-group">
+                <label className="min-label">Type</label>
+                <div className="min-segmented-control">
+                  {(['BEVERAGE', 'VEG', 'NON_VEG', 'VEGAN'] as DietaryType[]).map((dt) => (
+                    <button
+                      key={dt}
+                      type="button"
+                      className={`min-segment-btn ${dietaryType === dt ? 'active' : ''}`}
+                      onClick={() => setDietaryType(dt)}
+                    >
+                      {dt === 'BEVERAGE'
+                        ? '🧋 Beverage'
+                        : dt === 'VEG'
+                        ? '🟢 Veg'
+                        : dt === 'NON_VEG'
+                        ? '🔴 Non-Veg'
+                        : '🌱 Vegan'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="min-field-group">
+                <label className="min-label">Tag / Badge</label>
+                <input
+                  type="text"
+                  className="min-input"
+                  placeholder="e.g. Bestseller, Must Try, Chef Special"
+                  value={prodBadge}
+                  onChange={(e) => setProdBadge(e.target.value)}
+                />
               </div>
             </div>
 
             {/* Row 4: Customization & Modifier Groups */}
             <div className="min-modifiers-box">
               <div className="min-label-row mb-1">
-                <label className="min-label" style={{ margin: 0 }}>
-                  Modifier Groups (Sizes & Add-ons)
-                </label>
+                <div>
+                  <label className="min-label" style={{ margin: 0 }}>
+                    Linked Customization Choices & Toppings ({selectedGroupNames.length} groups selected)
+                  </label>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#64748b' }}>
+                    Check or uncheck groups to map which sizes, sweetness levels, and toppings are allowed for this item.
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveTab('addons')}
                   className="min-field-action-link"
                 >
-                  + Manage Modifiers
+                  + Add New Topping
                 </button>
               </div>
 
@@ -516,8 +641,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                         <span className="min-check-title">{grp}</span>
                         <span className="min-check-sub">
                           {items.length > 0
-                            ? items.map((i) => i.name).slice(0, 3).join(', ') +
-                              (items.length > 3 ? '...' : '')
+                            ? items
+                                .map((i) => `${i.name}${i.price > 0 ? ` (+₹${i.price})` : ''}`)
+                                .slice(0, 3)
+                                .join(', ') + (items.length > 3 ? ` +${items.length - 3} more` : '')
                             : '0 choices (Add in Modifiers tab)'}
                         </span>
                       </div>
@@ -529,6 +656,20 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
             {/* Modal Footer */}
             <div className="min-modal-footer">
+              {editingProduct && onProductDeleted && (
+                <button
+                  type="button"
+                  className="min-btn-danger-outline"
+                  onClick={async () => {
+                    if (window.confirm(`Are you sure you want to delete "${editingProduct.name}" from catalog?`)) {
+                      await onProductDeleted(editingProduct.id);
+                      onClose();
+                    }
+                  }}
+                >
+                  🗑️ Delete Product
+                </button>
+              )}
               <button type="button" onClick={onClose} className="min-btn-secondary">
                 Cancel
               </button>
@@ -537,7 +678,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={isSubmitting || !prodName.trim() || !prodPrice}
                 className="min-btn-primary"
               >
-                {isSubmitting ? 'Saving...' : 'Save & Add to POS'}
+                {isSubmitting ? 'Saving...' : editingProduct ? 'Save Changes' : 'Save & Add to POS'}
               </button>
             </div>
           </form>

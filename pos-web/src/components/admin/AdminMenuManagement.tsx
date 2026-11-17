@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { ProductCategory, Product, AddOn, CategoryRequest, ProductRequest, AddOnRequest } from '../../types/pos';
+import { AddProductModal } from '../AddProductModal';
 
 interface AdminMenuManagementProps {
   categories: ProductCategory[];
@@ -10,6 +11,8 @@ interface AdminMenuManagementProps {
   onCreateCategory: (req: CategoryRequest) => Promise<void>;
   onDeactivateCategory: (id: string) => Promise<void>;
   onCreateProduct: (req: ProductRequest) => Promise<void>;
+  onUpdateProduct?: (id: string, req: ProductRequest) => Promise<void>;
+  onDeleteProduct?: (id: string) => Promise<void>;
   onDeactivateProduct: (id: string) => Promise<void>;
   onCreateAddOn: (req: AddOnRequest) => Promise<void>;
   onUpdateProductAddOns?: (productId: string, addOnIds: string[]) => Promise<void>;
@@ -26,6 +29,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   onCreateCategory,
   onDeactivateCategory,
   onCreateProduct,
+  onUpdateProduct,
+  onDeleteProduct,
   onDeactivateProduct,
   onCreateAddOn,
   onUpdateProductAddOns,
@@ -36,23 +41,16 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // Selected item for Edit modal
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
   // New Category State
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [categoryDesc, setCategoryDesc] = useState('');
 
-  // New Product State
+  // Product Modal State
   const [showProductModal, setShowProductModal] = useState(false);
-  const [prodName, setProdName] = useState('');
-  const [prodDesc, setProdDesc] = useState('');
-  const [prodSku, setProdSku] = useState('');
-  const [prodPrice, setProdPrice] = useState('0');
-  const [prodCategoryId, setProdCategoryId] = useState('');
-  const [prodSubcategory, setProdSubcategory] = useState('');
-  const [customProdSubcat, setCustomProdSubcat] = useState('');
-  const [prodVariantName, setProdVariantName] = useState('');
-  const [prodVariantPrice, setProdVariantPrice] = useState('');
-  const [prodSelectedAddOnIds, setProdSelectedAddOnIds] = useState<string[]>([]);
 
   // Product Add-on Assignment Modal
   const [editingAddOnsProduct, setEditingAddOnsProduct] = useState<Product | null>(null);
@@ -131,57 +129,6 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create category');
-    }
-  };
-
-  const handleCreateProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    if (!prodCategoryId && categories.length > 0) {
-      setErrorMsg('Please select a category');
-      return;
-    }
-    try {
-      const variants =
-        prodVariantName && prodVariantPrice
-          ? [
-              {
-                name: prodVariantName,
-                price: parseFloat(prodVariantPrice),
-                isActive: true,
-                displayOrder: 1,
-              },
-            ]
-          : undefined;
-
-      const finalSubcat = customProdSubcat.trim() || prodSubcategory.trim() || undefined;
-
-      await onCreateProduct({
-        categoryId: prodCategoryId || categories[0]?.id,
-        subcategory: finalSubcat,
-        name: prodName,
-        description: prodDesc,
-        sku: prodSku || undefined,
-        basePrice: parseFloat(prodPrice) || 0,
-        variants,
-        addOnIds: prodSelectedAddOnIds,
-        isActive: true,
-      });
-
-      setProdName('');
-      setProdDesc('');
-      setProdSku('');
-      setProdPrice('0');
-      setProdSubcategory('');
-      setCustomProdSubcat('');
-      setProdVariantName('');
-      setProdVariantPrice('');
-      setProdSelectedAddOnIds([]);
-      setShowProductModal(false);
-      setSuccessMsg('Product created successfully with assigned add-ons!');
-      setTimeout(() => setSuccessMsg(null), 4000);
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to create product');
     }
   };
 
@@ -334,15 +281,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                 type="button"
                 className="btn btn-primary btn-sm"
                 onClick={() => {
-                  if (categories.length > 0 && !prodCategoryId) {
-                    setProdCategoryId(categories[0].id);
-                  }
-                  // Auto-select Choice of Size & Boba add-ons by default for convenience
-                  setProdSelectedAddOnIds(
-                    addOns
-                      .filter((a) => a.category === 'Choice Of Size' || a.category === 'Choice Of Sweetness' || a.category === 'Choice Of Boba & Toppings')
-                      .map((a) => a.id)
-                  );
+                  setEditingProduct(null);
                   setShowProductModal(true);
                 }}
               >
@@ -373,11 +312,43 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                   {products.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <strong>{p.name}</strong>
-                        {p.sku && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SKU: {p.sku}</div>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {p.imageUrl ? (
+                            <img
+                              src={p.imageUrl}
+                              alt={p.name}
+                              style={{ width: '42px', height: '42px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0, border: '1px solid #e2e8f0' }}
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div style={{ width: '42px', height: '42px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+                              🧋
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong>{p.name}</strong>
+                              {p.badge && (
+                                <span className="product-addon-mini-tag" style={{ background: '#fef3c7', color: '#b45309', fontWeight: 600 }}>
+                                  {p.badge}
+                                </span>
+                              )}
+                            </div>
+                            {p.sku && <div style={{ fontSize: '0.75rem', color: '#64748b' }}>SKU: {p.sku}</div>}
+                          </div>
+                        </div>
                       </td>
-                      <td>{p.category?.name || '-'}</td>
-                      <td>₹{p.basePrice.toFixed(2)}</td>
+                      <td>
+                        <div>{p.category?.name || '-'}</div>
+                        {p.subcategory && (
+                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{p.subcategory}</div>
+                        )}
+                      </td>
+                      <td>
+                        <strong style={{ color: '#0f172a' }}>₹{p.basePrice.toFixed(2)}</strong>
+                      </td>
                       <td>{p.variants?.length ? `${p.variants.length} variant(s)` : 'None'}</td>
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -415,15 +386,29 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                         </span>
                       </td>
                       <td>
-                        {p.isActive && (
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <button
                             type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => onDeactivateProduct(p.id)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontWeight: 600, padding: '0.3rem 0.6rem' }}
+                            onClick={() => {
+                              setEditingProduct(p);
+                              setShowProductModal(true);
+                            }}
+                            title="Edit product name, price, toppings, and photo"
                           >
-                            Deactivate
+                            ✏️ Edit
                           </button>
-                        )}
+                          {p.isActive && (
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => onDeactivateProduct(p.id)}
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -867,216 +852,45 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       )}
 
       {/* ========================================================
-          CREATE PRODUCT MODAL (WITH CATEGORIZED ADD-ON CHOICES)
+          ADD & EDIT PRODUCT MODAL (WITH IMAGE PREVIEWS & MODIFIER MAPPING)
          ======================================================== */}
-      {showProductModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '580px', maxWidth: '95%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0 }}>Create Product</h3>
-            <form onSubmit={handleCreateProduct}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <div className="form-group">
-                  <label className="form-label">Category *</label>
-                  <select
-                    className="form-select"
-                    value={prodCategoryId}
-                    onChange={(e) => {
-                      setProdCategoryId(e.target.value);
-                      const targetCat = categories.find((c) => c.id === e.target.value);
-                      if (targetCat?.subcategories && targetCat.subcategories.length > 0) {
-                        setProdSubcategory(targetCat.subcategories[0]);
-                      } else {
-                        setProdSubcategory('');
-                      }
-                      setCustomProdSubcat('');
-                    }}
-                    required
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Subcategory / Section</label>
-                  {(() => {
-                    const currentCat = categories.find((c) => c.id === (prodCategoryId || categories[0]?.id));
-                    const subcats = currentCat?.subcategories || [];
-                    return (
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {subcats.length > 0 ? (
-                          <select
-                            className="form-select"
-                            value={prodSubcategory}
-                            onChange={(e) => {
-                              setProdSubcategory(e.target.value);
-                              setCustomProdSubcat('');
-                            }}
-                            style={{ flex: 1 }}
-                          >
-                            <option value="">-- Choose Subcategory --</option>
-                            {subcats.map((sc) => (
-                              <option key={sc} value={sc}>{sc}</option>
-                            ))}
-                          </select>
-                        ) : null}
-                        <input
-                          type="text"
-                          className="form-input"
-                          placeholder={subcats.length > 0 ? "Or custom..." : "e.g. Milk Teas, Classic..."}
-                          value={customProdSubcat}
-                          onChange={(e) => setCustomProdSubcat(e.target.value)}
-                          style={{ flex: subcats.length > 0 ? 1 : 2 }}
-                        />
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Product Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  required
-                  value={prodName}
-                  onChange={(e) => setProdName(e.target.value)}
-                  placeholder="e.g. Authentic Milk Tea"
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <div className="form-group">
-                  <label className="form-label">SKU (Optional)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={prodSku}
-                    onChange={(e) => setProdSku(e.target.value)}
-                    placeholder="e.g. SKU-4471"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Base Price (₹)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="form-input"
-                    required
-                    value={prodPrice}
-                    onChange={(e) => setProdPrice(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Description (Optional)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={prodDesc}
-                  onChange={(e) => setProdDesc(e.target.value)}
-                  placeholder="e.g. Brewed Ceylon black tea with velvety fresh milk"
-                />
-              </div>
-
-              {/* Categorized Add-on Selection in Create Product */}
-              <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label className="form-label" style={{ margin: 0, fontWeight: 700 }}>
-                    Attach Choices & Add-ons ({prodSelectedAddOnIds.length} selected)
-                  </label>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() =>
-                        setProdSelectedAddOnIds(
-                          addOns
-                            .filter((a) => a.category === 'Choice Of Size' || a.category === 'Choice Of Sweetness' || a.category === 'Choice Of Boba & Toppings')
-                            .map((a) => a.id)
-                        )
-                      }
-                    >
-                      Select Standard Boba Choices
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setProdSelectedAddOnIds([])}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {Object.entries(groupedAddOns).map(([catName, catItems]) => {
-                  if (catItems.length === 0) return null;
-                  const catIds = catItems.map((i) => i.id);
-                  const isAllSelected = catIds.every((id) => prodSelectedAddOnIds.includes(id));
-                  return (
-                    <div key={catName} style={{ marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-                          {catName}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          style={{ fontSize: '0.68rem', padding: '1px 6px' }}
-                          onClick={() => {
-                            if (isAllSelected) {
-                              setProdSelectedAddOnIds(prodSelectedAddOnIds.filter((id) => !catIds.includes(id)));
-                            } else {
-                              setProdSelectedAddOnIds(Array.from(new Set([...prodSelectedAddOnIds, ...catIds])));
-                            }
-                          }}
-                        >
-                          {isAllSelected ? 'Deselect Category' : 'Select All'}
-                        </button>
-                      </div>
-                      <div className="addon-pill-grid" style={{ maxHeight: '110px' }}>
-                        {catItems.map((a) => {
-                          const isSelected = prodSelectedAddOnIds.includes(a.id);
-                          return (
-                            <div
-                              key={a.id}
-                              className={`addon-select-card ${isSelected ? 'selected' : ''}`}
-                              onClick={() => toggleAddOnInList(a.id, prodSelectedAddOnIds, setProdSelectedAddOnIds)}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {}}
-                                style={{ pointerEvents: 'none' }}
-                              />
-                              <div className="addon-card-info">
-                                <span className="addon-card-name">{a.name}</span>
-                                <span className="addon-card-price">
-                                  {a.price > 0 ? `+₹${a.price.toFixed(2)}` : '₹0.00'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowProductModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Create Product
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddProductModal
+        isOpen={showProductModal}
+        onClose={() => {
+          setShowProductModal(false);
+          setEditingProduct(null);
+        }}
+        categories={categories}
+        addOns={addOns}
+        editingProduct={editingProduct}
+        onProductCreated={async (req) => {
+          await onCreateProduct(req);
+          setSuccessMsg(`✓ Added "${req.name}" to menu`);
+          setTimeout(() => setSuccessMsg(null), 4000);
+        }}
+        onProductUpdated={async (id, req) => {
+          if (onUpdateProduct) {
+            await onUpdateProduct(id, req);
+            setSuccessMsg(`✓ Updated "${req.name}"`);
+            setTimeout(() => setSuccessMsg(null), 4000);
+          }
+        }}
+        onProductDeleted={async (id) => {
+          if (onDeleteProduct) {
+            await onDeleteProduct(id);
+            setSuccessMsg('✓ Product deleted from catalog');
+            setTimeout(() => setSuccessMsg(null), 4000);
+          }
+        }}
+        onCategoryCreated={async (catReq) => {
+          await onCreateCategory(catReq);
+          return { id: `cat-${Date.now()}`, name: catReq.name };
+        }}
+        onCreateAddOn={async (addOnReq) => {
+          await onCreateAddOn(addOnReq);
+          return { id: `add-${Date.now()}`, name: addOnReq.name, price: addOnReq.price, isActive: true };
+        }}
+      />
 
       {/* ========================================================
           MANAGE ADD-ONS FOR A SPECIFIC PRODUCT MODAL

@@ -659,6 +659,20 @@ export function App() {
     setTimeout(() => setOrderSuccessMessage(null), 5000);
   };
 
+  const handleUpdateProduct = async (id: string, req: ProductRequest) => {
+    await posApiClient.updateProduct(id, req);
+    await loadCatalog();
+    setOrderSuccessMessage(`✨ Item "${req.name}" updated successfully!`);
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    await posApiClient.deleteProduct(id);
+    await loadCatalog();
+    setOrderSuccessMessage('🗑️ Item removed from catalog!');
+    setTimeout(() => setOrderSuccessMessage(null), 5000);
+  };
+
   const handleCreateCategory = async (req: CategoryRequest) => {
     const newCat = await posApiClient.createCategory(req);
     await loadCatalog();
@@ -1253,6 +1267,8 @@ export function App() {
         categories={categories.filter((c) => c.id !== 'cat-all')}
         addOns={addOns}
         onProductCreated={handleCreateProduct}
+        onProductUpdated={handleUpdateProduct}
+        onProductDeleted={handleDeleteProduct}
         onCategoryCreated={handleCreateCategory}
         onCreateAddOn={handleCreateAddOn}
         onDeleteAddOn={handleDeleteAddOn}

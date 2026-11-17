@@ -1,5 +1,6 @@
 import type {
   Product,
+  ProductRequest,
   ProductCategory,
   RestaurantTable,
   Order,
@@ -927,6 +928,58 @@ class MockStore {
       return prod;
     }
     throw new Error('Product not found');
+  }
+
+  public updateProduct(id: string, req: ProductRequest): Product {
+    const list = this.getProducts();
+    const categories = this.getCategories();
+    const allAddons = this.getAddOns();
+
+    const prodIndex = list.findIndex((p) => p.id === id);
+    if (prodIndex === -1) {
+      throw new Error('Product not found');
+    }
+
+    const current = list[prodIndex];
+    const cat = req.categoryId ? categories.find((c) => c.id === req.categoryId) : current.category;
+    let finalAddons = current.addOns;
+    if (req.addOnIds) {
+      finalAddons = allAddons.filter((a) => req.addOnIds!.includes(a.id));
+    }
+
+    const updatedProd: Product = {
+      ...current,
+      name: req.name ?? current.name,
+      description: req.description !== undefined ? req.description : current.description,
+      sku: req.sku ?? current.sku,
+      basePrice: req.basePrice !== undefined ? req.basePrice : current.basePrice,
+      category: cat,
+      subcategory: req.subcategory !== undefined ? req.subcategory : current.subcategory,
+      imageUrl: req.imageUrl !== undefined ? req.imageUrl : current.imageUrl,
+      badge: req.badge !== undefined ? req.badge : current.badge,
+      dietaryType: req.dietaryType ?? current.dietaryType,
+      prepTimeMinutes: req.prepTimeMinutes ?? current.prepTimeMinutes,
+      variants: req.variants
+        ? req.variants.map((v: { name: string; sizeLabel?: string; price: number; isActive?: boolean }, i: number) => ({
+            id: `var-${id}-${i}`,
+            name: v.name,
+            sizeLabel: v.sizeLabel,
+            price: v.price,
+            isActive: v.isActive ?? true,
+          }))
+        : current.variants,
+      addOns: finalAddons,
+      isActive: req.isActive !== undefined ? req.isActive : current.isActive,
+    };
+
+    list[prodIndex] = updatedProd;
+    this.setStorage('products', list);
+    return updatedProd;
+  }
+
+  public deleteProduct(id: string): void {
+    const list = this.getProducts().filter((p) => p.id !== id);
+    this.setStorage('products', list);
   }
 
   // Tables

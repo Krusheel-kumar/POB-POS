@@ -17,6 +17,8 @@ vi.mock('../../api/posApiClient', () => ({
     createCategory: vi.fn(),
     deactivateCategory: vi.fn(),
     createProduct: vi.fn(),
+    updateProduct: vi.fn(),
+    deleteProduct: vi.fn(),
     deactivateProduct: vi.fn(),
     createAddOn: vi.fn(),
     updateProductAddOns: vi.fn(),

@@ -518,6 +518,54 @@ export class PosApiClient {
   }
 
   /**
+   * Update product
+   */
+  public async updateProduct(id: string, req: ProductRequest): Promise<Product> {
+    if (this.demoMode) {
+      return mockStore.updateProduct(id, req);
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(req),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update product: ${res.status}`);
+      }
+
+      return res.json();
+    } catch {
+      return mockStore.updateProduct(id, req);
+    }
+  }
+
+  /**
+   * Delete product
+   */
+  public async deleteProduct(id: string): Promise<void> {
+    if (this.demoMode) {
+      mockStore.deleteProduct(id);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to delete product: ${res.status}`);
+      }
+    } catch {
+      mockStore.deleteProduct(id);
+    }
+  }
+
+  /**
    * Fetch add-ons
    */
   public async getAddOns(): Promise<AddOn[]> {
