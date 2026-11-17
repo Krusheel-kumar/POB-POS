@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   TrendingDown,
@@ -16,6 +16,10 @@ import {
   AlertTriangle,
   Layers,
   Sparkles,
+  DollarSign,
+  Calendar,
+  Eye,
+  RefreshCw,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,18 +40,42 @@ import {
   MOCK_HOURLY_SALES,
   MOCK_ITEM_MATRIX,
   getVoidAuditLogs,
+  getSettledSalesInvoices,
+  type SettledInvoiceRecord,
   formatINR,
   type ItemMatrixRecord,
 } from '../../lib/mockReportsData';
+import { ReceiptModal } from '../ReceiptModal';
+import type { Bill } from '../../types/pos';
 import './ReportsDashboard.css';
 
-type ReportTab = 'z-report' | 'hourly' | 'item-matrix' | 'void-log' | 'gst-export';
+type ReportTab = 'z-report' | 'sales-report' | 'hourly' | 'item-matrix' | 'void-log' | 'gst-export';
 
 type SortField = 'name' | 'category' | 'qtySold' | 'totalRevenue' | 'foodCostPct';
 type SortDirection = 'asc' | 'desc';
 
 export const ReportsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ReportTab>('z-report');
+
+  // Settled Sales Register & Timeline State
+  const [salesTimeline, setSalesTimeline] = useState<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL' | 'CUSTOM'>('TODAY');
+  const [salesSearch, setSalesSearch] = useState('');
+  const [salesPaymentFilter, setSalesPaymentFilter] = useState<'ALL' | 'UPI' | 'CASH' | 'CARD'>('ALL');
+  const [salesChannelFilter, setSalesChannelFilter] = useState<'ALL' | 'DINE_IN' | 'TAKEAWAY' | 'COUNTER'>('ALL');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const sevenDaysAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const [salesFromDate, setSalesFromDate] = useState(sevenDaysAgoStr);
+  const [salesToDate, setSalesToDate] = useState(todayStr);
+  const [inspectedBill, setInspectedBill] = useState<Bill | null>(null);
+  const [allSettledInvoices, setAllSettledInvoices] = useState<SettledInvoiceRecord[]>(() => getSettledSalesInvoices());
+
+  const refreshSettledInvoices = () => {
+    setAllSettledInvoices(getSettledSalesInvoices());
+  };
+
+  useEffect(() => {
+    refreshSettledInvoices();
+  }, [activeTab]);
 
   // Item Matrix State
   const [itemSearch, setItemSearch] = useState('');
@@ -122,6 +150,71 @@ export const ReportsDashboard: React.FC = () => {
     }
   };
 
+  // Filtered Settled Invoices
+  const filteredSettledInvoices = useMemo(() => {
+    return allSettledInvoices.filter((inv) => {
+      const invDate = new Date(inv.createdAt);
+      const invDayStr = invDate.toISOString().split('T')[0];
+
+      // Timeline filter
+      if (salesTimeline === 'TODAY') {
+        const today = new Date().toISOString().split('T')[0];
+        if (invDayStr !== today) return false;
+      } else if (salesTimeline === 'YESTERDAY') {
+        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        if (invDayStr !== yesterday) return false;
+      } else if (salesTimeline === 'LAST_7_DAYS') {
+        const cutoff = Date.now() - 7 * 86400000;
+        if (invDate.getTime() < cutoff) return false;
+      } else if (salesTimeline === 'THIS_MONTH') {
+        const now = new Date();
+        if (invDate.getMonth() !== now.getMonth() || invDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (salesTimeline === 'CUSTOM') {
+        if (salesFromDate && invDayStr < salesFromDate) return false;
+        if (salesToDate && invDayStr > salesToDate) return false;
+      }
+
+      // Payment mode filter
+      if (salesPaymentFilter !== 'ALL' && inv.paymentMethod !== salesPaymentFilter) {
+        return false;
+      }
+
+      // Channel filter
+      if (salesChannelFilter !== 'ALL' && inv.orderType !== salesChannelFilter) {
+        return false;
+      }
+
+      // Omni-search filter
+      if (salesSearch.trim() !== '') {
+        const q = salesSearch.toLowerCase();
+        const match =
+          inv.invoiceNumber.toLowerCase().includes(q) ||
+          inv.orderNumber.toLowerCase().includes(q) ||
+          inv.customerName.toLowerCase().includes(q) ||
+          inv.customerPhone.includes(q) ||
+          inv.tableOrChannel.toLowerCase().includes(q) ||
+          inv.itemsSummary.toLowerCase().includes(q) ||
+          inv.transactionReference.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [allSettledInvoices, salesTimeline, salesPaymentFilter, salesChannelFilter, salesSearch, salesFromDate, salesToDate]);
+
+  // Dynamic Sales Metrics
+  const salesMetrics = useMemo(() => {
+    const count = filteredSettledInvoices.length;
+    const totalRevenue = filteredSettledInvoices.reduce((sum, i) => sum + i.totalAmount, 0);
+    const upiTotal = filteredSettledInvoices.filter((i) => i.paymentMethod === 'UPI').reduce((sum, i) => sum + i.totalAmount, 0);
+    const cashTotal = filteredSettledInvoices.filter((i) => i.paymentMethod === 'CASH').reduce((sum, i) => sum + i.totalAmount, 0);
+    const cardTotal = filteredSettledInvoices.filter((i) => i.paymentMethod === 'CARD').reduce((sum, i) => sum + i.totalAmount, 0);
+    const totalTax = filteredSettledInvoices.reduce((sum, i) => sum + i.taxAmount, 0);
+    const avgTicket = count > 0 ? totalRevenue / count : 0;
+
+    return { count, totalRevenue, upiTotal, cashTotal, cardTotal, totalTax, avgTicket };
+  }, [filteredSettledInvoices]);
+
   // CSV Exporter Helper
   const downloadCSV = (filename: string, csvContent: string, toastTitle: string) => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -134,6 +227,14 @@ export const ReportsDashboard: React.FC = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     showToast(toastTitle);
+  };
+
+  const handleExportSalesReportCSV = () => {
+    let csv = 'Invoice No,Order No,Date,Time,Customer Name,Mobile,Table/Channel,Order Type,Items Summary,Taxable Value (INR),CGST 2.5%,SGST 2.5%,Total Tax,Net Total (INR),Payment Mode,Payment Ref,Status\n';
+    filteredSettledInvoices.forEach((inv) => {
+      csv += `"${inv.invoiceNumber}","${inv.orderNumber}","${inv.dateFormatted}","${inv.timeFormatted}","${inv.customerName}","${inv.customerPhone}","${inv.tableOrChannel}","${inv.orderType}","${inv.itemsSummary.replace(/"/g, '""')}","${inv.taxableAmount.toFixed(2)}","${inv.cgst.toFixed(2)}","${inv.sgst.toFixed(2)}","${inv.taxAmount.toFixed(2)}","${inv.totalAmount.toFixed(2)}","${inv.paymentMethod}","${inv.transactionReference}","${inv.status}"\n`;
+    });
+    downloadCSV(`POB_Settled_Sales_Report_${Date.now()}.csv`, csv, 'Settled Invoices Sales Report CSV Downloaded');
   };
 
   const handleExportTable7 = () => {
@@ -194,6 +295,14 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
           >
             <Receipt size={16} />
             The Z-Report (End of Day)
+          </button>
+          <button
+            type="button"
+            className={`reports-tab-btn ${activeTab === 'sales-report' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sales-report')}
+          >
+            <DollarSign size={16} />
+            Settled Invoices & Sales Register
           </button>
           <button
             type="button"
@@ -387,6 +496,305 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
             </div>
           </div>
         </>
+      )}
+
+      {/* =========================================================================
+          VIEW: SETTLED INVOICES & REAL-TIME SALES REGISTER (TIMELINE & SEARCH)
+          ========================================================================= */}
+      {activeTab === 'sales-report' && (
+        <div className="report-card">
+          <div className="report-card-header">
+            <div>
+              <h3 className="report-card-title">
+                <DollarSign size={20} color="#059669" />
+                Settled Invoices & Real-Time Sales Register
+              </h3>
+              <p className="report-card-subtitle">
+                Live transactional sales ledger with authentic invoice numbers, payment modes, time audits & customer breakdown
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-sm btn-secondary"
+                onClick={refreshSettledInvoices}
+                title="Refresh live settled transactions"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
+              >
+                <RefreshCw size={14} /> Refresh
+              </button>
+              <button
+                type="button"
+                className="btn-export-download"
+                style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
+                onClick={handleExportSalesReportCSV}
+              >
+                <Download size={15} /> Export Filtered CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Timeline & Filter Controls Bar */}
+          <div className="sales-filter-control-panel">
+            {/* Row 1: Timeline Presets & Custom Range */}
+            <div className="sales-timeline-row">
+              <span className="filter-group-label">
+                <Calendar size={15} /> Timeline:
+              </span>
+              <div className="sales-preset-group">
+                {(['TODAY', 'YESTERDAY', 'LAST_7_DAYS', 'THIS_MONTH', 'ALL', 'CUSTOM'] as const).map((t) => {
+                  const labels = {
+                    TODAY: 'Today',
+                    YESTERDAY: 'Yesterday',
+                    LAST_7_DAYS: 'Last 7 Days',
+                    THIS_MONTH: 'This Month',
+                    ALL: 'All Time',
+                    CUSTOM: 'Custom Range 📅',
+                  };
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      className={`sales-timeline-btn ${salesTimeline === t ? 'active' : ''}`}
+                      onClick={() => setSalesTimeline(t)}
+                    >
+                      {labels[t]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Date Pickers */}
+              {salesTimeline === 'CUSTOM' && (
+                <div className="sales-custom-dates">
+                  <div className="date-input-wrap">
+                    <label>From:</label>
+                    <input
+                      type="date"
+                      value={salesFromDate}
+                      onChange={(e) => setSalesFromDate(e.target.value)}
+                      className="sales-date-input"
+                    />
+                  </div>
+                  <div className="date-input-wrap">
+                    <label>To:</label>
+                    <input
+                      type="date"
+                      value={salesToDate}
+                      onChange={(e) => setSalesToDate(e.target.value)}
+                      className="sales-date-input"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Row 2: Search Bar + Payment Filter + Channel Filter */}
+            <div className="sales-search-filter-row">
+              {/* Omni Search Input */}
+              <div className="sales-search-box">
+                <Search size={16} className="sales-search-icon" />
+                <input
+                  type="search"
+                  placeholder="Search Invoice # (e.g. INV-2026), Order #, Customer, Mobile, Table..."
+                  value={salesSearch}
+                  onChange={(e) => setSalesSearch(e.target.value)}
+                  className="sales-search-input"
+                  aria-label="Search Invoices"
+                />
+                {salesSearch && (
+                  <button type="button" className="sales-clear-search-btn" onClick={() => setSalesSearch('')}>
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Payment Mode Filter */}
+              <div className="sales-toggle-group">
+                <span className="toggle-label">Payment:</span>
+                {(['ALL', 'UPI', 'CASH', 'CARD'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`sales-toggle-pill ${salesPaymentFilter === m ? 'active' : ''}`}
+                    onClick={() => setSalesPaymentFilter(m)}
+                  >
+                    {m === 'ALL' ? 'All Modes' : m === 'UPI' ? '📱 UPI' : m === 'CASH' ? '💵 Cash' : '💳 Card'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Order Channel Filter */}
+              <div className="sales-toggle-group">
+                <span className="toggle-label">Channel:</span>
+                {(['ALL', 'DINE_IN', 'TAKEAWAY', 'COUNTER'] as const).map((ch) => (
+                  <button
+                    key={ch}
+                    type="button"
+                    className={`sales-toggle-pill ${salesChannelFilter === ch ? 'active' : ''}`}
+                    onClick={() => setSalesChannelFilter(ch)}
+                  >
+                    {ch === 'ALL' ? 'All Channels' : ch === 'DINE_IN' ? '🪑 Dine In' : ch === 'TAKEAWAY' ? '🛍️ Takeaway' : '⚡ Counter'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic KPI Summary Ribbon */}
+          <div className="sales-kpi-ribbon">
+            <div className="sales-kpi-pill primary">
+              <span className="kpi-label">Filtered Revenue</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.totalRevenue)}</strong>
+              <span className="kpi-sub">GST Taxable + Tax</span>
+            </div>
+            <div className="sales-kpi-pill">
+              <span className="kpi-label">Total Invoices</span>
+              <strong className="kpi-value">{salesMetrics.count}</strong>
+              <span className="kpi-sub">Settled Orders</span>
+            </div>
+            <div className="sales-kpi-pill upi">
+              <span className="kpi-label">UPI QR Total</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.upiTotal)}</strong>
+              <span className="kpi-sub">Instant Settled</span>
+            </div>
+            <div className="sales-kpi-pill cash">
+              <span className="kpi-label">Cash Collected</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.cashTotal)}</strong>
+              <span className="kpi-sub">Drawer Cash</span>
+            </div>
+            <div className="sales-kpi-pill card">
+              <span className="kpi-label">Card POS Total</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.cardTotal)}</strong>
+              <span className="kpi-sub">EDC Terminal</span>
+            </div>
+            <div className="sales-kpi-pill">
+              <span className="kpi-label">Average Bill</span>
+              <strong className="kpi-value">{formatINR(salesMetrics.avgTicket)}</strong>
+              <span className="kpi-sub">Per Customer</span>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="table-responsive" style={{ marginTop: '1rem' }}>
+            {filteredSettledInvoices.length === 0 ? (
+              <div className="sales-empty-state">
+                <Receipt size={42} color="#94a3b8" />
+                <h4>No Settled Invoices Found</h4>
+                <p>
+                  No transactions match the selected date timeline (
+                  {salesTimeline}) or search filter. Settle an order in the POS or adjust your filters above.
+                </p>
+                {(salesSearch || salesTimeline !== 'ALL' || salesPaymentFilter !== 'ALL' || salesChannelFilter !== 'ALL') && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => {
+                      setSalesTimeline('ALL');
+                      setSalesSearch('');
+                      setSalesPaymentFilter('ALL');
+                      setSalesChannelFilter('ALL');
+                    }}
+                    style={{ marginTop: '8px' }}
+                  >
+                    Reset All Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <table className="reports-table sales-ledger-table">
+                <thead>
+                  <tr>
+                    <th>Invoice No & Time</th>
+                    <th>Order & Table</th>
+                    <th>Customer</th>
+                    <th>Items & Customizations</th>
+                    <th>Payment Mode</th>
+                    <th style={{ textAlign: 'right' }}>Tax (5%)</th>
+                    <th style={{ textAlign: 'right' }}>Total Amount</th>
+                    <th style={{ textAlign: 'center' }}>Slip</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSettledInvoices.map((inv) => (
+                    <tr key={inv.id}>
+                      <td>
+                        <div className="inv-badge-num">{inv.invoiceNumber}</div>
+                        <div className="inv-date-time">
+                          {inv.dateFormatted} • {inv.timeFormatted}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="inv-ord-num">{inv.orderNumber}</div>
+                        <div className="inv-table-tag">{inv.tableOrChannel}</div>
+                      </td>
+                      <td>
+                        <div className="inv-cust-name">{inv.customerName}</div>
+                        {inv.customerPhone && (
+                          <div className="inv-cust-phone">📱 {inv.customerPhone}</div>
+                        )}
+                      </td>
+                      <td>
+                        <div className="inv-items-preview" title={inv.itemsSummary}>
+                          {inv.itemsSummary}
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`payment-pill-tag tag-${inv.paymentMethod.toLowerCase()}`}>
+                          {inv.paymentMethod === 'UPI' ? '📱 UPI' : inv.paymentMethod === 'CASH' ? '💵 Cash' : '💳 Card'}
+                        </span>
+                        <div className="inv-ref-sub">{inv.transactionReference}</div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="inv-tax-amt">{formatINR(inv.taxAmount, true)}</div>
+                        <div className="inv-tax-sub">CGST+SGST</div>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="inv-grand-total">{formatINR(inv.totalAmount, true)}</div>
+                        <span className="inv-status-paid">PAID</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn-view-invoice-slip"
+                          onClick={() => setInspectedBill(inv.rawBill || {
+                            id: inv.id,
+                            invoiceNumber: inv.invoiceNumber,
+                            status: 'PAID',
+                            customerName: inv.customerName,
+                            customerPhone: inv.customerPhone,
+                            subtotal: inv.subtotal,
+                            discountAmount: inv.discountAmount,
+                            taxableAmount: inv.taxableAmount,
+                            taxAmount: inv.taxAmount,
+                            totalAmount: inv.totalAmount,
+                            paidAmount: inv.paidAmount,
+                            order: {
+                              id: inv.id,
+                              orderNumber: inv.orderNumber,
+                            },
+                            payments: [{
+                              id: `pmt-${inv.id}`,
+                              paymentMethod: inv.paymentMethod,
+                              status: 'SUCCESSFUL',
+                              amount: inv.totalAmount,
+                              transactionReference: inv.transactionReference,
+                              createdAt: inv.createdAt,
+                            }],
+                            createdAt: inv.createdAt,
+                          })}
+                          title="View & reprint official tax invoice slip"
+                        >
+                          <Eye size={13} /> View Slip
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       )}
 
       {/* =========================================================================
@@ -868,6 +1276,18 @@ TOTAL ECO AGGREGATOR,,240,59000.00,0.00,1475.00,1475.00,61950.00
             </div>
           </div>
         </div>
+      )}
+
+      {/* Thermal Invoice Preview & Reprint Modal */}
+      {inspectedBill && (
+        <ReceiptModal
+          isOpen={Boolean(inspectedBill)}
+          onClose={() => setInspectedBill(null)}
+          mode="BILL"
+          bill={inspectedBill}
+          customerName={inspectedBill.customerName}
+          customerPhone={inspectedBill.customerPhone}
+        />
       )}
     </div>
   );

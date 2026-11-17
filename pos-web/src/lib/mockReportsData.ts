@@ -1,3 +1,6 @@
+import { mockStore } from '../data/mockStore';
+import type { Bill, BillStatus } from '../types/pos';
+
 export interface PaymentSplit {
   mode: string;
   label: string;
@@ -246,3 +249,342 @@ export function recordVoidAuditLog(entry: {
 
   return newRecord;
 }
+
+// ---------------------------------------------------------------------------
+// Settled Sales Invoices & Real-time Billing Register
+// ---------------------------------------------------------------------------
+export interface SettledInvoiceRecord {
+  id: string;
+  invoiceNumber: string;
+  orderNumber: string;
+  createdAt: string; // ISO date string for range filtering
+  dateFormatted: string;
+  timeFormatted: string;
+  customerName: string;
+  customerPhone: string;
+  tableOrChannel: string;
+  orderType: string;
+  itemsSummary: string;
+  subtotal: number;
+  discountAmount: number;
+  taxableAmount: number;
+  cgst: number;
+  sgst: number;
+  taxAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  paymentMethod: 'UPI' | 'CASH' | 'CARD';
+  transactionReference: string;
+  status: BillStatus;
+  rawBill?: Bill;
+}
+
+const now = Date.now();
+const oneHour = 60 * 60 * 1000;
+const oneDay = 24 * 60 * 60 * 1000;
+
+export const HISTORICAL_SETTLED_INVOICES: SettledInvoiceRecord[] = [
+  // Today's earlier settlements
+  {
+    id: 'inv-seed-101',
+    invoiceNumber: 'INV-2026-095',
+    orderNumber: 'ORD-2026-0048',
+    createdAt: new Date(now - 1.5 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 1.5 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '11:45 AM',
+    customerName: 'Ananya Sharma',
+    customerPhone: '98450 12345',
+    tableOrChannel: 'Table #04',
+    orderType: 'DINE_IN',
+    itemsSummary: '2x Tiger Brown Sugar Boba (Large 650ml), 1x Truffle Fries',
+    subtotal: 940,
+    discountAmount: 0,
+    taxableAmount: 940,
+    cgst: 23.5,
+    sgst: 23.5,
+    taxAmount: 47,
+    totalAmount: 987,
+    paidAmount: 987,
+    paymentMethod: 'UPI',
+    transactionReference: 'UPI-984381048',
+    status: 'PAID',
+  },
+  {
+    id: 'inv-seed-102',
+    invoiceNumber: 'INV-2026-094',
+    orderNumber: 'ORD-2026-0045',
+    createdAt: new Date(now - 2.8 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 2.8 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '10:30 AM',
+    customerName: 'Vikram Patel',
+    customerPhone: '91234 56780',
+    tableOrChannel: 'Counter Pickup',
+    orderType: 'COUNTER',
+    itemsSummary: '1x Taro Coconut Cream Tea, 1x Hazelnut Boba Shake',
+    subtotal: 510,
+    discountAmount: 0,
+    taxableAmount: 510,
+    cgst: 12.75,
+    sgst: 12.75,
+    taxAmount: 25.5,
+    totalAmount: 535.5,
+    paidAmount: 535.5,
+    paymentMethod: 'CASH',
+    transactionReference: 'CASH-POS1',
+    status: 'PAID',
+  },
+  {
+    id: 'inv-seed-103',
+    invoiceNumber: 'INV-2026-093',
+    orderNumber: 'ORD-2026-0041',
+    createdAt: new Date(now - 3.5 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 3.5 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '09:45 AM',
+    customerName: 'Priya Mukherjee',
+    customerPhone: '97654 32198',
+    tableOrChannel: 'Takeaway #02',
+    orderType: 'TAKEAWAY',
+    itemsSummary: '2x Authentic Boba Tea (Regular 400ml), 1x Mango Popping Boba',
+    subtotal: 720,
+    discountAmount: 50,
+    taxableAmount: 670,
+    cgst: 16.75,
+    sgst: 16.75,
+    taxAmount: 33.5,
+    totalAmount: 703.5,
+    paidAmount: 703.5,
+    paymentMethod: 'CARD',
+    transactionReference: 'POS-CRD-8821',
+    status: 'PAID',
+  },
+  // Yesterday's settlements
+  {
+    id: 'inv-seed-104',
+    invoiceNumber: 'INV-2026-088',
+    orderNumber: 'ORD-2026-0036',
+    createdAt: new Date(now - 1 * oneDay - 4 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 1 * oneDay - 4 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '08:20 PM',
+    customerName: 'Rohan Mehta',
+    customerPhone: '99887 66554',
+    tableOrChannel: 'Table #12',
+    orderType: 'DINE_IN',
+    itemsSummary: '4x Authentic Boba Tea, 2x Gourmet Smash Burger, 1x Cheese Loaded Nachos',
+    subtotal: 1850,
+    discountAmount: 100,
+    taxableAmount: 1750,
+    cgst: 43.75,
+    sgst: 43.75,
+    taxAmount: 87.5,
+    totalAmount: 1837.5,
+    paidAmount: 1837.5,
+    paymentMethod: 'UPI',
+    transactionReference: 'UPI-552199043',
+    status: 'PAID',
+  },
+  {
+    id: 'inv-seed-105',
+    invoiceNumber: 'INV-2026-087',
+    orderNumber: 'ORD-2026-0033',
+    createdAt: new Date(now - 1 * oneDay - 7 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 1 * oneDay - 7 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '05:15 PM',
+    customerName: 'Kavita Rao',
+    customerPhone: '98490 88771',
+    tableOrChannel: 'Table #06',
+    orderType: 'DINE_IN',
+    itemsSummary: '2x Thai Milk Boba Tea, 1x Lotus Biscoff Boba Shake',
+    subtotal: 780,
+    discountAmount: 0,
+    taxableAmount: 780,
+    cgst: 19.5,
+    sgst: 19.5,
+    taxAmount: 39,
+    totalAmount: 819,
+    paidAmount: 819,
+    paymentMethod: 'CARD',
+    transactionReference: 'POS-CRD-3310',
+    status: 'PAID',
+  },
+  {
+    id: 'inv-seed-106',
+    invoiceNumber: 'INV-2026-086',
+    orderNumber: 'ORD-2026-0031',
+    createdAt: new Date(now - 1 * oneDay - 9 * oneHour).toISOString(),
+    dateFormatted: new Date(now - 1 * oneDay - 9 * oneHour).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '03:10 PM',
+    customerName: 'Sanjay Reddy',
+    customerPhone: '94401 22334',
+    tableOrChannel: 'Counter Pickup',
+    orderType: 'COUNTER',
+    itemsSummary: '1x Iced Spanish Latte, 1x Hazelnut Boba Shake',
+    subtotal: 480,
+    discountAmount: 0,
+    taxableAmount: 480,
+    cgst: 12,
+    sgst: 12,
+    taxAmount: 24,
+    totalAmount: 504,
+    paidAmount: 504,
+    paymentMethod: 'CASH',
+    transactionReference: 'CASH-POS1',
+    status: 'PAID',
+  },
+  // Earlier this week (3 days ago)
+  {
+    id: 'inv-seed-107',
+    invoiceNumber: 'INV-2026-078',
+    orderNumber: 'ORD-2026-0024',
+    createdAt: new Date(now - 3 * oneDay).toISOString(),
+    dateFormatted: new Date(now - 3 * oneDay).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '07:45 PM',
+    customerName: 'Sneha Kulkarni',
+    customerPhone: '97000 44556',
+    tableOrChannel: 'Table #03',
+    orderType: 'DINE_IN',
+    itemsSummary: '3x Brown Sugar Pearls Boba, 2x Chicken Tikka Sandwich',
+    subtotal: 1240,
+    discountAmount: 50,
+    taxableAmount: 1190,
+    cgst: 29.75,
+    sgst: 29.75,
+    taxAmount: 59.5,
+    totalAmount: 1249.5,
+    paidAmount: 1249.5,
+    paymentMethod: 'UPI',
+    transactionReference: 'UPI-771120984',
+    status: 'PAID',
+  },
+  // Earlier this week (5 days ago)
+  {
+    id: 'inv-seed-108',
+    invoiceNumber: 'INV-2026-071',
+    orderNumber: 'ORD-2026-0019',
+    createdAt: new Date(now - 5 * oneDay).toISOString(),
+    dateFormatted: new Date(now - 5 * oneDay).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '06:30 PM',
+    customerName: 'Aditya Varma',
+    customerPhone: '98850 77112',
+    tableOrChannel: 'Table #08',
+    orderType: 'DINE_IN',
+    itemsSummary: '2x Roasted Oolong Boba Tea, 2x Truffle Fries',
+    subtotal: 890,
+    discountAmount: 0,
+    taxableAmount: 890,
+    cgst: 22.25,
+    sgst: 22.25,
+    taxAmount: 44.5,
+    totalAmount: 934.5,
+    paidAmount: 934.5,
+    paymentMethod: 'CARD',
+    transactionReference: 'POS-CRD-9011',
+    status: 'PAID',
+  },
+  // Earlier this month (10 days ago)
+  {
+    id: 'inv-seed-109',
+    invoiceNumber: 'INV-2026-062',
+    orderNumber: 'ORD-2026-0012',
+    createdAt: new Date(now - 10 * oneDay).toISOString(),
+    dateFormatted: new Date(now - 10 * oneDay).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+    timeFormatted: '02:15 PM',
+    customerName: 'Deepak Chawla',
+    customerPhone: '90001 88992',
+    tableOrChannel: 'Counter Pickup',
+    orderType: 'COUNTER',
+    itemsSummary: '1x Matcha Green Tea Boba, 1x Classic Waffle',
+    subtotal: 440,
+    discountAmount: 0,
+    taxableAmount: 440,
+    cgst: 11,
+    sgst: 11,
+    taxAmount: 22,
+    totalAmount: 462,
+    paidAmount: 462,
+    paymentMethod: 'UPI',
+    transactionReference: 'UPI-119934882',
+    status: 'PAID',
+  },
+];
+
+export function getSettledSalesInvoices(): SettledInvoiceRecord[] {
+  let liveBills: Bill[] = [];
+  try {
+    liveBills = mockStore.getBills();
+  } catch (err) {
+    console.warn('Failed to get bills from mockStore:', err);
+  }
+
+  const liveOrders = mockStore.getOrders();
+
+  // Convert live bills from POS store
+  const convertedLive: SettledInvoiceRecord[] = liveBills
+    .filter((b) => b.status === 'PAID' || (b.paidAmount && b.paidAmount > 0))
+    .map((b) => {
+      const associatedOrder = b.order?.id
+        ? liveOrders.find((o) => o.id === b.order?.id)
+        : null;
+
+      const pmt = (b.payments && b.payments.length > 0) ? b.payments[0] : null;
+      const method: 'UPI' | 'CASH' | 'CARD' =
+        pmt?.paymentMethod === 'CASH' ? 'CASH' :
+        pmt?.paymentMethod === 'CARD' ? 'CARD' : 'UPI';
+
+      const createdDate = new Date(b.createdAt);
+
+      const itemsDesc = associatedOrder?.items && associatedOrder.items.length > 0
+        ? associatedOrder.items.map((it) => `${it.quantity}x ${it.productNameSnapshot}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''}`).join(', ')
+        : (b.order?.items && b.order.items.length > 0)
+        ? b.order.items.map((it) => `${it.quantity}x ${it.productNameSnapshot}${it.variantNameSnapshot ? ` (${it.variantNameSnapshot})` : ''}`).join(', ')
+        : 'Assorted Bubble Tea & Cafe Items';
+
+      const tableInfo = associatedOrder?.table?.tableNumber
+        ? `Table #${associatedOrder.table.tableNumber}`
+        : b.order?.table?.tableNumber
+        ? `Table #${b.order.table.tableNumber}`
+        : associatedOrder?.orderType === 'TAKEAWAY' || b.order?.orderType === 'TAKEAWAY'
+        ? 'Takeaway Parcel'
+        : 'Counter Pickup';
+
+      const cgst = Number((b.taxAmount / 2).toFixed(2));
+      const sgst = Number((b.taxAmount / 2).toFixed(2));
+
+      return {
+        id: b.id,
+        invoiceNumber: b.invoiceNumber,
+        orderNumber: b.order?.orderNumber || associatedOrder?.orderNumber || 'ORD-2026-LIVE',
+        createdAt: b.createdAt,
+        dateFormatted: createdDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        timeFormatted: createdDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+        customerName: b.customerName || associatedOrder?.customerName || 'Walk-in Guest',
+        customerPhone: b.customerPhone || associatedOrder?.customerPhone || '',
+        tableOrChannel: tableInfo,
+        orderType: b.order?.orderType || associatedOrder?.orderType || 'COUNTER',
+        itemsSummary: itemsDesc,
+        subtotal: b.subtotal,
+        discountAmount: b.discountAmount || 0,
+        taxableAmount: b.taxableAmount,
+        cgst,
+        sgst,
+        taxAmount: b.taxAmount,
+        totalAmount: b.totalAmount,
+        paidAmount: b.paidAmount || b.totalAmount,
+        paymentMethod: method,
+        transactionReference: pmt?.transactionReference || `PMT-${b.invoiceNumber}`,
+        status: b.status,
+        rawBill: b,
+      };
+    });
+
+  // Filter out any seed duplicate IDs
+  const liveInvoiceNums = new Set(convertedLive.map((c) => c.invoiceNumber));
+  const filteredHistorical = HISTORICAL_SETTLED_INVOICES.filter(
+    (h) => !liveInvoiceNums.has(h.invoiceNumber)
+  );
+
+  // Combine live and historical, sorted by createdAt descending
+  return [...convertedLive, ...filteredHistorical].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+

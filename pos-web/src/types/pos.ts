@@ -294,6 +294,10 @@ export interface Bill {
   order?: {
     id: string;
     orderNumber: string;
+    orderType?: OrderType;
+    table?: RestaurantTable;
+    items?: OrderItem[];
+    customerNotes?: string;
   };
   payments?: Payment[];
   createdAt: string;

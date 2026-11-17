@@ -914,27 +914,14 @@ export function App() {
         </div>
       </header>
 
-      {/* Subtoolbar with Search & Collection tabs */}
+      {/* Subtoolbar with Centered Search Bar */}
       {activeTab === 'MENU' && (
         <div className="pos-subtoolbar">
-          <div className="subtoolbar-left">
-            <button type="button" className="mode-tab-btn active">
-              📂 Browse Menu ({filteredProducts.length})
-            </button>
-            <button
-              type="button"
-              className="mode-tab-btn"
-              onClick={() => setIsAddProductOpen(true)}
-              style={{ background: '#f5f3ff', color: '#7c3aed', borderColor: '#ddd6fe', fontWeight: 700 }}
-            >
-              + Add Product / Category
-            </button>
-            {selectedTable && (
-              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '4px 10px', border: '1px solid #bae6fd', borderRadius: '6px' }}>
-                Table: {selectedTable.tableNumber}
-              </span>
-            )}
-          </div>
+          {selectedTable && (
+            <div className="subtoolbar-table-badge">
+              <span>🪑 Table: {selectedTable.tableNumber}</span>
+            </div>
+          )}
 
           <div className="search-input-wrapper">
             <span className="search-icon-inside">🔍</span>
@@ -946,6 +933,17 @@ export function App() {
               className="retail-search-bar"
               aria-label="Search items"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {orderSuccessMessage && (

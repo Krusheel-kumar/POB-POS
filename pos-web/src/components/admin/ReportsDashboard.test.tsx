@@ -113,4 +113,36 @@ describe('ReportsDashboard Component', () => {
     // Toast notification check
     expect(screen.getByText(/GSTR-1 Table 7 \(B2C Consolidated\) CSV Downloaded/i)).toBeInTheDocument();
   });
+
+  it('navigates to Settled Invoices & Sales Register, tests timeline filtering and omni-search', () => {
+    render(<ReportsDashboard />);
+
+    // Click Sales Register tab
+    const salesTabBtn = screen.getByRole('button', { name: /Settled Invoices/i });
+    fireEvent.click(salesTabBtn);
+
+    expect(screen.getByText(/Settled Invoices & Real-Time Sales Register/i)).toBeInTheDocument();
+    expect(screen.getByText(/Filtered Revenue/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total Invoices/i)).toBeInTheDocument();
+
+    // Verify timeline preset buttons exist
+    expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Yesterday' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Last 7 Days' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'This Month' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All Time' })).toBeInTheDocument();
+
+    // Switch timeline to All Time
+    fireEvent.click(screen.getByRole('button', { name: 'All Time' }));
+    expect(screen.getByText(/INV-2026-095/i)).toBeInTheDocument();
+
+    // Test Search input
+    const searchInput = screen.getByPlaceholderText(/Search Invoice #/i);
+    fireEvent.change(searchInput, { target: { value: 'Ananya' } });
+    expect(screen.getByText(/Ananya Sharma/i)).toBeInTheDocument();
+
+    // Verify slip view button exists
+    expect(screen.getAllByRole('button', { name: /View Slip/i }).length).toBeGreaterThanOrEqual(1);
+  });
 });
+
