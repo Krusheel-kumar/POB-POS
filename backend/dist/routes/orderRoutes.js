@@ -2,6 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.orderRoutes = orderRoutes;
 const database_js_1 = require("../db/database.js");
+function toIsoString(val) {
+    if (!val)
+        return new Date().toISOString();
+    if (val instanceof Date)
+        return val.toISOString();
+    const parsed = new Date(val);
+    return !isNaN(parsed.getTime()) ? parsed.toISOString() : String(val);
+}
 async function orderRoutes(fastify) {
     // --- CREATE ORDER (With Automatic KOT Generation) ---
     fastify.post('/api/v1/orders', async (req, reply) => {
@@ -176,8 +184,47 @@ async function orderRoutes(fastify) {
             taxAmount: Number(order.tax_amount),
             totalAmount: Number(order.total_amount),
             items,
-            createdAt: String(order.created_at),
+            createdAt: toIsoString(order.created_at),
         });
+    });
+    // --- GET ALL ORDERS (GLOBAL OR FILTERED) ---
+    fastify.get('/api/v1/orders', async (req, reply) => {
+        const { outletId } = req.query;
+        let sql = 'SELECT * FROM orders';
+        const args = [];
+        if (outletId) {
+            sql += ' WHERE outlet_id = ?';
+            args.push(outletId);
+        }
+        sql += ' ORDER BY created_at DESC LIMIT 100';
+        const res = await database_js_1.db.execute({ sql, args });
+        const orders = [];
+        for (const o of res.rows) {
+            const itemsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM order_items WHERE order_id = ?', args: [o.id] });
+            orders.push({
+                id: String(o.id),
+                orderNumber: String(o.order_number),
+                orderType: String(o.order_type),
+                status: String(o.status),
+                customerName: o.customer_name ? String(o.customer_name) : undefined,
+                customerPhone: o.customer_phone ? String(o.customer_phone) : undefined,
+                tableNumber: o.table_number ? String(o.table_number) : undefined,
+                subtotal: Number(o.subtotal),
+                discountAmount: Number(o.discount_amount),
+                taxableAmount: Number(o.taxable_amount),
+                taxAmount: Number(o.tax_amount),
+                totalAmount: Number(o.total_amount),
+                items: itemsRes.rows.map((r) => ({
+                    id: String(r.id),
+                    productNameSnapshot: String(r.product_name_snapshot),
+                    unitPriceSnapshot: Number(r.unit_price_snapshot),
+                    quantity: Number(r.quantity),
+                    lineTotalSnapshot: Number(r.line_total_snapshot),
+                })),
+                createdAt: toIsoString(o.created_at),
+            });
+        }
+        return reply.send(orders);
     });
     // --- GET ORDERS FOR OUTLET ---
     fastify.get('/api/v1/orders/outlet/:outletId', async (req, reply) => {
@@ -209,7 +256,7 @@ async function orderRoutes(fastify) {
                     quantity: Number(r.quantity),
                     lineTotalSnapshot: Number(r.line_total_snapshot),
                 })),
-                createdAt: String(o.created_at),
+                createdAt: toIsoString(o.created_at),
             });
         }
         return reply.send(orders);

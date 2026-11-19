@@ -77,7 +77,7 @@ export function App() {
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
 
   // Outlet & Payment Policy
-  const [paymentPolicy, setPaymentPolicy] = useState<PaymentPolicy>('FLEXIBLE');
+  const [paymentPolicy, setPaymentPolicy] = useState<PaymentPolicy>('PAY_FIRST');
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [currentOutletId, setCurrentOutletId] = useState<string>(() => posApiClient.getConfig().outletId || 'outlet-demo-flagship');
 
@@ -520,57 +520,166 @@ export function App() {
     }
   };
 
+  // 1-Click Atomic Quick Settle (Order + Bill + Payment in one atomic pipeline)
+  const handleQuickSettle = async (method: PaymentMethod, autoPrintReceipt = true) => {
+    if (cartItems.length === 0) return;
+    setIsSubmitting(true);
+    setApiError(null);
+
+    try {
+      const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
+      const idempotencyKey = `POS-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+      const orderPayload: CreateOrderRequest = {
+        outletId,
+        orderType,
+        idempotencyKey,
+        customerName: customerName.trim() !== '' ? customerName.trim() : undefined,
+        customerPhone: customerPhone.trim() !== '' ? customerPhone.trim() : undefined,
+        tableId: orderType === 'DINE_IN' && selectedTable ? selectedTable.id : undefined,
+        tableNumber: orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : undefined,
+        customerNotes: customerNotes.trim() !== '' ? customerNotes : undefined,
+        items: cartItems.map((item) => ({
+          productId: item.product.id,
+          variantId: item.selectedVariant?.id,
+          addOnIds: item.selectedAddOns.map((a) => a.id),
+          quantity: item.quantity,
+          itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+        })),
+      };
+
+      // 1. Create order
+      const createdOrder = await posApiClient.createOrder(orderPayload);
+
+      // 2. Issue official gapless GST Tax Invoice
+      const issuedBill = await posApiClient.issueBill(createdOrder.id);
+
+      // 3. Record payment immediately with chosen payment method
+      const pmtKey = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      await posApiClient.recordPayment(issuedBill.id, issuedBill.totalAmount, method, pmtKey);
+
+      // 4. Retrieve complete order with item snapshots for receipt printing
+      const finalOrder = await posApiClient.getOrderById(createdOrder.id).catch(() => createdOrder);
+      const finalBill = await posApiClient.getBillByOrderId(createdOrder.id).catch(() => issuedBill);
+
+      setLastPlacedOrder(finalOrder);
+      setCartItems([]);
+      setCustomerNotes('');
+      setBackendCalculation(null);
+      setIsKotSent(false);
+      await loadTables();
+
+      setOrderSuccessMessage(
+        `🎉 Bill #${issuedBill.invoiceNumber} Settled via ${method} (₹${issuedBill.totalAmount.toFixed(2)})! Saved to Sales Reports.`
+      );
+      setTimeout(() => setOrderSuccessMessage(null), 6000);
+
+      // 5. Open Thermal Receipt preview
+      if (autoPrintReceipt) {
+        setReceiptModal({
+          isOpen: true,
+          mode: 'BILL',
+          order: finalOrder,
+          bill: finalBill,
+          customerName: customerName.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to settle order';
+      setApiError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handlePrintBill = async (orderId?: string) => {
     let orderToPrint: Order | null = null;
+    let billToPrint: Bill | null = null;
     if (orderId) {
       try {
         orderToPrint = await posApiClient.getOrderById(orderId);
+        billToPrint = await posApiClient.getBillByOrderId(orderId).catch(() => null);
       } catch {
         // fallback
       }
     }
     if (!orderToPrint) {
       if (cartItems.length > 0) {
-        const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
-        const estDiscount = backendCalculation?.discountAmount ?? 0;
-        const estTaxable = estSubtotal - estDiscount;
-        const estTax = backendCalculation?.taxAmount ?? (estTaxable * 0.05);
-        const estTotal = backendCalculation?.totalAmount ?? (estTaxable + estTax);
+        try {
+          setIsSubmitting(true);
+          const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
+          const idempotencyKey = `POS-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+          const createdOrder = await posApiClient.createOrder({
+            outletId,
+            orderType,
+            idempotencyKey,
+            customerName: customerName.trim() || undefined,
+            customerPhone: customerPhone.trim() || undefined,
+            tableId: orderType === 'DINE_IN' && selectedTable ? selectedTable.id : undefined,
+            tableNumber: orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : undefined,
+            customerNotes: customerNotes.trim() || undefined,
+            items: cartItems.map((item) => ({
+              productId: item.product.id,
+              variantId: item.selectedVariant?.id,
+              addOnIds: item.selectedAddOns.map((a) => a.id),
+              quantity: item.quantity,
+              itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+            })),
+          });
 
-        orderToPrint = {
-          id: `temp-bill-${Date.now()}`,
-          orderNumber: `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          orderType,
-          status: 'CONFIRMED',
-          customerName: customerName.trim() || undefined,
-          customerPhone: customerPhone.trim() || undefined,
-          subtotal: estSubtotal,
-          discountAmount: estDiscount,
-          taxableAmount: estTaxable,
-          taxAmount: estTax,
-          totalAmount: estTotal,
-          table: selectedTable ? selectedTable : undefined,
-          customerNotes,
-          items: cartItems.map((ci) => {
-            const addOnNames = ci.selectedAddOns.map((a) => a.name).join(', ');
-            const fullVariant = ci.selectedVariant?.name
-              ? (addOnNames ? `${ci.selectedVariant.name} • +${addOnNames}` : ci.selectedVariant.name)
-              : (addOnNames ? `+${addOnNames}` : undefined);
-            return {
+          const bill = await posApiClient.issueBill(createdOrder.id);
+          orderToPrint = await posApiClient.getOrderById(createdOrder.id).catch(() => createdOrder);
+          billToPrint = bill;
+          setLastPlacedOrder(orderToPrint);
+          setCartItems([]);
+          setCustomerNotes('');
+          setBackendCalculation(null);
+          setIsKotSent(false);
+          await loadTables();
+
+          setOrderSuccessMessage(`🧾 Bill #${bill.invoiceNumber} generated! Click 'Collect Payment' to settle.`);
+          setTimeout(() => setOrderSuccessMessage(null), 6000);
+        } catch (err: unknown) {
+          console.warn('Backend bill generation failed, using local estimate:', err);
+          const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
+          const estDiscount = backendCalculation?.discountAmount ?? 0;
+          const estTaxable = estSubtotal - estDiscount;
+          const estTax = backendCalculation?.taxAmount ?? (estTaxable * 0.05);
+          const estTotal = backendCalculation?.totalAmount ?? (estTaxable + estTax);
+
+          orderToPrint = {
+            id: `temp-bill-${Date.now()}`,
+            orderNumber: `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            orderType,
+            status: 'CONFIRMED',
+            customerName: customerName.trim() || undefined,
+            customerPhone: customerPhone.trim() || undefined,
+            subtotal: estSubtotal,
+            discountAmount: estDiscount,
+            taxableAmount: estTaxable,
+            taxAmount: estTax,
+            totalAmount: estTotal,
+            table: selectedTable ? selectedTable : undefined,
+            customerNotes,
+            items: cartItems.map((ci) => ({
               id: ci.id,
               productNameSnapshot: ci.product.name,
-              variantNameSnapshot: fullVariant,
+              variantNameSnapshot: ci.selectedVariant?.name,
               quantity: ci.quantity,
               unitPriceSnapshot: ci.unitPrice,
               lineTotalSnapshot: ci.lineTotal,
               itemNotes: ci.itemNotes,
               addOns: ci.selectedAddOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
-            };
-          }),
-          createdAt: new Date().toISOString(),
-        };
+            })),
+            createdAt: new Date().toISOString(),
+          };
+        } finally {
+          setIsSubmitting(false);
+        }
       } else if (lastPlacedOrder) {
         orderToPrint = lastPlacedOrder;
+        billToPrint = await posApiClient.getBillByOrderId(lastPlacedOrder.id).catch(() => null);
       } else {
         const seedBills = mockStore.getBills();
         if (seedBills.length > 0 && seedBills[0].order) {
@@ -583,6 +692,7 @@ export function App() {
       isOpen: true,
       mode: 'BILL',
       order: orderToPrint,
+      bill: billToPrint,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
     });
@@ -1134,6 +1244,8 @@ export function App() {
             onCustomerNotesChange={setCustomerNotes}
             backendCalculation={backendCalculation}
             onReviewOrder={() => setIsReviewOpen(true)}
+            onQuickSettle={handleQuickSettle}
+            isSubmitting={isSubmitting}
             onPrintBill={() => handlePrintBill()}
             onPrintKot={() => handlePrintKot()}
             selectedTableNumber={orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : null}
@@ -1194,6 +1306,7 @@ export function App() {
         bill={receiptModal.bill}
         customerName={receiptModal.customerName || customerName}
         customerPhone={receiptModal.customerPhone || customerPhone}
+        onOpenPayment={handleOpenPayment}
       />
 
       {/* Add Product & Category Wizard Modal */}

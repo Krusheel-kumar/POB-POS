@@ -123,6 +123,24 @@ async function billingRoutes(fastify) {
             createdAt: new Date().toISOString(),
         });
     });
+    // --- UPDATE PAYMENT STATUS ---
+    fastify.patch('/api/v1/bills/payments/:paymentId/status', async (req, reply) => {
+        const { paymentId } = req.params;
+        const { status } = req.body;
+        await database_js_1.db.execute({
+            sql: 'UPDATE payments SET status = ? WHERE id = ?',
+            args: [status || 'SUCCESSFUL', paymentId],
+        });
+        return reply.send({ id: paymentId, status: status || 'SUCCESSFUL' });
+    });
+}
+function toIsoString(val) {
+    if (!val)
+        return new Date().toISOString();
+    if (val instanceof Date)
+        return val.toISOString();
+    const parsed = new Date(val);
+    return !isNaN(parsed.getTime()) ? parsed.toISOString() : String(val);
 }
 async function formatBillResponse(row) {
     const paymentsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM payments WHERE bill_id = ?', args: [row.id] });
@@ -171,9 +189,9 @@ async function formatBillResponse(row) {
             paymentMethod: String(p.payment_method),
             status: String(p.status),
             transactionReference: p.transaction_reference ? String(p.transaction_reference) : undefined,
-            createdAt: String(p.created_at),
+            createdAt: toIsoString(p.created_at),
         })),
-        createdAt: String(row.created_at),
-        settledAt: row.settled_at ? String(row.settled_at) : undefined,
+        createdAt: toIsoString(row.created_at),
+        settledAt: row.settled_at ? toIsoString(row.settled_at) : undefined,
     };
 }

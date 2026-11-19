@@ -101,13 +101,11 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   };
 
   useEffect(() => {
-    if (externalBills === undefined) {
-      loadData();
-    }
-  }, [externalBills, outletId]);
+    loadData();
+  }, [outletId]);
 
-  const activeBills = externalBills !== undefined ? externalBills : internalBills;
-  const activeOrders = externalOrders !== undefined ? externalOrders : internalOrders;
+  const activeBills = internalBills.length > 0 ? internalBills : (externalBills || []);
+  const activeOrders = internalOrders.length > 0 ? internalOrders : (externalOrders || []);
 
   // Settled Sales Register & Timeline State
   const [salesTimeline, setSalesTimeline] = useState<'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS' | 'THIS_MONTH' | 'ALL' | 'CUSTOM'>('TODAY');
@@ -122,7 +120,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
 
   // Convert real live bills to SettledInvoiceRecords
   const allSettledInvoices = useMemo<SettledInvoiceRecord[]>(() => {
-    if (externalBills !== undefined || internalBills.length > 0) {
+    if (!posApiClient.isDemoModeActive() || externalBills !== undefined || internalBills.length > 0) {
       return activeBills
         .filter((b) => b.status === 'PAID' || (b.paidAmount && b.paidAmount > 0))
         .map((b) => {
@@ -201,7 +199,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
-    return getSettledSalesInvoices();
+    return posApiClient.isDemoModeActive() ? getSettledSalesInvoices() : [];
   }, [activeBills, activeOrders]);
 
   // Item Matrix State
@@ -228,14 +226,21 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
     return allSettledInvoices.filter((inv) => {
       const invDate = new Date(inv.createdAt);
       const invDayStr = !isNaN(invDate.getTime()) ? toLocalDateString(invDate) : '';
+      const invUtcDayStr = !isNaN(invDate.getTime()) ? invDate.toISOString().slice(0, 10) : '';
+      const today = toLocalDateString(new Date());
+      const todayUtc = new Date().toISOString().slice(0, 10);
 
       // Timeline filter
       if (salesTimeline === 'TODAY') {
-        const today = toLocalDateString(new Date());
-        if (invDayStr !== today) return false;
+        const isToday =
+          invDayStr === today ||
+          invUtcDayStr === todayUtc ||
+          Math.abs(Date.now() - invDate.getTime()) < 24 * 3600 * 1000;
+        if (!isToday) return false;
       } else if (salesTimeline === 'YESTERDAY') {
         const yesterday = toLocalDateString(new Date(Date.now() - 86400000));
-        if (invDayStr !== yesterday) return false;
+        const yesterdayUtc = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+        if (invDayStr !== yesterday && invUtcDayStr !== yesterdayUtc) return false;
       } else if (salesTimeline === 'LAST_7_DAYS') {
         const cutoff = Date.now() - 7 * 86400000;
         if (!isNaN(invDate.getTime()) && invDate.getTime() < cutoff) return false;
@@ -669,6 +674,44 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
           ========================================================================= */}
       {activeTab === 'z-report' && (
         <>
+          {/* Quick Timeline Selector for Z-Report */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>
+              📊 Sales Timeline Range:
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {(['TODAY', 'YESTERDAY', 'LAST_7_DAYS', 'THIS_MONTH', 'ALL'] as const).map((t) => {
+                const labels: Record<string, string> = {
+                  TODAY: 'Today',
+                  YESTERDAY: 'Yesterday',
+                  LAST_7_DAYS: 'Last 7 Days',
+                  THIS_MONTH: 'This Month',
+                  ALL: 'All Time (Live)',
+                };
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setSalesTimeline(t)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      border: salesTimeline === t ? '1px solid #4f46e5' : '1px solid #cbd5e1',
+                      background: salesTimeline === t ? '#4f46e5' : '#ffffff',
+                      color: salesTimeline === t ? '#ffffff' : '#334155',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {labels[t]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Top KPI Cards */}
           <div className="kpi-grid">
             <div className="kpi-card">

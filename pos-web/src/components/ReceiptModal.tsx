@@ -12,6 +12,7 @@ interface ReceiptModalProps {
   ticket?: KitchenTicket | null;
   customerName?: string;
   customerPhone?: string;
+  onOpenPayment?: (orderId: string) => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -23,6 +24,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   ticket,
   customerName,
   customerPhone,
+  onOpenPayment,
 }) => {
   const orderKey =
     order?.orderNumber ||
@@ -62,15 +64,26 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const activeCustomerName = order?.customerName || bill?.customerName || customerName;
   const activeCustomerPhone = order?.customerPhone || bill?.customerPhone || customerPhone;
+  const isPaid = bill?.status === 'PAID' || order?.status === 'BILLED';
+  const targetOrderId = order?.id || bill?.orderId || bill?.order?.id;
 
   return (
     <div className="receipt-modal-backdrop" role="dialog" aria-modal="true">
       <div className="receipt-modal-container">
         <div className="receipt-modal-actions no-print">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <div className="modal-title-pill">
               {mode === 'BILL' ? '🧾 Customer Tax Invoice' : '🍳 Kitchen Order Ticket (KOT)'}
             </div>
+            {isPaid ? (
+              <span className="modal-print-status-tag original" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
+                ✅ PAID & SETTLED
+              </span>
+            ) : mode === 'BILL' ? (
+              <span className="modal-print-status-tag duplicate" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a' }}>
+                ⏳ UNPAID / ISSUED
+              </span>
+            ) : null}
             {isDuplicate ? (
               <span className="modal-print-status-tag duplicate">
                 ⚠️ DUPLICATE (#{printCount + 1})
@@ -81,7 +94,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {mode === 'BILL' && !isPaid && onOpenPayment && targetOrderId && !targetOrderId.startsWith('temp-') && (
+              <button
+                type="button"
+                className="receipt-btn-print"
+                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', borderColor: '#059669' }}
+                onClick={() => {
+                  onClose();
+                  onOpenPayment(targetOrderId);
+                }}
+              >
+                💳 Collect Payment
+              </button>
+            )}
             <button type="button" className="receipt-btn-print" onClick={handlePrint}>
               🖨️ Print {isDuplicate ? 'Duplicate ' : ''}{mode === 'BILL' ? 'Bill' : 'KOT'}
             </button>

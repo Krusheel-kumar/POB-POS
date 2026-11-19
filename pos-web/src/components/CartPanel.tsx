@@ -22,6 +22,8 @@ interface CartPanelProps {
   onPrintBill?: () => void;
   onPrintKot?: () => void;
   isKotSent?: boolean;
+  isSubmitting?: boolean;
+  onQuickSettle?: (method: PaymentMethod, autoPrint: boolean) => Promise<void>;
   onRequireManagerVoid?: (item: {
     id: string;
     name: string;
@@ -45,12 +47,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   onCustomerNotesChange,
   backendCalculation,
   onReviewOrder,
+  onQuickSettle,
   selectedTableNumber,
   runningOrderId,
   onCancelRunningOrder,
   onPrintBill,
   onPrintKot,
   isKotSent = false,
+  isSubmitting = false,
   onRequireManagerVoid,
 }) => {
   const [localCustomerName, setLocalCustomerName] = useState('');
@@ -448,19 +452,52 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           <span className="auto-print-status">⚡ Auto-Print Enabled</span>
         </div>
 
-        {/* Main Checkout Button */}
-        <button
-          type="button"
-          className="retail-checkout-btn"
-          onClick={onReviewOrder}
-          disabled={items.length === 0}
-        >
-          {items.length === 0 ? (
-            <span>Checkout (Select Items)</span>
-          ) : (
-            <span>Review & Place Order • ₹{total.toFixed(2)}</span>
-          )}
-        </button>
+        {/* Main Checkout Button Group */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+          {onQuickSettle && items.length > 0 && !runningOrderId ? (
+            <button
+              type="button"
+              className="retail-checkout-btn"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                fontWeight: 700,
+                fontSize: '1rem',
+              }}
+              onClick={() => onQuickSettle(selectedPaymentMethod, autoPrint)}
+              disabled={isSubmitting || items.length === 0}
+            >
+              {isSubmitting ? (
+                <span>⚡ Processing Settle & Bill...</span>
+              ) : (
+                <span>
+                  ⚡ Settle & Bill • ₹{total.toFixed(2)} ({selectedPaymentMethod})
+                </span>
+              )}
+            </button>
+          ) : null}
+
+          <button
+            type="button"
+            className="retail-checkout-btn"
+            style={{
+              background: onQuickSettle && items.length > 0 && !runningOrderId ? '#f8fafc' : undefined,
+              color: onQuickSettle && items.length > 0 && !runningOrderId ? '#334155' : undefined,
+              border: onQuickSettle && items.length > 0 && !runningOrderId ? '1px solid #cbd5e1' : undefined,
+            }}
+            onClick={onReviewOrder}
+            disabled={isSubmitting || items.length === 0}
+          >
+            {items.length === 0 ? (
+              <span>Checkout (Select Items)</span>
+            ) : Boolean(runningOrderId) ? (
+              <span>Review & Send Add-ons to Kitchen • ₹{total.toFixed(2)}</span>
+            ) : (
+              <span>Review & Place Order • ₹{total.toFixed(2)}</span>
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   );
