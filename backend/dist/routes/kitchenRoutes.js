@@ -2,6 +2,50 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.kitchenRoutes = kitchenRoutes;
 const database_js_1 = require("../db/database.js");
+function toIsoString(val) {
+    if (!val)
+        return new Date().toISOString();
+    if (val instanceof Date)
+        return val.toISOString();
+    const parsed = new Date(val);
+    return !isNaN(parsed.getTime()) ? parsed.toISOString() : String(val);
+}
+async function getKitchenTicketResponse(ticketId) {
+    const tRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_tickets WHERE id = ?', args: [ticketId] });
+    if (tRes.rows.length === 0)
+        return null;
+    const t = tRes.rows[0];
+    const itemsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_items WHERE ticket_id = ?', args: [ticketId] });
+    const items = [];
+    for (const itemRow of itemsRes.rows) {
+        const addonsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_item_addons WHERE ticket_item_id = ?', args: [itemRow.id] });
+        items.push({
+            id: String(itemRow.id),
+            orderItemId: itemRow.order_item_id ? String(itemRow.order_item_id) : undefined,
+            productNameSnapshot: String(itemRow.product_name_snapshot),
+            variantNameSnapshot: itemRow.variant_name_snapshot ? String(itemRow.variant_name_snapshot) : undefined,
+            quantity: Number(itemRow.quantity),
+            status: String(itemRow.status),
+            addOns: addonsRes.rows.map((a) => ({
+                id: String(a.id),
+                addOnNameSnapshot: String(a.addon_name_snapshot),
+            })),
+        });
+    }
+    return {
+        id: String(t.id),
+        ticketNumber: String(t.ticket_number),
+        status: String(t.status),
+        orderNumberSnapshot: String(t.order_number_snapshot),
+        orderTypeSnapshot: String(t.order_type_snapshot),
+        tableNumberSnapshot: t.table_number_snapshot ? String(t.table_number_snapshot) : undefined,
+        customerNotesSnapshot: t.customer_notes_snapshot ? String(t.customer_notes_snapshot) : undefined,
+        cancellationReason: t.cancellation_reason ? String(t.cancellation_reason) : undefined,
+        items,
+        createdAt: toIsoString(t.created_at),
+        updatedAt: toIsoString(t.updated_at),
+    };
+}
 async function kitchenRoutes(fastify) {
     // --- GET KITCHEN TICKETS FOR OUTLET ---
     fastify.get('/api/v1/kitchen-tickets/outlet/:outletId', async (req, reply) => {
@@ -17,36 +61,42 @@ async function kitchenRoutes(fastify) {
         const res = await database_js_1.db.execute({ sql, args });
         const content = [];
         for (const t of res.rows) {
-            const itemsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_items WHERE ticket_id = ?', args: [t.id] });
-            const items = [];
-            for (const itemRow of itemsRes.rows) {
-                const addonsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_item_addons WHERE ticket_item_id = ?', args: [itemRow.id] });
-                items.push({
-                    id: String(itemRow.id),
-                    orderItemId: itemRow.order_item_id ? String(itemRow.order_item_id) : undefined,
-                    productNameSnapshot: String(itemRow.product_name_snapshot),
-                    variantNameSnapshot: itemRow.variant_name_snapshot ? String(itemRow.variant_name_snapshot) : undefined,
-                    quantity: Number(itemRow.quantity),
-                    status: String(itemRow.status),
-                    addOns: addonsRes.rows.map((a) => ({
-                        id: String(a.id),
-                        addOnNameSnapshot: String(a.addon_name_snapshot),
-                    })),
-                });
-            }
-            content.push({
-                id: String(t.id),
-                ticketNumber: String(t.ticket_number),
-                status: String(t.status),
-                orderNumberSnapshot: String(t.order_number_snapshot),
-                orderTypeSnapshot: String(t.order_type_snapshot),
-                tableNumberSnapshot: t.table_number_snapshot ? String(t.table_number_snapshot) : undefined,
-                customerNotesSnapshot: t.customer_notes_snapshot ? String(t.customer_notes_snapshot) : undefined,
-                cancellationReason: t.cancellation_reason ? String(t.cancellation_reason) : undefined,
-                items,
-                createdAt: String(t.created_at),
-                updatedAt: String(t.updated_at),
-            });
+            const ticketObj = await getKitchenTicketResponse(String(t.id));
+            if (ticketObj)
+                content.push(ticketObj);
+        }
+        return reply.send({
+            content,
+            totalElements: content.length,
+            totalPages: 1,
+            size: 50,
+            number: 0,
+        });
+    });
+    // --- GET ALL KITCHEN TICKETS (GLOBAL) ---
+    fastify.get('/api/v1/kitchen-tickets', async (req, reply) => {
+        const { status, outletId } = req.query;
+        let sql = 'SELECT * FROM kitchen_tickets';
+        const args = [];
+        const conditions = [];
+        if (outletId) {
+            conditions.push('outlet_id = ?');
+            args.push(outletId);
+        }
+        if (status) {
+            conditions.push('status = ?');
+            args.push(status);
+        }
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+        sql += ' ORDER BY created_at DESC LIMIT 50';
+        const res = await database_js_1.db.execute({ sql, args });
+        const content = [];
+        for (const t of res.rows) {
+            const ticketObj = await getKitchenTicketResponse(String(t.id));
+            if (ticketObj)
+                content.push(ticketObj);
         }
         return reply.send({
             content,
@@ -72,12 +122,8 @@ async function kitchenRoutes(fastify) {
             sql: 'UPDATE kitchen_ticket_items SET status = ? WHERE ticket_id = ?',
             args: [status, ticketId],
         });
-        return reply.send({
-            id: ticketId,
-            status,
-            cancellationReason,
-            updatedAt: new Date().toISOString(),
-        });
+        const fullTicket = await getKitchenTicketResponse(ticketId);
+        return reply.send(fullTicket);
     });
     // --- UPDATE SINGLE ITEM STATUS ON TICKET ---
     fastify.patch('/api/v1/kitchen-tickets/items/:itemId/status', async (req, reply) => {
@@ -90,9 +136,20 @@ async function kitchenRoutes(fastify) {
             sql: 'UPDATE kitchen_ticket_items SET status = ? WHERE id = ?',
             args: [status, itemId],
         });
+        const itemRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_items WHERE id = ?', args: [itemId] });
+        const itemRow = itemRes.rows[0];
+        const addonsRes = await database_js_1.db.execute({ sql: 'SELECT * FROM kitchen_ticket_item_addons WHERE ticket_item_id = ?', args: [itemId] });
         return reply.send({
-            id: itemId,
-            status,
+            id: String(itemRow.id),
+            orderItemId: itemRow.order_item_id ? String(itemRow.order_item_id) : undefined,
+            productNameSnapshot: String(itemRow.product_name_snapshot),
+            variantNameSnapshot: itemRow.variant_name_snapshot ? String(itemRow.variant_name_snapshot) : undefined,
+            quantity: Number(itemRow.quantity),
+            status: String(itemRow.status),
+            addOns: addonsRes.rows.map((a) => ({
+                id: String(a.id),
+                addOnNameSnapshot: String(a.addon_name_snapshot),
+            })),
         });
     });
 }

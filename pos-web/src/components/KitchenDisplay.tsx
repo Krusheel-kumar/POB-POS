@@ -65,7 +65,22 @@ export const KitchenDisplay: React.FC<KitchenDisplayProps> = ({ onBackToPos }) =
       const updated = await posApiClient.updateKitchenTicketStatus(ticketId, nextStatus, reason);
       setTickets((prev) =>
         prev
-          .map((t) => (t.id === ticketId ? updated : t))
+          .map((t) => {
+            if (t.id !== ticketId) return t;
+            const updatedItems = (updated && updated.items && updated.items.length > 0)
+              ? updated.items
+              : (t.items || []).map((i) => ({
+                  ...i,
+                  status: nextStatus === 'CANCELLED' ? 'CANCELLED' : (nextStatus === 'READY' ? 'READY' : (nextStatus === 'PREPARING' && i.status === 'QUEUED' ? 'PREPARING' : i.status)),
+                }));
+
+            return {
+              ...t,
+              ...updated,
+              status: (updated && updated.status) || nextStatus,
+              items: updatedItems,
+            };
+          })
           .filter((t) => {
             if (selectedFilter === 'ACTIVE') {
               return t.status === 'QUEUED' || t.status === 'PREPARING';
@@ -87,9 +102,12 @@ export const KitchenDisplay: React.FC<KitchenDisplayProps> = ({ onBackToPos }) =
       setTickets((prev) =>
         prev.map((t) => {
           if (t.id === ticketId) {
-            const updatedItems = t.items.map((i) => (i.id === itemId ? updatedItem : i));
+            const currentItems = t.items || [];
+            const updatedItems = currentItems.map((i) =>
+              i.id === itemId ? { ...i, ...updatedItem, status: nextStatus } : i
+            );
             // Check if all items are ready
-            const allReady = updatedItems.every(
+            const allReady = updatedItems.length > 0 && updatedItems.every(
               (i) => i.status === 'READY' || i.status === 'CANCELLED'
             );
             const anyPreparing = updatedItems.some((i) => i.status === 'PREPARING');
@@ -242,7 +260,7 @@ export const KitchenDisplay: React.FC<KitchenDisplayProps> = ({ onBackToPos }) =
 
                   {/* Ticket Items */}
                   <div className="ticket-items-list">
-                    {ticket.items.map((item) => {
+                    {(ticket.items || []).map((item) => {
                       const itemQueued = item.status === 'QUEUED';
                       const itemPreparing = item.status === 'PREPARING';
                       const itemReady = item.status === 'READY';
