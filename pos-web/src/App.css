@@ -378,6 +378,67 @@
   border-radius: 6px;
 }
 
+.subtoolbar-change-table-btn {
+  background: #ffffff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subtoolbar-change-table-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.subtoolbar-back-menu-btn {
+  position: absolute;
+  left: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+  padding: 5px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subtoolbar-back-menu-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+.cart-change-table-pill-btn {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cart-change-table-pill-btn:hover {
+  background: #1d4ed8;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
 .search-input-wrapper {
   position: relative;
   width: 100%;

@@ -2,7 +2,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import App from './App';
 import { posApiClient } from './api/posApiClient';
-import type { Product, ProductCategory, Order } from './types/pos';
+import type { Product, ProductCategory, Order, RestaurantTable } from './types/pos';
+
+const mockTables: RestaurantTable[] = [
+  { id: 'tbl-1', tableNumber: '1', capacity: 4, status: 'AVAILABLE' },
+  { id: 'tbl-2', tableNumber: '2', capacity: 2, status: 'AVAILABLE' },
+];
 
 const mockCategories: ProductCategory[] = [
   { id: 'cat-1', name: 'Boba Tea' },
@@ -46,20 +51,26 @@ describe('Frontend–Backend Integration (Cashier POS)', () => {
       outletId: '22222222-2222-2222-2222-222222222222',
     });
     vi.spyOn(posApiClient, 'getOutlets').mockResolvedValue([{ id: '22222222-2222-2222-2222-222222222222', name: 'Test Outlet', paymentPolicy: 'FLEXIBLE' }]);
-    vi.spyOn(posApiClient, 'getTables').mockResolvedValue([]);
+    vi.spyOn(posApiClient, 'getTables').mockResolvedValue(mockTables);
     vi.spyOn(posApiClient, 'getAddOns').mockResolvedValue([]);
   });
 
-  it('loads and renders categories and products from backend API', async () => {
+  it('loads and renders table selection first in dine-in mode, and opens catalog upon table selection', async () => {
     vi.spyOn(posApiClient, 'getCategories').mockResolvedValue(mockCategories);
     vi.spyOn(posApiClient, 'getProducts').mockResolvedValue(mockProducts);
 
     render(<App />);
 
-    // Initially displays loading
-    expect(screen.getByText(/Loading menu from server.../i)).toBeInTheDocument();
+    // In Dine-In mode, table floor plan is displayed first
+    await waitFor(() => {
+      expect(screen.getByText(/Dine-In Table Selection/i)).toBeInTheDocument();
+      expect(screen.getByText('Table 1')).toBeInTheDocument();
+    });
 
-    // After API resolves
+    // Select Table 1 to open catalog
+    fireEvent.click(screen.getByText('Table 1'));
+
+    // After table selection, categories and products are displayed
     await waitFor(() => {
       expect(screen.getByText('Boba Tea')).toBeInTheDocument();
       expect(screen.getByText('Coffee')).toBeInTheDocument();
@@ -99,6 +110,12 @@ describe('Frontend–Backend Integration (Cashier POS)', () => {
     const createOrderSpy = vi.spyOn(posApiClient, 'createOrder').mockResolvedValue(mockCreatedOrder);
 
     render(<App />);
+
+    // In Dine-In mode, select Table 1
+    await waitFor(() => {
+      expect(screen.getByText('Table 1')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Table 1'));
 
     // Wait for catalog load
     await waitFor(() => {
@@ -159,6 +176,12 @@ describe('Frontend–Backend Integration (Cashier POS)', () => {
     vi.spyOn(posApiClient, 'createOrder').mockRejectedValue(new Error('User is not authorized for outlet'));
 
     render(<App />);
+
+    // In Dine-In mode, select Table 1
+    await waitFor(() => {
+      expect(screen.getByText('Table 1')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Table 1'));
 
     await waitFor(() => {
       expect(screen.getByText('Butter Croissant')).toBeInTheDocument();

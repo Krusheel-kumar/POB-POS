@@ -69,6 +69,7 @@ export function App() {
   // Table Management State
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null);
+  const [isChoosingTable, setIsChoosingTable] = useState<boolean>(true);
 
   // Running Order State (When adding items to an existing running dine-in order)
   const [runningOrder, setRunningOrder] = useState<Order | null>(null);
@@ -319,8 +320,13 @@ export function App() {
   const handleSelectTable = (table: RestaurantTable) => {
     setSelectedTable(table);
     setOrderType('DINE_IN');
-    setRunningOrder(null);
+    setIsChoosingTable(false);
     setActiveTab('MENU');
+    if (table.currentOrderId) {
+      handleOpenRunningOrder(table.currentOrderId);
+    } else {
+      setRunningOrder(null);
+    }
   };
 
   const handleOpenRunningOrder = async (orderId: string) => {
@@ -332,6 +338,7 @@ export function App() {
       if (order.table) {
         setSelectedTable(order.table);
       }
+      setIsChoosingTable(false);
       setActiveTab('MENU');
     } catch (err: unknown) {
       setApiError(err instanceof Error ? err.message : 'Failed to load running order');
@@ -714,39 +721,95 @@ export function App() {
     }
     if (!orderToPrint) {
       if (cartItems.length > 0) {
-        const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
-        orderToPrint = {
-          id: `temp-kot-${Date.now()}`,
-          orderNumber: `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-          orderType,
-          status: 'CONFIRMED',
-          customerName: customerName.trim() || undefined,
-          customerPhone: customerPhone.trim() || undefined,
-          subtotal: estSubtotal,
-          discountAmount: 0,
-          taxableAmount: estSubtotal,
-          taxAmount: 0,
-          totalAmount: estSubtotal,
-          table: selectedTable ? selectedTable : undefined,
-          customerNotes,
-          items: cartItems.map((ci) => {
-            const addOnNames = ci.selectedAddOns.map((a) => a.name).join(', ');
-            const fullVariant = ci.selectedVariant?.name
-              ? (addOnNames ? `${ci.selectedVariant.name} • +${addOnNames}` : ci.selectedVariant.name)
-              : (addOnNames ? `+${addOnNames}` : undefined);
-            return {
-              id: ci.id,
-              productNameSnapshot: ci.product.name,
-              variantNameSnapshot: fullVariant,
-              quantity: ci.quantity,
-              unitPriceSnapshot: ci.unitPrice,
-              lineTotalSnapshot: ci.lineTotal,
-              itemNotes: ci.itemNotes,
-              addOns: ci.selectedAddOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
-            };
-          }),
-          createdAt: new Date().toISOString(),
-        };
+        setIsSubmitting(true);
+        try {
+          if (runningOrder) {
+            // Adding more items to active running dine-in order
+            const idempotencyKey = `KOT-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+            const updated = await posApiClient.addOrderItems(runningOrder.id, {
+              idempotencyKey,
+              items: cartItems.map((item) => ({
+                productId: item.product.id,
+                variantId: item.selectedVariant?.id,
+                addOnIds: item.selectedAddOns.map((a) => a.id),
+                quantity: item.quantity,
+                itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+              })),
+            });
+            orderToPrint = updated;
+            setLastPlacedOrder(updated);
+            setRunningOrder(updated);
+            setCartItems([]);
+            await loadTables();
+            setOrderSuccessMessage(`👨‍🍳 Add-on KOT dispatched for Table ${selectedTable?.tableNumber || ''}! New Total: ₹${updated.totalAmount.toFixed(2)}`);
+            setTimeout(() => setOrderSuccessMessage(null), 5000);
+          } else {
+            // Placing first KOT order for the table
+            const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
+            const idempotencyKey = `KOT-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+            const createdOrder = await posApiClient.createOrder({
+              outletId,
+              orderType,
+              idempotencyKey,
+              customerName: customerName.trim() || undefined,
+              customerPhone: customerPhone.trim() || undefined,
+              tableId: orderType === 'DINE_IN' && selectedTable ? selectedTable.id : undefined,
+              tableNumber: orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : undefined,
+              customerNotes: customerNotes.trim() || undefined,
+              items: cartItems.map((item) => ({
+                productId: item.product.id,
+                variantId: item.selectedVariant?.id,
+                addOnIds: item.selectedAddOns.map((a) => a.id),
+                quantity: item.quantity,
+                itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+              })),
+            });
+            orderToPrint = createdOrder;
+            setLastPlacedOrder(createdOrder);
+            setRunningOrder(createdOrder);
+            setCartItems([]);
+            await loadTables();
+            setOrderSuccessMessage(`👨‍🍳 KOT #${createdOrder.orderNumber} sent to kitchen for Table ${selectedTable?.tableNumber || ''}!`);
+            setTimeout(() => setOrderSuccessMessage(null), 5000);
+          }
+        } catch (err) {
+          console.warn('Failed to commit KOT to backend, using local estimate:', err);
+          const estSubtotal = cartItems.reduce((s, i) => s + i.lineTotal, 0);
+          orderToPrint = {
+            id: `temp-kot-${Date.now()}`,
+            orderNumber: `ORD-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+            orderType,
+            status: 'CONFIRMED',
+            customerName: customerName.trim() || undefined,
+            customerPhone: customerPhone.trim() || undefined,
+            subtotal: estSubtotal,
+            discountAmount: 0,
+            taxableAmount: estSubtotal,
+            taxAmount: 0,
+            totalAmount: estSubtotal,
+            table: selectedTable ? selectedTable : undefined,
+            customerNotes,
+            items: cartItems.map((ci) => {
+              const addOnNames = ci.selectedAddOns.map((a) => a.name).join(', ');
+              const fullVariant = ci.selectedVariant?.name
+                ? (addOnNames ? `${ci.selectedVariant.name} • +${addOnNames}` : ci.selectedVariant.name)
+                : (addOnNames ? `+${addOnNames}` : undefined);
+              return {
+                id: ci.id,
+                productNameSnapshot: ci.product.name,
+                variantNameSnapshot: fullVariant,
+                quantity: ci.quantity,
+                unitPriceSnapshot: ci.unitPrice,
+                lineTotalSnapshot: ci.lineTotal,
+                itemNotes: ci.itemNotes,
+                addOns: ci.selectedAddOns.map((a) => ({ id: a.id, name: a.name, price: a.price })),
+              };
+            }),
+            createdAt: new Date().toISOString(),
+          };
+        } finally {
+          setIsSubmitting(false);
+        }
       } else if (lastPlacedOrder) {
         orderToPrint = lastPlacedOrder;
       } else {
@@ -1054,10 +1117,27 @@ export function App() {
       {/* Subtoolbar with Centered Search Bar */}
       {activeTab === 'MENU' && (
         <div className="pos-subtoolbar">
-          {selectedTable && (
+          {orderType === 'DINE_IN' && selectedTable && !isChoosingTable && (
             <div className="subtoolbar-table-badge">
               <span>🪑 Table: {selectedTable.tableNumber}</span>
+              <button
+                type="button"
+                className="subtoolbar-change-table-btn"
+                onClick={() => setIsChoosingTable(true)}
+                title="Change or reassign table"
+              >
+                ⇄ Change Table
+              </button>
             </div>
+          )}
+          {orderType === 'DINE_IN' && isChoosingTable && selectedTable && (
+            <button
+              type="button"
+              className="subtoolbar-back-menu-btn"
+              onClick={() => setIsChoosingTable(false)}
+            >
+              ← Back to Menu (Table {selectedTable.tableNumber})
+            </button>
           )}
 
           <div className="search-input-wrapper">
@@ -1119,113 +1199,137 @@ export function App() {
         </div>
       ) : (
         <div className="pos-main-container">
-          {/* Category Navigation Sidebar */}
-          <nav className="pos-category-nav" aria-label="Menu categories">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                className={`category-pill ${selectedCategoryId === cat.id ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedCategoryId(cat.id);
-                  setSelectedSubcategory('all');
-                }}
-              >
-                <span className="category-name-text">{cat.name}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              className="category-pill new-category-pill"
-              onClick={() => setIsAddProductOpen(true)}
-              title="Create new category & subcategories"
-            >
-              + New Category
-            </button>
-          </nav>
-
-          {/* Product Catalog Grid */}
-          <section className="pos-catalog-section" aria-label="Product Catalog">
-            {/* Subcategory Filter Bar */}
-            {currentCategorySubcategories.length > 0 && (
-              <div className="subcategory-bar" role="group" aria-label="Subcategories">
+          {orderType === 'DINE_IN' && (!selectedTable || isChoosingTable) ? (
+            /* DINE-IN TABLE SELECTION FIRST */
+            <div className="pos-table-selection-panel" style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
+              <TableManagementView
+                tables={tables}
+                selectedTableId={selectedTable?.id ?? null}
+                onSelectTable={handleSelectTable}
+                onOpenRunningOrder={handleOpenRunningOrder}
+                onCollectPayment={handleOpenPayment}
+                onGenerateBill={handleGenerateBill}
+                onPrintBill={handlePrintBill}
+                onPrintKot={handlePrintKot}
+                onCreateTable={handleCreateTable}
+                onDeleteTable={handleDeleteTable}
+                onUpdateTableStatus={handleUpdateTableStatus}
+                onRefresh={loadTables}
+                isInlineMode={true}
+                onCancelSelectTable={selectedTable ? () => setIsChoosingTable(false) : undefined}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Category Navigation Sidebar */}
+              <nav className="pos-category-nav" aria-label="Menu categories">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`category-pill ${selectedCategoryId === cat.id ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedCategoryId(cat.id);
+                      setSelectedSubcategory('all');
+                    }}
+                  >
+                    <span className="category-name-text">{cat.name}</span>
+                  </button>
+                ))}
                 <button
                   type="button"
-                  className={`subcat-pill ${selectedSubcategory === 'all' ? 'active' : ''}`}
-                  onClick={() => setSelectedSubcategory('all')}
+                  className="category-pill new-category-pill"
+                  onClick={() => setIsAddProductOpen(true)}
+                  title="Create new category & subcategories"
                 >
-                  All (
-                  {
-                    products.filter(
-                      (p) => selectedCategoryId === 'cat-all' || p.category?.id === selectedCategoryId
-                    ).length
-                  }
-                  )
+                  + New Category
                 </button>
-                {currentCategorySubcategories.map((sc) => {
-                  const count = products.filter(
-                    (p) =>
-                      (selectedCategoryId === 'cat-all' || p.category?.id === selectedCategoryId) &&
-                      p.subcategory === sc
-                  ).length;
-                  return (
-                    <button
-                      key={sc}
-                      type="button"
-                      className={`subcat-pill ${selectedSubcategory === sc ? 'active' : ''}`}
-                      onClick={() => setSelectedSubcategory(sc)}
-                    >
-                      {sc} {count > 0 ? `(${count})` : ''}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+              </nav>
 
-            {isLoading ? (
-              <div className="loading-state">
-                <p>Loading menu from server...</p>
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="no-products-view" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '16px', border: '2px dashed #cbd5e1', margin: '2rem auto', maxWidth: '480px' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✨</div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.5rem' }}>
-                  {products.length === 0 ? 'Fresh Clean Menu Canvas' : 'No Items Found'}
-                </h3>
-                <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: '1.5' }}>
-                  {products.length === 0
-                    ? 'All demo items have been cleared. Ready to start fresh! Click below to add your first real product with your laptop images.'
-                    : `No items found matching "${searchQuery || 'selected category'}".`}
-                </p>
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddProductOpen(true)}
-                    style={{ background: '#7c3aed', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '0.75rem 1.75rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)' }}
-                  >
-                    + Add Real Product
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddProductOpen(true)}
-                    style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
-                  >
-                    + New Category
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="product-grid">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    onSelect={(p) => setActiveModalProduct(p)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
+              {/* Product Catalog Grid */}
+              <section className="pos-catalog-section" aria-label="Product Catalog">
+                {/* Subcategory Filter Bar */}
+                {currentCategorySubcategories.length > 0 && (
+                  <div className="subcategory-bar" role="group" aria-label="Subcategories">
+                    <button
+                      type="button"
+                      className={`subcat-pill ${selectedSubcategory === 'all' ? 'active' : ''}`}
+                      onClick={() => setSelectedSubcategory('all')}
+                    >
+                      All (
+                      {
+                        products.filter(
+                          (p) => selectedCategoryId === 'cat-all' || p.category?.id === selectedCategoryId
+                        ).length
+                      }
+                      )
+                    </button>
+                    {currentCategorySubcategories.map((sc) => {
+                      const count = products.filter(
+                        (p) =>
+                          (selectedCategoryId === 'cat-all' || p.category?.id === selectedCategoryId) &&
+                          p.subcategory === sc
+                      ).length;
+                      return (
+                        <button
+                          key={sc}
+                          type="button"
+                          className={`subcat-pill ${selectedSubcategory === sc ? 'active' : ''}`}
+                          onClick={() => setSelectedSubcategory(sc)}
+                        >
+                          {sc} {count > 0 ? `(${count})` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {isLoading ? (
+                  <div className="loading-state">
+                    <p>Loading menu from server...</p>
+                  </div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="no-products-view" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '16px', border: '2px dashed #cbd5e1', margin: '2rem auto', maxWidth: '480px' }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✨</div>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.5rem' }}>
+                      {products.length === 0 ? 'Fresh Clean Menu Canvas' : 'No Items Found'}
+                    </h3>
+                    <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: '1.5' }}>
+                      {products.length === 0
+                        ? 'All demo items have been cleared. Ready to start fresh! Click below to add your first real product with your laptop images.'
+                        : `No items found matching "${searchQuery || 'selected category'}".`}
+                    </p>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddProductOpen(true)}
+                        style={{ background: '#7c3aed', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '0.75rem 1.75rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)' }}
+                      >
+                        + Add Real Product
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddProductOpen(true)}
+                        style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+                      >
+                        + New Category
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="product-grid">
+                    {filteredProducts.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onSelect={(p) => setActiveModalProduct(p)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
 
           {/* Right Cart Sidebar */}
           <CartPanel
@@ -1233,10 +1337,19 @@ export function App() {
             orderType={orderType}
             onOrderTypeChange={(t) => {
               setOrderType(t);
-              if (t !== 'DINE_IN') {
+              if (t === 'DINE_IN') {
+                if (!selectedTable) {
+                  setIsChoosingTable(true);
+                }
+              } else {
                 setSelectedTable(null);
                 setRunningOrder(null);
+                setIsChoosingTable(false);
               }
+            }}
+            onChangeTable={() => {
+              setOrderType('DINE_IN');
+              setIsChoosingTable(true);
             }}
             onUpdateQuantity={handleUpdateQuantity}
             onRemoveItem={handleRemoveItem}
