@@ -19,6 +19,7 @@ interface CartPanelProps {
   selectedTableNumber?: string | null;
   runningOrderId?: string | null;
   onCancelRunningOrder?: () => void;
+  onChangeTable?: () => void;
   onPrintBill?: () => void;
   onPrintKot?: () => void;
   isKotSent?: boolean;
@@ -51,6 +52,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   selectedTableNumber,
   runningOrderId,
   onCancelRunningOrder,
+  onChangeTable,
   onPrintBill,
   onPrintKot,
   isKotSent = false,
@@ -137,13 +139,25 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           <div className="cart-header-title">
             <span className="cart-icon">🧾</span>
             <strong>
-              {orderType === 'DINE_IN' && selectedTableNumber
-                ? `Table ${selectedTableNumber}`
+              {orderType === 'DINE_IN'
+                ? (selectedTableNumber ? `Table ${selectedTableNumber}` : 'Select Table')
                 : 'Counter Bill'}
             </strong>
             <span className="counter-status-pill">
-              {orderType === 'DINE_IN' ? '● Table Active' : '● Counter #01'}
+              {orderType === 'DINE_IN'
+                ? (selectedTableNumber ? '● Table Active' : '● No Table')
+                : '● Counter #01'}
             </span>
+            {orderType === 'DINE_IN' && onChangeTable && (
+              <button
+                type="button"
+                className="cart-change-table-pill-btn"
+                onClick={onChangeTable}
+                title="Change or reassign table"
+              >
+                ⇄ {selectedTableNumber ? 'Change Table' : 'Pick Table'}
+              </button>
+            )}
             {isLocked && (
               <span className="kot-locked-indicator" title="KOT Dispatched to Kitchen. Modifying items requires Manager PIN.">
                 🔒 KOT Active
@@ -222,7 +236,14 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               key={type}
               type="button"
               className={`order-tab-btn tab-${typeClass} ${orderType === type ? 'active' : ''}`}
-              onClick={() => onOrderTypeChange(type)}
+              onClick={() => {
+                if (type === 'DINE_IN' && orderType === 'DINE_IN' && onChangeTable) {
+                  onChangeTable();
+                } else {
+                  onOrderTypeChange(type);
+                }
+              }}
+              title={type === 'DINE_IN' && orderType === 'DINE_IN' ? 'Click to change or select table' : undefined}
             >
               <span className="tab-icon">{icon}</span>
               <span className="tab-title">{label}</span>
@@ -255,15 +276,37 @@ export const CartPanel: React.FC<CartPanelProps> = ({
       {/* Cart Items Area */}
       <div className="retail-cart-body">
         {items.length === 0 ? (
-          <div className="retail-empty-state">
-            <div className="empty-bag-circle">
-              <span>🛍️</span>
+          orderType === 'DINE_IN' && !selectedTableNumber ? (
+            <div className="retail-empty-state">
+              <div className="empty-bag-circle" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                <span>🪑</span>
+              </div>
+              <h4 className="empty-state-title">No Table Selected</h4>
+              <p className="empty-state-sub">
+                Please select an available table from the floor layout on the left to start this Dine-In order.
+              </p>
+              {onChangeTable && (
+                <button
+                  type="button"
+                  className="cart-change-table-pill-btn"
+                  onClick={onChangeTable}
+                  style={{ marginTop: '10px', padding: '7px 16px', fontSize: '0.85rem' }}
+                >
+                  🪑 View Tables Floor Plan
+                </button>
+              )}
             </div>
-            <h4 className="empty-state-title">Your cart is empty.</h4>
-            <p className="empty-state-sub">
-              Tap menu items on the catalog to add to this order
-            </p>
-          </div>
+          ) : (
+            <div className="retail-empty-state">
+              <div className="empty-bag-circle">
+                <span>🛍️</span>
+              </div>
+              <h4 className="empty-state-title">Your cart is empty.</h4>
+              <p className="empty-state-sub">
+                Tap menu items on the catalog to add to this order
+              </p>
+            </div>
+          )
         ) : (
           <div className="retail-items-list">
             {items.map((item) => (

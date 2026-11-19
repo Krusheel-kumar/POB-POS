@@ -14,6 +14,8 @@ interface TableManagementViewProps {
   onDeleteTable: (tableId: string) => Promise<void>;
   onUpdateTableStatus: (tableId: string, status: TableStatus, reason?: string) => Promise<void>;
   onRefresh: () => void;
+  isInlineMode?: boolean;
+  onCancelSelectTable?: () => void;
 }
 
 export const TableManagementView: React.FC<TableManagementViewProps> = ({
@@ -29,6 +31,8 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
   onDeleteTable,
   onUpdateTableStatus,
   onRefresh,
+  isInlineMode = false,
+  onCancelSelectTable,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTableNum, setNewTableNum] = useState('');
@@ -78,19 +82,39 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
   };
 
   return (
-    <div className="table-management-container" style={{ padding: '20px', height: '100%', overflowY: 'auto' }}>
+    <div className="table-management-container" style={{ padding: isInlineMode ? '16px 20px' : '20px', height: '100%', overflowY: 'auto' }}>
       {/* Header bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>🪑</span> Table Overview & Running Orders
+          <h2 style={{ margin: 0, fontSize: isInlineMode ? '1.3rem' : '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
+            <span>🪑</span> {isInlineMode ? 'Dine-In Table Selection' : 'Table Overview & Running Orders'}
           </h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.875rem' }}>
-            Live status of dining tables, active ticket durations, and outstanding balances.
+          <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+            {isInlineMode
+              ? 'Tap any available table to open menu and take an order, or tap a running table to view/add items.'
+              : 'Live status of dining tables, active ticket durations, and outstanding balances.'}
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {onCancelSelectTable && (
+            <button
+              type="button"
+              onClick={onCancelSelectTable}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                background: '#3b82f6',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              ← Back to Menu
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary"
@@ -103,7 +127,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
             type="button"
             className="btn btn-primary"
             onClick={() => setIsAdding(!isAdding)}
-            style={{ padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', background: '#2563eb', color: '#fff', border: 'none' }}
+            style={{ padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', background: '#0f172a', color: '#fff', border: 'none' }}
           >
             {isAdding ? '✕ Cancel' : '➕ Add Table'}
           </button>
@@ -211,18 +235,38 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
             <div
               key={tbl.id}
               style={{
-                background: '#fff',
-                border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                background: isSelected ? '#f0fdf4' : '#fff',
+                border: isSelected
+                  ? '2px solid #16a34a'
+                  : tbl.status === 'AVAILABLE'
+                  ? '1.5px solid #86efac'
+                  : tbl.status === 'RUNNING'
+                  ? '1.5px solid #7dd3fc'
+                  : '1px solid #e2e8f0',
                 borderRadius: '12px',
                 padding: '16px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                boxShadow: isSelected ? '0 4px 12px rgba(37,99,235,0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                boxShadow: isSelected ? '0 4px 14px rgba(22, 163, 74, 0.2)' : '0 2px 5px rgba(0,0,0,0.04)',
                 transition: 'all 0.15s ease',
               }}
             >
-              <div>
+              <div
+                onClick={() => {
+                  if (hasOrder && tbl.currentOrderId) {
+                    onOpenRunningOrder(tbl.currentOrderId);
+                  } else {
+                    onSelectTable(tbl);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+                title={
+                  hasOrder
+                    ? `Table ${tbl.tableNumber}: Tap to open order & add more items`
+                    : `Table ${tbl.tableNumber}: Tap to select and open menu`
+                }
+              >
                 {/* Header: Table Number & Status Badge */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                   <div>
@@ -230,7 +274,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                       Table {tbl.tableNumber}
                     </h3>
                     <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                      Capacity: {tbl.capacity} seats
+                      Capacity: {tbl.capacity} seats {tbl.name ? `• ${tbl.name}` : ''}
                     </span>
                   </div>
                   <span
@@ -276,8 +320,8 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '12px', fontStyle: 'italic', padding: '8px 0' }}>
-                    No active order. Ready for new guests.
+                  <div style={{ color: '#16a34a', background: '#f0fdf4', borderRadius: '8px', padding: '10px', fontSize: '0.82rem', marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>●</span> Available • Tap card to open menu
                   </div>
                 )}
               </div>

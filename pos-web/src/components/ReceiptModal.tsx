@@ -209,7 +209,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       doc.write(fullHtml);
       doc.close();
 
-      setTimeout(() => {
+      const triggerPrint = () => {
         try {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
@@ -221,9 +221,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             if (document.body.contains(iframe)) {
               document.body.removeChild(iframe);
             }
-          }, 2000);
+          }, 3000);
         }
-      }, 250);
+      };
+
+      // Fast trigger upon document write completion (50ms instead of 250ms)
+      setTimeout(triggerPrint, 40);
     } catch (e) {
       console.warn('Print iframe creation error, using window.print():', e);
       window.print();
@@ -278,7 +281,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     if (isOpen && autoPrint) {
       const timer = setTimeout(() => {
         handlePrint();
-      }, 120);
+      }, 40);
       return () => clearTimeout(timer);
     }
   }, [isOpen, autoPrint]);

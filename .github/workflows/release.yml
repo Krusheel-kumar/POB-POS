@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -34,15 +35,13 @@ jobs:
 
       - name: Package Windows Installer
         working-directory: pos-web
-        run: npx electron-builder --win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win -c.publish=never
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name != 'main' && github.ref_name || 'v1.0.0' }}
+          name: POP O' BOB POS Desktop App ${{ github.ref_name }}
           draft: false
           prerelease: false
           generate_release_notes: true
