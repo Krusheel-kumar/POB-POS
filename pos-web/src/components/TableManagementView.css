@@ -458,8 +458,12 @@
 
 .btn-card-take {
   flex: 1;
+  height: 38px;
   background: #10b981;
   color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 8px;
 }
 
 .btn-card-take:hover {
@@ -468,47 +472,55 @@
 
 .btn-card-current {
   flex: 1;
+  height: 38px;
   background: #2563eb;
   color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 700;
+  border-radius: 8px;
 }
 
 .btn-card-add-items {
+  flex: 1;
+  height: 38px;
   background: #0284c7;
   color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 8px;
 }
 
 .btn-card-add-items:hover {
   background: #0369a1;
 }
 
-.btn-card-kot {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-}
-
-.btn-card-kot:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-.btn-card-bill {
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  color: #b45309;
-}
-
-.btn-card-bill:hover {
-  background: #fde68a;
-}
-
-.btn-card-pay {
+.btn-card-settle {
+  flex: 1;
+  height: 38px;
   background: #10b981;
   color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
 }
 
-.btn-card-pay:hover {
+.btn-card-settle:hover {
   background: #059669;
+}
+
+.btn-card-clear {
+  flex: 1;
+  height: 38px;
+  background: #7e22ce;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 8px;
+}
+
+.btn-card-clear:hover {
+  background: #6b21a8;
 }
 
 .btn-card-delete {

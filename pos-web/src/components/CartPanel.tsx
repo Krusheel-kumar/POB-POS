@@ -447,118 +447,197 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         </div>
 
-        {/* Payment Method Selector */}
-        <div className="payment-method-bar">
-          <button
-            type="button"
-            className={`pmt-pill ${selectedPaymentMethod === 'UPI' ? 'active' : ''}`}
-            onClick={() => setSelectedPaymentMethod('UPI')}
-          >
-            📱 UPI QR
-          </button>
-          <button
-            type="button"
-            className={`pmt-pill ${selectedPaymentMethod === 'CASH' ? 'active' : ''}`}
-            onClick={() => setSelectedPaymentMethod('CASH')}
-          >
-            💵 Cash
-          </button>
-          <button
-            type="button"
-            className={`pmt-pill ${selectedPaymentMethod === 'CARD' ? 'active' : ''}`}
-            onClick={() => setSelectedPaymentMethod('CARD')}
-          >
-            💳 Card
-          </button>
-        </div>
-
-        {/* Action Buttons Row */}
-        <div className="cart-secondary-actions">
-          <button
-            type="button"
-            className={`btn-secondary-tool ${isLocked ? 'kot-sent-active' : ''}`}
-            onClick={onPrintKot || onReviewOrder}
-            title={isKotSent ? 'Reprint duplicate KOT copy (Anti-fraud watermark logged)' : 'Send order ticket to kitchen'}
-          >
-            {isKotSent ? '👨‍🍳 Reprint KOT (Duplicate)' : '👨‍🍳 Send KOT to Kitchen'}
-          </button>
-          <button
-            type="button"
-            className="btn-secondary-tool"
-            onClick={onPrintBill || onReviewOrder}
-            title={
-              typeof window !== 'undefined' && window.electronAPI?.isElectron
-                ? 'Instant automatic silent print to default Windows PC printer'
-                : 'Preview / Print Tax Invoice Receipt'
-            }
-          >
-            🖨️ Print Bill
-          </button>
-        </div>
-
-        {/* Auto Print Checkbox */}
-        <div className="auto-print-row">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={autoPrint}
-              onChange={(e) => setAutoPrint(e.target.checked)}
-            />
-            <span>Auto-Print Receipt on Settle</span>
-          </label>
-          <span className="auto-print-status">
-            {typeof window !== 'undefined' && window.electronAPI?.isElectron
-              ? '⚡ Instant Silent Print'
-              : '⚡ Auto-Print Enabled'}
-          </span>
-        </div>
-
-        {/* Main Checkout Button Group */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-          {onQuickSettle && items.length > 0 && !runningOrderId ? (
+        {orderType === 'DINE_IN' ? (
+          /* ====================================================
+             DINE-IN ORDER ACTIONS: Primary KOT Fire + Settle Check
+             ==================================================== */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+            {/* 1. Primary Action: Fire KOT directly to Kitchen */}
             <button
               type="button"
               className="retail-checkout-btn"
               style={{
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 color: '#ffffff',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
                 fontWeight: 700,
-                fontSize: '1rem',
+                fontSize: '0.98rem',
+                height: '46px',
               }}
-              onClick={() => onQuickSettle(selectedPaymentMethod, autoPrint)}
+              onClick={onPrintKot || onReviewOrder}
               disabled={isSubmitting || items.length === 0}
+              title="Dispatch Kitchen Order Ticket (KOT) to Kitchen Printer / KDS"
             >
               {isSubmitting ? (
-                <span>⚡ Processing Settle & Bill...</span>
+                <span>👨‍🍳 Sending to Kitchen...</span>
+              ) : items.length === 0 ? (
+                <span>👨‍🍳 Send KOT (Add Items)</span>
+              ) : Boolean(runningOrderId) ? (
+                <span>
+                  👨‍🍳 Send Add-on KOT to Kitchen • {items.reduce((s, i) => s + i.quantity, 0)} Items
+                </span>
               ) : (
                 <span>
-                  ⚡ Settle & Bill • ₹{total.toFixed(2)} ({selectedPaymentMethod})
+                  👨‍🍳 Send KOT to Kitchen • {items.reduce((s, i) => s + i.quantity, 0)} Items
                 </span>
               )}
             </button>
-          ) : null}
 
-          <button
-            type="button"
-            className="retail-checkout-btn"
-            style={{
-              background: onQuickSettle && items.length > 0 && !runningOrderId ? '#f8fafc' : undefined,
-              color: onQuickSettle && items.length > 0 && !runningOrderId ? '#334155' : undefined,
-              border: onQuickSettle && items.length > 0 && !runningOrderId ? '1px solid #cbd5e1' : undefined,
-            }}
-            onClick={onReviewOrder}
-            disabled={isSubmitting || items.length === 0}
-          >
-            {items.length === 0 ? (
-              <span>Checkout (Select Items)</span>
-            ) : Boolean(runningOrderId) ? (
-              <span>Review & Send Add-ons to Kitchen • ₹{total.toFixed(2)}</span>
-            ) : (
-              <span>Review & Place Order • ₹{total.toFixed(2)}</span>
-            )}
-          </button>
-        </div>
+            {/* 2. Secondary Settle / Bill Option (When customer is ready for check) */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary-tool"
+                style={{
+                  flex: 1,
+                  padding: '9px 10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  background: '#fef3c7',
+                  color: '#b45309',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                }}
+                onClick={onPrintBill || onReviewOrder}
+                disabled={isSubmitting || items.length === 0}
+                title="Print Tax Invoice / Bill for Customer"
+              >
+                🖨️ Print Bill
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary-tool"
+                style={{
+                  flex: 1.2,
+                  padding: '9px 10px',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  background: '#ffffff',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                }}
+                onClick={onReviewOrder}
+                disabled={isSubmitting || items.length === 0}
+              >
+                📋 Review & Place Order
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* ====================================================
+             COUNTER & TAKEAWAY: Fast Pay First Flow
+             ==================================================== */
+          <>
+            {/* Payment Method Selector */}
+            <div className="payment-method-bar">
+              <button
+                type="button"
+                className={`pmt-pill ${selectedPaymentMethod === 'UPI' ? 'active' : ''}`}
+                onClick={() => setSelectedPaymentMethod('UPI')}
+              >
+                📱 UPI QR
+              </button>
+              <button
+                type="button"
+                className={`pmt-pill ${selectedPaymentMethod === 'CASH' ? 'active' : ''}`}
+                onClick={() => setSelectedPaymentMethod('CASH')}
+              >
+                💵 Cash
+              </button>
+              <button
+                type="button"
+                className={`pmt-pill ${selectedPaymentMethod === 'CARD' ? 'active' : ''}`}
+                onClick={() => setSelectedPaymentMethod('CARD')}
+              >
+                💳 Card
+              </button>
+            </div>
+
+            {/* Secondary Print Actions */}
+            <div className="cart-secondary-actions">
+              <button
+                type="button"
+                className="btn-secondary-tool"
+                onClick={onPrintKot || onReviewOrder}
+                title="Send ticket to kitchen"
+              >
+                👨‍🍳 Kitchen KOT
+              </button>
+              <button
+                type="button"
+                className="btn-secondary-tool"
+                onClick={onPrintBill || onReviewOrder}
+                title="Print Bill Receipt"
+              >
+                🖨️ Print Bill
+              </button>
+            </div>
+
+            {/* Auto Print Checkbox */}
+            <div className="auto-print-row">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={autoPrint}
+                  onChange={(e) => setAutoPrint(e.target.checked)}
+                />
+                <span>Auto-Print Receipt on Settle</span>
+              </label>
+              <span className="auto-print-status">
+                {typeof window !== 'undefined' && window.electronAPI?.isElectron
+                  ? '⚡ Instant Silent Print'
+                  : '⚡ Auto-Print Enabled'}
+              </span>
+            </div>
+
+            {/* Main Checkout Button Group */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+              {onQuickSettle && items.length > 0 ? (
+                <button
+                  type="button"
+                  className="retail-checkout-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                  }}
+                  onClick={() => onQuickSettle(selectedPaymentMethod, autoPrint)}
+                  disabled={isSubmitting || items.length === 0}
+                >
+                  {isSubmitting ? (
+                    <span>⚡ Processing Settle & Bill...</span>
+                  ) : (
+                    <span>
+                      ⚡ Settle & Bill • ₹{total.toFixed(2)} ({selectedPaymentMethod})
+                    </span>
+                  )}
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                className="retail-checkout-btn"
+                style={{
+                  background: onQuickSettle && items.length > 0 ? '#f8fafc' : undefined,
+                  color: onQuickSettle && items.length > 0 ? '#334155' : undefined,
+                  border: onQuickSettle && items.length > 0 ? '1px solid #cbd5e1' : undefined,
+                }}
+                onClick={onReviewOrder}
+                disabled={isSubmitting || items.length === 0}
+              >
+                {items.length === 0 ? (
+                  <span>Checkout (Select Items)</span>
+                ) : (
+                  <span>Review & Place Order • ₹{total.toFixed(2)}</span>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );

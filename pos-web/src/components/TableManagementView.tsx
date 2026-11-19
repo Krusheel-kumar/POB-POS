@@ -33,7 +33,6 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
   onCollectPayment,
   onGenerateBill,
   onPrintBill,
-  onPrintKot,
   onCreateTable,
   onDeleteTable,
   onUpdateTableStatus,
@@ -352,18 +351,11 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                 )}
               </div>
 
-              {/* Action Buttons Row */}
+              {/* Streamlined Action Buttons (Max 1 or 2 Clear Actions) */}
               <div className="table-card-actions">
-                <button
-                  type="button"
-                  className={`btn-card-action ${isSelected ? 'btn-card-current' : 'btn-card-take'}`}
-                  onClick={() => onSelectTable(tbl)}
-                >
-                  {isSelected ? '✓ In Menu' : 'Take Order'}
-                </button>
-
-                {hasOrder && (
+                {hasOrder ? (
                   <>
+                    {/* Action 1: Add More Items */}
                     <button
                       type="button"
                       className="btn-card-action btn-card-add-items"
@@ -374,44 +366,55 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                           onSelectTable(tbl);
                         }
                       }}
-                      title="Add more items to this table"
+                      title="Add more items to this table order"
                     >
                       ➕ Add Items
                     </button>
 
-                    {onPrintKot && tbl.currentOrderId && (
-                      <button
-                        type="button"
-                        className="btn-card-action btn-card-kot"
-                        onClick={() => onPrintKot(tbl.currentOrderId!)}
-                        title="Print Kitchen Order Ticket (KOT)"
-                      >
-                        👨‍🍳 KOT
-                      </button>
-                    )}
+                    {/* Action 2: Settle & Print Bill */}
+                    <button
+                      type="button"
+                      className="btn-card-action btn-card-settle"
+                      onClick={() => {
+                        if (tbl.currentOrderId) {
+                          if (onCollectPayment) {
+                            onCollectPayment(tbl.currentOrderId);
+                          } else if (onPrintBill) {
+                            onPrintBill(tbl.currentOrderId);
+                          } else if (onGenerateBill) {
+                            onGenerateBill(tbl.currentOrderId);
+                          }
+                        } else {
+                          onSelectTable(tbl);
+                        }
+                      }}
+                      title="Generate bill and settle payment"
+                    >
+                      🧾 Settle / Bill
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`btn-card-action ${isSelected ? 'btn-card-current' : 'btn-card-take'}`}
+                      onClick={() => onSelectTable(tbl)}
+                    >
+                      {isSelected ? '✓ In Menu' : '➕ Start Order'}
+                    </button>
 
-                    {(onPrintBill || onGenerateBill) && tbl.currentOrderId && (
+                    {(tbl.status === 'AVAILABLE' || tbl.status === 'CLOSED') && (
                       <button
                         type="button"
-                        className="btn-card-action btn-card-bill"
+                        className="btn-card-delete"
+                        title="Delete Table"
                         onClick={() => {
-                          if (onPrintBill) onPrintBill(tbl.currentOrderId!);
-                          else if (onGenerateBill) onGenerateBill(tbl.currentOrderId!);
+                          if (window.confirm(`Delete Table ${tbl.tableNumber}?`)) {
+                            onDeleteTable(tbl.id);
+                          }
                         }}
-                        title="Print Tax Invoice / Bill"
                       >
-                        🧾 Bill
-                      </button>
-                    )}
-
-                    {onCollectPayment && tbl.currentOrderId && (
-                      <button
-                        type="button"
-                        className="btn-card-action btn-card-pay"
-                        onClick={() => onCollectPayment(tbl.currentOrderId!)}
-                        title="Collect Payment & Settle Table"
-                      >
-                        💳 Pay
+                        🗑
                       </button>
                     )}
                   </>
@@ -420,25 +423,10 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                 {tbl.status === 'PAID_CLEARING' && (
                   <button
                     type="button"
-                    className="btn-card-action btn-card-pay"
+                    className="btn-card-action btn-card-clear"
                     onClick={() => onUpdateTableStatus(tbl.id, 'AVAILABLE')}
                   >
-                    Clear & Free
-                  </button>
-                )}
-
-                {(tbl.status === 'AVAILABLE' || tbl.status === 'CLOSED') && !isCartActiveOnThisTable && (
-                  <button
-                    type="button"
-                    className="btn-card-delete"
-                    title="Delete Table"
-                    onClick={() => {
-                      if (window.confirm(`Delete Table ${tbl.tableNumber}?`)) {
-                        onDeleteTable(tbl.id);
-                      }
-                    }}
-                  >
-                    🗑
+                    ✓ Clear & Free Table
                   </button>
                 )}
               </div>

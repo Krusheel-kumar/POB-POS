@@ -576,10 +576,15 @@ export function App() {
       setCustomerNotes('');
       setBackendCalculation(null);
       setIsKotSent(false);
+      setSelectedTable(null);
+      setRunningOrder(null);
       await loadTables();
+      if (orderType === 'DINE_IN') {
+        setIsChoosingTable(true);
+      }
 
       setOrderSuccessMessage(
-        `🎉 Bill #${issuedBill.invoiceNumber} Settled via ${method} (₹${issuedBill.totalAmount.toFixed(2)})! Saved to Sales Reports.`
+        `🎉 Bill #${issuedBill.invoiceNumber} Settled via ${method} (₹${issuedBill.totalAmount.toFixed(2)})! Table freed.`
       );
       setTimeout(() => setOrderSuccessMessage(null), 6000);
 
@@ -741,6 +746,9 @@ export function App() {
             setRunningOrder(updated);
             setCartItems([]);
             await loadTables();
+            if (orderType === 'DINE_IN') {
+              setIsChoosingTable(true);
+            }
             setOrderSuccessMessage(`👨‍🍳 Add-on KOT dispatched for Table ${selectedTable?.tableNumber || ''}! New Total: ₹${updated.totalAmount.toFixed(2)}`);
             setTimeout(() => setOrderSuccessMessage(null), 5000);
           } else {
@@ -769,6 +777,9 @@ export function App() {
             setRunningOrder(createdOrder);
             setCartItems([]);
             await loadTables();
+            if (orderType === 'DINE_IN') {
+              setIsChoosingTable(true);
+            }
             setOrderSuccessMessage(`👨‍🍳 KOT #${createdOrder.orderNumber} sent to kitchen for Table ${selectedTable?.tableNumber || ''}!`);
             setTimeout(() => setOrderSuccessMessage(null), 5000);
           }
