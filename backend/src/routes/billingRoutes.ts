@@ -56,11 +56,29 @@ export async function billingRoutes(fastify: FastifyInstance): Promise<void> {
     return reply.send(await formatBillResponse(res.rows[0]));
   });
 
+  // --- GET ALL BILLS (GLOBAL OR OUTLET FILTERED) ---
+  fastify.get('/api/v1/bills', async (req: FastifyRequest<{ Querystring: { outletId?: string } }>, reply: FastifyReply) => {
+    const { outletId } = req.query;
+    let sql = 'SELECT * FROM bills';
+    const args: any[] = [];
+    if (outletId) {
+      sql += ' WHERE outlet_id = ?';
+      args.push(outletId);
+    }
+    sql += ' ORDER BY created_at DESC LIMIT 100';
+    const res = await db.execute({ sql, args });
+    const bills = [];
+    for (const b of res.rows) {
+      bills.push(await formatBillResponse(b));
+    }
+    return reply.send(bills);
+  });
+
   // --- GET BILLS FOR OUTLET ---
   fastify.get('/api/v1/bills/outlet/:outletId', async (req: FastifyRequest<{ Params: { outletId: string } }>, reply: FastifyReply) => {
     const { outletId } = req.params;
     const res = await db.execute({
-      sql: 'SELECT * FROM bills WHERE outlet_id = ? ORDER BY created_at DESC LIMIT 50',
+      sql: 'SELECT * FROM bills WHERE outlet_id = ? ORDER BY created_at DESC LIMIT 100',
       args: [outletId],
     });
 
@@ -167,6 +185,8 @@ async function formatBillResponse(row: any): Promise<any> {
     orderId: String(row.order_id),
     order: orderSnapshot,
     invoiceNumber: String(row.invoice_number),
+    customerName: orderSnapshot?.customerName,
+    customerPhone: orderSnapshot?.customerPhone,
     subtotal: Number(row.subtotal),
     discountAmount: Number(row.discount_amount),
     taxableAmount: Number(row.taxable_amount),
@@ -182,6 +202,7 @@ async function formatBillResponse(row: any): Promise<any> {
       amount: Number(p.amount),
       paymentMethod: String(p.payment_method),
       status: String(p.status),
+      transactionReference: p.transaction_reference ? String(p.transaction_reference) : undefined,
       createdAt: String(p.created_at),
     })),
     createdAt: String(row.created_at),

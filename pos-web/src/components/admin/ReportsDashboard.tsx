@@ -61,6 +61,13 @@ export interface ReportsDashboardProps {
   onRefresh?: () => void;
 }
 
+const toLocalDateString = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   bills: externalBills,
   orders: externalOrders,
@@ -107,8 +114,8 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   const [salesSearch, setSalesSearch] = useState('');
   const [salesPaymentFilter, setSalesPaymentFilter] = useState<'ALL' | 'UPI' | 'CASH' | 'CARD'>('ALL');
   const [salesChannelFilter, setSalesChannelFilter] = useState<'ALL' | 'DINE_IN' | 'TAKEAWAY' | 'COUNTER'>('ALL');
-  const todayStr = new Date().toISOString().split('T')[0];
-  const sevenDaysAgoStr = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const todayStr = toLocalDateString(new Date());
+  const sevenDaysAgoStr = toLocalDateString(new Date(Date.now() - 7 * 86400000));
   const [salesFromDate, setSalesFromDate] = useState(sevenDaysAgoStr);
   const [salesToDate, setSalesToDate] = useState(todayStr);
   const [inspectedBill, setInspectedBill] = useState<Bill | null>(null);
@@ -220,14 +227,14 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   const filteredSettledInvoices = useMemo(() => {
     return allSettledInvoices.filter((inv) => {
       const invDate = new Date(inv.createdAt);
-      const invDayStr = !isNaN(invDate.getTime()) ? invDate.toISOString().split('T')[0] : '';
+      const invDayStr = !isNaN(invDate.getTime()) ? toLocalDateString(invDate) : '';
 
       // Timeline filter
       if (salesTimeline === 'TODAY') {
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateString(new Date());
         if (invDayStr !== today) return false;
       } else if (salesTimeline === 'YESTERDAY') {
-        const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+        const yesterday = toLocalDateString(new Date(Date.now() - 86400000));
         if (invDayStr !== yesterday) return false;
       } else if (salesTimeline === 'LAST_7_DAYS') {
         const cutoff = Date.now() - 7 * 86400000;

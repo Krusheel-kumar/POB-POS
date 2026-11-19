@@ -107,7 +107,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
 
   useEffect(() => {
     loadAdminData();
-  }, [loadAdminData]);
+  }, [loadAdminData, activeTab]);
 
   // Handlers for menu management
   const handleCreateCategory = async (req: CategoryRequest) => {

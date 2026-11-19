@@ -465,7 +465,7 @@ export function App() {
     }
 
     // Normal Create Order flow
-    const outletId = posApiClient.getConfig().outletId || '00000000-0000-0000-0000-000000000000';
+    const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
     const idempotencyKey = `POS-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
     const orderPayload: CreateOrderRequest = {
