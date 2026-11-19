@@ -37,10 +37,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
   const getBadgeClass = (badge?: string) => {
     if (!badge) return 'badge-default';
     const b = badge.toLowerCase();
-    if (b.includes('best') || b.includes('hot')) return 'badge-red';
-    if (b.includes('chef') || b.includes('wood')) return 'badge-amber';
-    if (b.includes('festive') || b.includes('reserve')) return 'badge-green';
-    return 'badge-purple';
+    if (b.includes('best') || b.includes('hot') || b.includes('fav')) return 'badge-amber';
+    if (b.includes('chef') || b.includes('wood') || b.includes('special')) return 'badge-iris';
+    if (b.includes('festive') || b.includes('reserve') || b.includes('fresh')) return 'badge-emerald';
+    return 'badge-slate';
   };
 
   return (
@@ -104,10 +104,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
 
       {/* Product Details */}
       <div className="card-info">
-        <h3 className="card-title" title={product.name}>
-          {product.name}
-        </h3>
-        <p className="card-sub">{product.description || product.sku}</p>
+        <div className="card-text-block">
+          <h3 className="card-title" title={product.name}>
+            {product.name}
+          </h3>
+          <p className="card-sub">{product.description || product.sku}</p>
+        </div>
 
         <div className="card-bottom-row">
           <div className="price-box">

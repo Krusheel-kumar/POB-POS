@@ -755,165 +755,125 @@ export function App() {
 
   return (
     <div className="pos-app-root">
-      {/* Top Header Bar */}
-      <header className="pos-topbar">
+      {/* Top Header Bar - Minimal High-Brand Executive POS Header */}
+      <header className="pos-topbar" role="banner">
         <div className="topbar-left">
-          <span className="topbar-menu-icon" title="Menu">☰</span>
           <div className="brand-badge-box">
             <div className="brand-icon-logo">P</div>
-            <span className="brand-title-text">POP O' BOB</span>
+            <div className="brand-text-stack">
+              <span className="brand-title-text">POP O' BOB</span>
+              <span className="brand-subtitle-tag">POS TERMINAL</span>
+            </div>
           </div>
+
+          {/* Primary View Controller Segmented Switch (Operations) */}
+          <nav className="topbar-nav-segmented" aria-label="Terminal views">
+            <button
+              type="button"
+              className={`nav-segmented-btn header-action-pill ${activeTab === 'MENU' ? 'active' : ''}`}
+              onClick={() => setActiveTab('MENU')}
+            >
+              <span className="nav-btn-icon">🍽️</span>
+              <span>Menu POS</span>
+            </button>
+            <button
+              type="button"
+              className={`nav-segmented-btn header-action-pill ${activeTab === 'TABLES' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('TABLES');
+                loadTables();
+              }}
+            >
+              <span className="nav-btn-icon">🪑</span>
+              <span>Tables</span>
+              {tables.filter((t) => t.status === 'RUNNING').length > 0 && (
+                <span className="header-badge-count">
+                  {tables.filter((t) => t.status === 'RUNNING').length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="nav-segmented-btn header-action-pill"
+              onClick={() => {
+                window.history.pushState({}, '', '/kitchen');
+                setCurrentPath('/kitchen');
+              }}
+            >
+              <span className="nav-btn-icon">🍳</span>
+              <span>Kitchen (KDS)</span>
+            </button>
+          </nav>
         </div>
 
-        {/* Action Pills */}
-        <div className="topbar-quick-actions">
+        {/* Center / Management Quick Tools */}
+        <div className="topbar-center-tools">
+          <div className="topbar-tools-group">
+            <button
+              type="button"
+              className="topbar-tool-pill header-action-pill header-admin-pill"
+              onClick={() => {
+                window.history.pushState({}, '', '/admin');
+                setCurrentPath('/admin');
+              }}
+              title="Open Admin Portal to manage catalog, categories, and add-ons"
+            >
+              ⚙️ Admin
+            </button>
+            <button
+              type="button"
+              className="topbar-tool-pill header-action-pill"
+              onClick={() => {
+                window.history.pushState({}, '', '/admin/reports');
+                setCurrentPath('/admin/reports');
+              }}
+              title="Open Live Analytics & Reports Dashboard"
+            >
+              📊 Reports
+            </button>
+            <button
+              type="button"
+              className="topbar-tool-pill header-action-pill"
+              onClick={() => {
+                window.history.pushState({}, '', '/admin/inventory');
+                setCurrentPath('/admin/inventory');
+              }}
+              title="Open Advanced Inventory, Recipes (BOM), Central Transfers & Variance Report"
+            >
+              📦 Inventory
+            </button>
+            <button
+              type="button"
+              className="topbar-tool-pill header-action-pill"
+              onClick={() => setIsAddProductOpen(true)}
+              title="Create and manage menu items, categories, or modifiers in Petpooja view"
+            >
+              📋 Menu
+            </button>
+          </div>
+
           <button
             type="button"
-            className={`header-action-pill ${activeTab === 'MENU' ? 'active' : ''}`}
-            onClick={() => setActiveTab('MENU')}
-          >
-            🍽️ Menu POS
-          </button>
-          <button
-            type="button"
-            className={`header-action-pill ${activeTab === 'TABLES' ? 'active' : ''}`}
-            onClick={() => {
-              setActiveTab('TABLES');
-              loadTables();
-            }}
-          >
-            🪑 Tables
-            {tables.filter((t) => t.status === 'RUNNING').length > 0 && (
-              <span className="header-badge-count">
-                {tables.filter((t) => t.status === 'RUNNING').length}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => {
-              window.history.pushState({}, '', '/kitchen');
-              setCurrentPath('/kitchen');
-            }}
-          >
-            🍳 Kitchen (KDS)
-          </button>
-          <button
-            type="button"
-            className="header-action-pill header-admin-pill"
-            onClick={() => {
-              window.history.pushState({}, '', '/admin');
-              setCurrentPath('/admin');
-            }}
-            style={{
-              background: '#0f172a',
-              color: '#ffffff',
-              borderColor: '#0f172a',
-              fontWeight: 700,
-              boxShadow: '0 2px 4px rgba(15, 23, 42, 0.2)',
-            }}
-            title="Open Admin Portal to manage catalog, categories, and add-ons"
-          >
-            ⚙️ Admin Portal
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => {
-              window.history.pushState({}, '', '/admin/reports');
-              setCurrentPath('/admin/reports');
-            }}
-            style={{
-              background: '#4f46e5',
-              color: '#ffffff',
-              borderColor: '#4f46e5',
-              fontWeight: 700,
-              boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)',
-            }}
-            title="Open Live Analytics & Reports Dashboard"
-          >
-            📊 Reports & Analytics
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => {
-              window.history.pushState({}, '', '/admin/inventory');
-              setCurrentPath('/admin/inventory');
-            }}
-            style={{
-              background: '#0284c7',
-              color: '#ffffff',
-              borderColor: '#0284c7',
-              fontWeight: 700,
-              boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)',
-            }}
-            title="Open Advanced Inventory, Recipes (BOM), Central Transfers & Variance Report"
-          >
-            📦 Inventory & BOM
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
+            className="topbar-new-order-btn header-action-pill"
             onClick={handleClearCart}
-            style={{ color: '#4f46e5', fontWeight: 700 }}
           >
             + New Order
           </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => setIsAddProductOpen(true)}
-            style={{ background: '#2563eb', color: '#ffffff', borderColor: '#2563eb', fontWeight: 600 }}
-            title="Create and manage menu items, categories, or modifiers in Petpooja view"
-          >
-            📋 Menu & Items
-          </button>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#ecfdf5',
-              padding: '3px 10px',
-              borderRadius: '20px',
-              border: '1px solid #a7f3d0',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: '#065f46',
-            }}
-            title="Live Fastify + SQLite WAL Production Engine running locally on port 8080"
-          >
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            <span>Fastify Engine (:8080)</span>
+        </div>
+
+        {/* Right Section: Status, Policy, Tools & Staff Avatar */}
+        <div className="topbar-right">
+          <div className="topbar-status-chip engine-chip" title="Live Fastify + SQLite WAL Production Engine running locally on port 8080">
+            <span className="status-live-dot" />
+            <span>Fastify (:8080)</span>
           </div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              background: '#f8fafc',
-              padding: '2px 8px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-            }}
-            title="Current active outlet branch"
-          >
-            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>📍 Branch:</span>
+
+          <div className="topbar-status-chip branch-chip" title="Current active outlet branch">
+            <span className="branch-label-prefix">📍</span>
             <select
               value={currentOutletId}
               onChange={(e) => handleSwitchOutlet(e.target.value)}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                color: '#0f172a',
-                cursor: 'pointer',
-                outline: 'none',
-                maxWidth: '180px',
-              }}
+              className="branch-native-select"
               aria-label="Active Outlet Branch"
             >
               {outlets.map((o) => (
@@ -924,65 +884,54 @@ export function App() {
             </select>
           </div>
 
-          <span className="counter-active-badge">
-            ● Counter #01
-          </span>
           <select
             value={paymentPolicy}
             onChange={(e) => handlePolicyChange(e.target.value as PaymentPolicy)}
-            style={{
-              padding: '4px 8px',
-              borderRadius: '6px',
-              border: '1px solid #cbd5e1',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              background: '#f8fafc',
-              color: '#334155',
-            }}
+            className="policy-native-select"
             aria-label="Payment Policy"
           >
             <option value="PAY_FIRST">Pay First (QSR)</option>
             <option value="PAY_LATER">Pay Later (Dine-in)</option>
             <option value="FLEXIBLE">Flexible</option>
           </select>
-        </div>
 
-        <div className="topbar-right">
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => handlePrintKot()}
-            title="Preview and print Kitchen Order Ticket (KOT)"
-          >
-            👨‍🍳 Print KOT
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            onClick={() => handlePrintBill()}
-            title="Preview and print thermal bill receipt"
-          >
-            🧾 Print Bill
-          </button>
-          <button
-            type="button"
-            className="header-action-pill"
-            style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontWeight: 600 }}
-            onClick={async () => {
-              if (window.confirm('Clear all demo products, categories, orders, and reports to start completely fresh?')) {
-                await posApiClient.clearAllDemoData();
-                await loadCatalog();
-                setOrderSuccessMessage('✨ Clean slate activated! All demo data cleared. Ready for your real menu!');
-                setTimeout(() => setOrderSuccessMessage(null), 5000);
-              }
-            }}
-            title="Clear all demo products and start fresh with real items"
-          >
-            🧹 Fresh Start (Clear Demo)
-          </button>
+          <div className="topbar-print-group">
+            <button
+              type="button"
+              className="topbar-icon-action-btn header-action-pill"
+              onClick={() => handlePrintKot()}
+              title="Preview and print Kitchen Order Ticket (KOT)"
+            >
+              👨‍🍳 KOT
+            </button>
+            <button
+              type="button"
+              className="topbar-icon-action-btn header-action-pill"
+              onClick={() => handlePrintBill()}
+              title="Preview and print thermal bill receipt"
+            >
+              🧾 Bill
+            </button>
+            <button
+              type="button"
+              className="topbar-icon-action-btn btn-danger-clean header-action-pill"
+              onClick={async () => {
+                if (window.confirm('Clear all demo products, categories, orders, and reports to start completely fresh?')) {
+                  await posApiClient.clearAllDemoData();
+                  await loadCatalog();
+                  setOrderSuccessMessage('✨ Clean slate activated! All demo data cleared. Ready for your real menu!');
+                  setTimeout(() => setOrderSuccessMessage(null), 5000);
+                }
+              }}
+              title="Clear all demo products and start fresh with real items"
+            >
+              🧹 Demo
+            </button>
+          </div>
+
           <div className="user-avatar-pill">
             <span className="avatar-initials">JD</span>
-            <span>John Doe</span>
+            <span className="avatar-name">John Doe</span>
           </div>
         </div>
       </header>
@@ -1006,7 +955,7 @@ export function App() {
               className="retail-search-bar"
               aria-label="Search items"
             />
-            {searchQuery && (
+            {searchQuery ? (
               <button
                 type="button"
                 className="search-clear-btn"
@@ -1016,6 +965,8 @@ export function App() {
               >
                 ✕
               </button>
+            ) : (
+              <span className="search-shortcut-hint">⌘K</span>
             )}
           </div>
 
@@ -1065,22 +1016,13 @@ export function App() {
                   setSelectedSubcategory('all');
                 }}
               >
-                {cat.name}
+                <span className="category-name-text">{cat.name}</span>
               </button>
             ))}
             <button
               type="button"
-              className="category-pill"
+              className="category-pill new-category-pill"
               onClick={() => setIsAddProductOpen(true)}
-              style={{
-                marginTop: 'auto',
-                border: '1.5px dashed #c4b5fd',
-                background: '#fbf9ff',
-                color: '#7c3aed',
-                fontWeight: 700,
-                textAlign: 'center',
-                justifyContent: 'center',
-              }}
               title="Create new category & subcategories"
             >
               + New Category
@@ -1097,7 +1039,7 @@ export function App() {
                   className={`subcat-pill ${selectedSubcategory === 'all' ? 'active' : ''}`}
                   onClick={() => setSelectedSubcategory('all')}
                 >
-                  🏷️ All (
+                  All (
                   {
                     products.filter(
                       (p) => selectedCategoryId === 'cat-all' || p.category?.id === selectedCategoryId
@@ -1150,7 +1092,7 @@ export function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsAddCategoryOpen(true)}
+                    onClick={() => setIsAddProductOpen(true)}
                     style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
                   >
                     + New Category
