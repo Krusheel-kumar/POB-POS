@@ -71,44 +71,24 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
     return t.status === selectedStatusFilter;
   });
 
-  const getStatusBadge = (status: TableStatus) => {
-    switch (status) {
-      case 'AVAILABLE':
-        return { label: 'Available', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' };
-      case 'RUNNING':
-      case 'OCCUPIED':
-        return { label: 'Occupied', bg: '#f0f9ff', color: '#0284c7', border: '#bae6fd' };
-      case 'BILL_REQUESTED':
-        return { label: 'Bill Issued', bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
-      case 'PAYMENT_DUE':
-        return { label: 'Payment Due', bg: '#fef2f2', color: '#dc2626', border: '#fecaca' };
-      case 'PAID_CLEARING':
-        return { label: 'Paid / Clearing', bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
-      case 'CLOSED':
-        return { label: 'Closed', bg: '#f8fafc', color: '#64748b', border: '#cbd5e1' };
-      default:
-        return { label: status, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
-    }
-  };
-
   return (
     <div
       className="table-management-container"
-      style={{ padding: isInlineMode ? '16px 20px' : '20px' }}
+      style={{ padding: isInlineMode ? '14px 18px' : '18px' }}
     >
       {/* Header Bar */}
       <div className="table-header-bar">
         <div>
           <h2
             className="table-header-title"
-            style={{ fontSize: isInlineMode ? '1.25rem' : '1.4rem' }}
+            style={{ fontSize: isInlineMode ? '1.2rem' : '1.35rem' }}
           >
-            <span>🪑</span> {isInlineMode ? 'Dine-In Table Selection' : 'Table Overview & Running Orders'}
+            <span>🪑</span> {isInlineMode ? 'Dine-In Table Selection' : 'Table Floor Plan'}
           </h2>
           <p className="table-header-sub">
             {isInlineMode
-              ? 'Tap any table card to open menu, view live items, or add items to an active order.'
-              : 'Live status of dining tables, active ticket durations, ordered items, and outstanding balances.'}
+              ? 'Tap any table tile to start an order or manage running checks.'
+              : 'Live square grid of dining tables, active checks, and floor layout.'}
           </p>
         </div>
 
@@ -120,23 +100,23 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
               onClick={onCancelSelectTable}
               title="Return to active menu catalog"
             >
-              ← Back to Menu
+              ← Menu
             </button>
           )}
           <button
             type="button"
             className="table-btn-refresh"
             onClick={onRefresh}
-            title="Refresh table list from server"
+            title="Refresh tables"
           >
-            ↻ Refresh
+            ↻
           </button>
           <button
             type="button"
             className="table-btn-add"
             onClick={() => setIsAdding(!isAdding)}
           >
-            {isAdding ? '✕ Cancel' : '➕ Add Table'}
+            {isAdding ? '✕' : '+ Table'}
           </button>
         </div>
       </div>
@@ -145,22 +125,22 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
       {isAdding && (
         <form onSubmit={handleCreate} className="table-create-form">
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px', color: '#334155' }}>
-              Table Number / Label
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '3px', color: '#334155' }}>
+              Table # (e.g. T1 or 5)
             </label>
             <input
               type="text"
-              placeholder="e.g. 7 or Patio-2"
+              placeholder="e.g. T9"
               value={newTableNum}
               onChange={(e) => setNewTableNum(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '160px' }}
+              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '120px' }}
               autoFocus
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px', color: '#334155' }}>
-              Seating Capacity
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, marginBottom: '3px', color: '#334155' }}>
+              Seats
             </label>
             <input
               type="number"
@@ -168,28 +148,28 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
               max="50"
               value={newCapacity}
               onChange={(e) => setNewCapacity(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '100px' }}
+              style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '80px' }}
             />
           </div>
 
           <button
             type="submit"
-            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+            style={{ padding: '7px 16px', background: '#2563eb', color: '#fff', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer' }}
           >
-            Save Table
+            Save
           </button>
         </form>
       )}
 
       {errorMsg && (
-        <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '16px', fontSize: '0.88rem', fontWeight: 600 }}>
+        <div style={{ padding: '8px 12px', background: '#fee2e2', color: '#b91c1c', borderRadius: '6px', marginBottom: '12px', fontSize: '0.82rem', fontWeight: 600 }}>
           ⚠ {errorMsg}
         </div>
       )}
 
       {/* Filter Tabs */}
       <div className="table-filter-bar">
-        {['ALL', 'AVAILABLE', 'OCCUPIED', 'BILL_REQUESTED', 'CLOSED'].map((f) => {
+        {['ALL', 'AVAILABLE', 'OCCUPIED', 'BILL_REQUESTED'].map((f) => {
           const isActive =
             selectedStatusFilter === f ||
             (f === 'OCCUPIED' && selectedStatusFilter === 'RUNNING');
@@ -206,13 +186,13 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
               className={`table-filter-pill ${isActive ? 'active' : ''}`}
               onClick={() => setSelectedStatusFilter(f)}
             >
-              {f.replace('_', ' ')} ({count})
+              {f === 'BILL_REQUESTED' ? 'BILLED' : f} ({count})
             </button>
           );
         })}
       </div>
 
-      {/* Table Cards Grid */}
+      {/* Modern Compact Square Cards Grid */}
       <div className="table-cards-grid">
         {filteredTables.map((tbl) => {
           const isSelected = selectedTableId === tbl.id;
@@ -222,7 +202,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
           // 1. Committed items from server/order
           const committedItems: RestaurantTableItem[] = tbl.items || [];
 
-          // 2. Pending items being staged in active POS cart for this table
+          // 2. Pending items in active cart for this table
           const pendingCartItems: RestaurantTableItem[] = isCartActiveOnThisTable
             ? activeCartItems.map((ci) => ({
                 name: ci.product.name,
@@ -233,7 +213,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
               }))
             : [];
 
-          // 3. Combined items list
+          // 3. Combined items list & total
           const allTableItems: RestaurantTableItem[] = [...committedItems, ...pendingCartItems];
           const totalUnits = allTableItems.reduce((sum, it) => sum + it.quantity, 0);
 
@@ -247,7 +227,6 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
             isCartActiveOnThisTable && tbl.status === 'AVAILABLE'
               ? 'OCCUPIED'
               : tbl.status;
-          const badge = getStatusBadge(effectiveStatus);
 
           // Dynamic Card Class
           let cardStatusClass = 'card-available';
@@ -256,109 +235,52 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
           if (isSelected) cardStatusClass += ' card-selected';
 
           return (
-            <div key={tbl.id} className={`pos-table-card ${cardStatusClass}`}>
-              {/* Entire upper body is 1-tap clickable */}
-              <div
-                className="table-card-clickable"
-                onClick={() => {
-                  if (tbl.currentOrderId) {
-                    onOpenRunningOrder(tbl.currentOrderId);
-                  } else {
-                    onSelectTable(tbl);
-                  }
-                }}
-                title={
-                  hasOrder
-                    ? `Table ${tbl.tableNumber}: Tap to open menu & add items`
-                    : `Table ${tbl.tableNumber}: Tap to select table & start order`
-                }
-              >
-                {/* Header: Table Number, Seats & Status Badge */}
-                <div className="table-card-header">
-                  <div className="table-card-title-group">
-                    <h3 className="table-card-num">Table {tbl.tableNumber}</h3>
-                    <span className="table-card-meta">
-                      👥 {tbl.capacity} seats {tbl.name ? `• ${tbl.name}` : ''}
+            <div
+              key={tbl.id}
+              className={`pos-table-card ${cardStatusClass}`}
+              title={`Table ${tbl.tableNumber}`}
+            >
+              {hasOrder ? (
+                /* ================= OCCUPIED SQUARE TILE ================= */
+                <div className="square-card-occupied-body">
+                  {/* Top Bar: Table Number & Duration Timer */}
+                  <div className="square-card-top">
+                    <span className="square-table-id">
+                      <span className="square-sr-prefix">Table {tbl.tableNumber}</span>
+                      <span aria-hidden="true">{tbl.tableNumber}</span>
                     </span>
-                  </div>
-                  <span
-                    className="table-status-pill"
-                    style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
-                  >
-                    <span className="status-dot" />
-                    {isCartActiveOnThisTable ? 'In Cart' : badge.label}
-                  </span>
-                </div>
-
-                {/* Hero Bill Amount Block (High-Brand Minimal Display) */}
-                {hasOrder ? (
-                  <div className="table-card-bill-hero">
-                    <div className="bill-hero-top">
-                      <span className="bill-hero-label">BILL TOTAL</span>
-                      <span className="bill-hero-ticket">
-                        {tbl.orderNumber || (isCartActiveOnThisTable ? 'Draft Cart' : 'Active Ticket')}
-                      </span>
-                    </div>
-
-                    <div className="bill-hero-amount-row">
-                      <span className="bill-hero-amount">₹{displayTotal.toFixed(2)}</span>
-                      {tbl.durationMinutes !== undefined && (
-                        <span className="bill-hero-timer">⏱ {tbl.durationMinutes}m</span>
-                      )}
-                    </div>
-
-                    {isCartActiveOnThisTable && (
-                      <div className="bill-hero-pending-alert">
-                        <span>⚡ New In Cart (+{pendingCartItems.length} items)</span>
-                        <span>+₹{pendingTotal.toFixed(2)}</span>
-                      </div>
+                    {tbl.durationMinutes !== undefined ? (
+                      <span className="square-table-timer">⏱ {tbl.durationMinutes}m</span>
+                    ) : (
+                      <span className="square-table-dot occupied" />
                     )}
                   </div>
-                ) : (
-                  <div className="table-card-available-block">
-                    <span>●</span> Table Available • Tap to open menu
+
+                  {/* Center: Large Bill Amount & Items Count */}
+                  <div
+                    className="square-card-center"
+                    onClick={() => {
+                      if (tbl.currentOrderId) {
+                        onOpenRunningOrder(tbl.currentOrderId);
+                      } else {
+                        onSelectTable(tbl);
+                      }
+                    }}
+                    title="Tap to view or add items"
+                  >
+                    <span className="square-bill-amount">₹{displayTotal.toFixed(0)}</span>
+                    <span className="square-items-sub">
+                      {allTableItems.length > 0
+                        ? `${totalUnits} item${totalUnits > 1 ? 's' : ''}`
+                        : 'Active Order'}
+                    </span>
                   </div>
-                )}
 
-                {/* Itemized Items Section (What items are on this table) */}
-                {allTableItems.length > 0 && (
-                  <div className="table-card-items-section">
-                    <div className="items-section-header">
-                      <span>Ordered Items ({allTableItems.length})</span>
-                      <span className="items-section-count">{totalUnits} units</span>
-                    </div>
-
-                    <div className="table-card-items-list">
-                      {allTableItems.map((item, idx) => (
-                        <div key={idx} className="table-item-row">
-                          <div className="item-left">
-                            <span className="item-qty-pill">{item.quantity}×</span>
-                            <span className="item-name-span">{item.name}</span>
-                            {item.variant && (
-                              <span className="item-variant-span">({item.variant})</span>
-                            )}
-                            {item.isPending && (
-                              <span className="item-pending-badge">In Cart</span>
-                            )}
-                          </div>
-                          {item.lineTotal != null && (
-                            <span className="item-price-span">₹{item.lineTotal.toFixed(2)}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Streamlined Action Buttons (Max 1 or 2 Clear Actions) */}
-              <div className="table-card-actions">
-                {hasOrder ? (
-                  <>
-                    {/* Action 1: Add More Items */}
+                  {/* Bottom: 2 Compact Action Buttons */}
+                  <div className="square-card-actions">
                     <button
                       type="button"
-                      className="btn-card-action btn-card-add-items"
+                      className="square-btn-add"
                       onClick={() => {
                         if (tbl.currentOrderId) {
                           onOpenRunningOrder(tbl.currentOrderId);
@@ -366,70 +288,78 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                           onSelectTable(tbl);
                         }
                       }}
-                      title="Add more items to this table order"
+                      title="Add items to table"
                     >
-                      ➕ Add Items
+                      + Add
                     </button>
-
-                    {/* Action 2: Settle & Print Bill */}
                     <button
                       type="button"
-                      className="btn-card-action btn-card-settle"
+                      className="square-btn-bill"
                       onClick={() => {
                         if (tbl.currentOrderId) {
-                          if (onCollectPayment) {
-                            onCollectPayment(tbl.currentOrderId);
-                          } else if (onPrintBill) {
-                            onPrintBill(tbl.currentOrderId);
-                          } else if (onGenerateBill) {
-                            onGenerateBill(tbl.currentOrderId);
-                          }
+                          if (onCollectPayment) onCollectPayment(tbl.currentOrderId);
+                          else if (onPrintBill) onPrintBill(tbl.currentOrderId);
+                          else if (onGenerateBill) onGenerateBill(tbl.currentOrderId);
                         } else {
                           onSelectTable(tbl);
                         }
                       }}
-                      title="Generate bill and settle payment"
+                      title="Print bill & settle"
                     >
-                      🧾 Settle / Bill
+                      🧾 Bill
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className={`btn-card-action ${isSelected ? 'btn-card-current' : 'btn-card-take'}`}
-                      onClick={() => onSelectTable(tbl)}
-                    >
-                      {isSelected ? '✓ In Menu' : '➕ Start Order'}
-                    </button>
-
+                  </div>
+                </div>
+              ) : (
+                /* ================= AVAILABLE MINIMAL SQUARE TILE ================= */
+                <div
+                  className="square-card-available-body"
+                  onClick={() => onSelectTable(tbl)}
+                >
+                  {/* Top Right: Status Dot & Delete Button on Hover */}
+                  <div className="square-card-top">
+                    <span className="square-table-dot available" />
                     {(tbl.status === 'AVAILABLE' || tbl.status === 'CLOSED') && (
                       <button
                         type="button"
-                        className="btn-card-delete"
+                        className="square-delete-btn"
                         title="Delete Table"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (window.confirm(`Delete Table ${tbl.tableNumber}?`)) {
                             onDeleteTable(tbl.id);
                           }
                         }}
                       >
-                        🗑
+                        ×
                       </button>
                     )}
-                  </>
-                )}
+                  </div>
 
-                {tbl.status === 'PAID_CLEARING' && (
-                  <button
-                    type="button"
-                    className="btn-card-action btn-card-clear"
-                    onClick={() => onUpdateTableStatus(tbl.id, 'AVAILABLE')}
-                  >
-                    ✓ Clear & Free Table
-                  </button>
-                )}
-              </div>
+                  {/* Center: Table Identifier Only (e.g. T1, T2) */}
+                  <div className="square-card-center-empty">
+                    <span className="square-table-num-large">
+                      <span className="square-sr-prefix">Table {tbl.tableNumber}</span>
+                      <span aria-hidden="true">{tbl.tableNumber}</span>
+                    </span>
+                  </div>
+
+                  {/* Bottom: + Order Pill */}
+                  <div className="square-card-bottom-pill">
+                    <span>+ Order</span>
+                  </div>
+                </div>
+              )}
+
+              {tbl.status === 'PAID_CLEARING' && (
+                <button
+                  type="button"
+                  className="square-btn-clear"
+                  onClick={() => onUpdateTableStatus(tbl.id, 'AVAILABLE')}
+                >
+                  Clear
+                </button>
+              )}
             </div>
           );
         })}
