@@ -91,6 +91,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prodBadge, setProdBadge] = useState('');
+  const [deletedProductIds, setDeletedProductIds] = useState<string[]>([]);
   const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([
     'Choice Of Size',
     'Choice Of Boba & Toppings',
@@ -256,6 +257,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   // Catalog filtered items for Petpooja view
   const modalFilteredProducts = useMemo(() => {
     return (products || []).filter((p) => {
+      if (deletedProductIds.includes(p.id)) return false;
       if (selectedModalCatId !== 'ALL' && p.category?.id !== selectedModalCatId) {
         return false;
       }
@@ -511,6 +513,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 type="button"
                 onClick={async () => {
                   if (window.confirm('Wipe menu catalog to start fresh?')) {
+                    setDeletedProductIds((products || []).map((p) => p.id));
                     await onClearCatalog();
                     setActiveTab('category');
                   }
@@ -763,6 +766,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                                     style={{ padding: '2px 7px', fontSize: '0.75rem' }}
                                     onClick={async () => {
                                       if (window.confirm(`Delete "${p.name}"?`)) {
+                                        setDeletedProductIds((prev) => [...prev, p.id]);
                                         await onProductDeleted(p.id);
                                       }
                                     }}

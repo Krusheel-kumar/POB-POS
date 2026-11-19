@@ -563,8 +563,8 @@ export class PosApiClient {
    * Delete product
    */
   public async deleteProduct(id: string): Promise<void> {
+    mockStore.deleteProduct(id);
     if (this.demoMode) {
-      mockStore.deleteProduct(id);
       return;
     }
 
@@ -577,8 +577,8 @@ export class PosApiClient {
       if (!res.ok) {
         throw new Error(`Failed to delete product: ${res.status}`);
       }
-    } catch {
-      mockStore.deleteProduct(id);
+    } catch (err) {
+      console.warn('Backend delete product warning:', err);
     }
   }
 
@@ -1042,7 +1042,7 @@ export class PosApiClient {
   }
 
   public async clearCatalog(): Promise<void> {
-    mockStore.clearCatalog();
+    await this.clearAllDemoData();
   }
 
   public async loadSampleCatalog(): Promise<void> {

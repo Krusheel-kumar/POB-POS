@@ -238,8 +238,15 @@ export async function catalogRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.delete('/api/v1/products/:id', async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const { id } = req.params;
-    await db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
-    return reply.status(204).send();
+    try {
+      await db.execute({ sql: 'DELETE FROM product_addons WHERE product_id = ?', args: [id] });
+      await db.execute({ sql: 'DELETE FROM product_variants WHERE product_id = ?', args: [id] });
+      await db.execute({ sql: 'DELETE FROM order_items WHERE product_id = ?', args: [id] });
+      await db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
+      return reply.status(200).send({ success: true, deletedId: id });
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'Failed to delete product: ' + err.message });
+    }
   });
 
   fastify.patch('/api/v1/products/:id/deactivate', async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {

@@ -187,8 +187,16 @@ async function catalogRoutes(fastify) {
     });
     fastify.delete('/api/v1/products/:id', async (req, reply) => {
         const { id } = req.params;
-        await database_js_1.db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
-        return reply.status(204).send();
+        try {
+            await database_js_1.db.execute({ sql: 'DELETE FROM product_addons WHERE product_id = ?', args: [id] });
+            await database_js_1.db.execute({ sql: 'DELETE FROM product_variants WHERE product_id = ?', args: [id] });
+            await database_js_1.db.execute({ sql: 'DELETE FROM order_items WHERE product_id = ?', args: [id] });
+            await database_js_1.db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
+            return reply.status(200).send({ success: true, deletedId: id });
+        }
+        catch (err) {
+            return reply.status(500).send({ error: 'Failed to delete product: ' + err.message });
+        }
     });
     fastify.patch('/api/v1/products/:id/deactivate', async (req, reply) => {
         const { id } = req.params;
