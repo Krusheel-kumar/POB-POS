@@ -4,7 +4,9 @@ node_modules/
 
 # Production Build
 dist/
-*/dist/
+pos-web/dist/
+!backend/dist/
+!backend/dist/**
 dist-ssr/
 */dist-ssr/
 
