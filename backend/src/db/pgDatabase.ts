@@ -25,11 +25,20 @@ export class PgDatabase {
       process.env.DATABASE_URL ||
       `postgresql://${process.env.PGUSER || 'postgres'}:${encodeURIComponent(process.env.PGPASSWORD || 'postgres')}@${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || '5432'}/${process.env.PGDATABASE || 'pob_pos'}`;
 
+    const isRemote =
+      connectionString.includes('render.com') ||
+      connectionString.includes('neon.tech') ||
+      connectionString.includes('supabase.co') ||
+      connectionString.includes('railway') ||
+      connectionString.includes('sslmode=require') ||
+      process.env.PGSSLMODE === 'require';
+
     this.pool = new Pool({
       connectionString,
+      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
       max: 20,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 3000,
+      connectionTimeoutMillis: 5000,
     });
 
     this.pool.on('error', (err) => {
@@ -90,7 +99,7 @@ export class PgDatabase {
 
   public async ensureDatabaseExists(): Promise<void> {
     const targetDb = process.env.PGDATABASE || 'pob_pos';
-    if (targetDb === 'postgres') return;
+    if (process.env.DATABASE_URL || targetDb === 'postgres') return;
 
     const adminClient = new pg.Client({
       host: process.env.PGHOST || 'localhost',
