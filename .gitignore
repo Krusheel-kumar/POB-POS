@@ -5,6 +5,8 @@ node_modules/
 # Production Build
 dist/
 pos-web/dist/
+dist-electron/
+*/dist-electron/
 !backend/dist/
 !backend/dist/**
 dist-ssr/
