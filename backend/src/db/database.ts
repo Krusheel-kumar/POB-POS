@@ -28,13 +28,15 @@ export async function initDatabase(): Promise<void> {
   // Test and initialize PostgreSQL if requested or configured
   if ((process.env.DATABASE_TYPE === 'postgres' || process.env.DATABASE_URL) && !(isProd && isLocalDbUrl)) {
     try {
-      console.log('[Database] Initializing PostgreSQL schema & connection...');
+      const hostPart = connStr ? connStr.split('@')[1]?.split('/')[0] : `${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || '5432'}`;
+      console.log(`[Database] Initializing PostgreSQL connection to host: ${hostPart}...`);
       await pgDatabase.initSchema();
       const connected = await pgDatabase.testConnection();
       if (connected) {
         isPostgresActive = true;
         console.log('====================================================');
         console.log('🚀 [Database] CONNECTED TO POSTGRESQL PRODUCTION DB!');
+        console.log(`   Host: ${hostPart}`);
         console.log(`   Database: ${process.env.PGDATABASE || 'pob_pos'}`);
         console.log('====================================================');
         return;
