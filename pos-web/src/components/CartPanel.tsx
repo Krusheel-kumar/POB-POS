@@ -94,7 +94,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const isLocked = isKotSent || Boolean(runningOrderId);
 
   const handleItemMinus = (item: CartItem) => {
-    if (isLocked && onRequireManagerVoid) {
+    const itemIsLocked = item.isDispatched ?? isLocked;
+    if (itemIsLocked && onRequireManagerVoid) {
       onRequireManagerVoid({
         id: item.id,
         name: item.product.name,
@@ -107,7 +108,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   };
 
   const handleItemDelete = (item: CartItem) => {
-    if (isLocked && onRequireManagerVoid) {
+    const itemIsLocked = item.isDispatched ?? isLocked;
+    if (itemIsLocked && onRequireManagerVoid) {
       onRequireManagerVoid({
         id: item.id,
         name: item.product.name,
@@ -302,11 +304,15 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   <div className="item-title-row">
                     <span className="item-name">
                       {item.product.name}
-                      {isLocked && (
+                      {item.isDispatched ? (
                         <span className="cart-badge-locked" title="Dispatched to Kitchen. Modifying requires Manager PIN.">
                           🔒 Sent
                         </span>
-                      )}
+                      ) : runningOrderId ? (
+                        <span className="cart-badge-new-addon" title="New add-on item. Ready to send to kitchen.">
+                          + New
+                        </span>
+                      ) : null}
                     </span>
                     <span className="item-line-total">₹{item.lineTotal.toFixed(2)}</span>
                   </div>
@@ -475,9 +481,13 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               ) : items.length === 0 ? (
                 <span>👨‍🍳 Send KOT (Add Items)</span>
               ) : Boolean(runningOrderId) ? (
-                <span>
-                  👨‍🍳 Send Add-on KOT to Kitchen • {items.reduce((s, i) => s + i.quantity, 0)} Items
-                </span>
+                items.some((i) => !i.isDispatched) ? (
+                  <span>
+                    👨‍🍳 Send Add-on KOT to Kitchen • {items.filter((i) => !i.isDispatched).reduce((s, i) => s + i.quantity, 0)} Items
+                  </span>
+                ) : (
+                  <span>✓ All Table Items Dispatched (KOT Active)</span>
+                )
               ) : (
                 <span>
                   👨‍🍳 Send KOT to Kitchen • {items.reduce((s, i) => s + i.quantity, 0)} Items

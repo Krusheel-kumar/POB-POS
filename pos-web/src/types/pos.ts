@@ -172,6 +172,7 @@ export interface CartItem {
   itemNotes: string;
   unitPrice: number;
   lineTotal: number;
+  isDispatched?: boolean;
 }
 
 export interface CalculationItemDetail {

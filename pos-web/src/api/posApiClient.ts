@@ -873,6 +873,31 @@ export class PosApiClient {
   }
 
   /**
+   * Void / reduce item from running order
+   */
+  public async voidOrderItem(orderId: string, itemId: string, quantityToVoid: number, reason: string): Promise<Order> {
+    if (this.demoMode) {
+      return mockStore.voidOrderItem(orderId, itemId, quantityToVoid, reason);
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/orders/${orderId}/items/${itemId}/void`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ quantityToVoid, reason }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to void item: ${res.status}`);
+      }
+
+      return res.json();
+    } catch {
+      return mockStore.voidOrderItem(orderId, itemId, quantityToVoid, reason);
+    }
+  }
+
+  /**
    * Issue Bill for Order
    */
   public async issueBill(orderId: string, notes?: string): Promise<Bill> {

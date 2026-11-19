@@ -4,6 +4,7 @@ import type {
   ProductCategory,
   RestaurantTable,
   Order,
+  OrderItem,
   Bill,
   KitchenTicket,
   KitchenTicketItem,
@@ -1304,6 +1305,68 @@ class MockStore {
     tickets.unshift(addOnTicket);
     this.setStorage('tickets', tickets);
 
+    return order;
+  }
+
+  public voidOrderItem(orderId: string, itemId: string, quantityToVoid: number, _reason: string): Order {
+    const orders = this.getOrders();
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) throw new Error('Order not found');
+
+    const tables = this.getTables();
+
+    if (itemId === 'cart-all') {
+      order.items = [];
+      order.subtotal = 0;
+      order.taxableAmount = 0;
+      order.taxAmount = 0;
+      order.totalAmount = 0;
+    } else if (order.items) {
+      order.items = order.items
+        .map((it) => {
+          if (it.id === itemId) {
+            const newQty = it.quantity - quantityToVoid;
+            if (newQty <= 0) return null;
+            return {
+              ...it,
+              quantity: newQty,
+              lineTotalSnapshot: Number((it.unitPriceSnapshot * newQty).toFixed(2)),
+            };
+          }
+          return it;
+        })
+        .filter((it): it is OrderItem => it !== null);
+
+      const newSubtotal = Number(order.items.reduce((s, it) => s + it.lineTotalSnapshot, 0).toFixed(2));
+      order.subtotal = newSubtotal;
+      order.taxableAmount = newSubtotal;
+      order.taxAmount = Number((newSubtotal * 0.05).toFixed(2));
+      order.totalAmount = Number((newSubtotal + order.taxAmount).toFixed(2));
+    }
+
+    // Update associated table
+    if (order.table) {
+      const tbl = tables.find((t) => t.id === order.table?.id || t.tableNumber === order.table?.tableNumber);
+      if (tbl) {
+        tbl.currentTotal = order.totalAmount;
+        tbl.amountDue = Math.max(0, order.totalAmount - (tbl.amountPaid || 0));
+        const currentItems = order.items || [];
+        tbl.items = currentItems.map((it) => ({
+          name: it.productNameSnapshot,
+          variant: it.variantNameSnapshot,
+          quantity: it.quantity,
+          lineTotal: it.lineTotalSnapshot,
+        }));
+        if (currentItems.length === 0) {
+          tbl.status = 'AVAILABLE';
+          tbl.currentOrderId = undefined;
+          tbl.orderNumber = undefined;
+        }
+        this.setStorage('tables', tables);
+      }
+    }
+
+    this.setStorage('orders', orders);
     return order;
   }
 

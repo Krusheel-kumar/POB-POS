@@ -1016,6 +1016,18 @@
   border-radius: 4px;
 }
 
+.cart-badge-new-addon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #0369a1;
+  background-color: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .counter-status-pill {
   font-size: 0.72rem;
   font-weight: 700;

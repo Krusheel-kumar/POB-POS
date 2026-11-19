@@ -277,8 +277,23 @@ export function App() {
     setIsKotSent(false);
   };
 
-  const handleConfirmVoid = (reason: string, notes: string, managerPin: string) => {
+  const handleConfirmVoid = async (reason: string, notes: string, managerPin: string) => {
     if (!voidTarget) return;
+
+    if (runningOrder) {
+      try {
+        const updated = await posApiClient.voidOrderItem(
+          runningOrder.id,
+          voidTarget.id,
+          voidTarget.quantity,
+          notes ? `${reason} (${notes})` : reason
+        );
+        setRunningOrder(updated.items && updated.items.length > 0 ? updated : null);
+        await loadTables();
+      } catch {
+        // continue
+      }
+    }
 
     if (voidTarget.id === 'cart-all') {
       setCartItems([]);
@@ -326,6 +341,8 @@ export function App() {
       handleOpenRunningOrder(table.currentOrderId);
     } else {
       setRunningOrder(null);
+      setCartItems([]);
+      setIsKotSent(false);
     }
   };
 
@@ -338,6 +355,53 @@ export function App() {
       if (order.table) {
         setSelectedTable(order.table);
       }
+      if (order.customerName) setCustomerName(order.customerName);
+      if (order.customerPhone) setCustomerPhone(order.customerPhone);
+
+      // Populate cart with existing order items, marked as dispatched so modifying/voiding strictly requires Manager PIN
+      if (order.items && order.items.length > 0) {
+        const loadedCartItems: CartItem[] = order.items.map((it, idx) => {
+          const matchedProd = products.find((p) => p.id === it.productId || p.name === it.productNameSnapshot);
+          return {
+            id: it.id || `running-${order.id}-${idx}`,
+            product: matchedProd || {
+              id: it.productId || `prod-snapshot-${idx}`,
+              name: it.productNameSnapshot,
+              description: '',
+              sku: '',
+              basePrice: it.unitPriceSnapshot,
+              isActive: true,
+              variants: [],
+              addOns: [],
+            },
+            selectedVariant: it.variantNameSnapshot
+              ? {
+                  id: `var-${it.id}`,
+                  name: it.variantNameSnapshot,
+                  price: it.unitPriceSnapshot,
+                  isActive: true,
+                }
+              : undefined,
+            selectedAddOns: (it.addOns || []).map((a) => ({
+              id: a.id || `addon-${Math.random()}`,
+              name: a.addOnNameSnapshot || a.name || 'Extra',
+              price: a.price || 0,
+              isActive: true,
+            })),
+            quantity: it.quantity,
+            itemNotes: it.itemNotes || '',
+            unitPrice: it.unitPriceSnapshot,
+            lineTotal: it.lineTotalSnapshot,
+            isDispatched: true, // Strict Anti-Fraud Guard: requires Manager PIN to void or reduce
+          };
+        });
+        setCartItems(loadedCartItems);
+        setIsKotSent(true);
+      } else {
+        setCartItems([]);
+        setIsKotSent(false);
+      }
+
       setIsChoosingTable(false);
       setActiveTab('MENU');
     } catch (err: unknown) {
@@ -441,30 +505,35 @@ export function App() {
     // If adding items to an existing running order
     if (runningOrder) {
       try {
-        const idempotencyKey = `ADD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-        const updated = await posApiClient.addOrderItems(runningOrder.id, {
-          idempotencyKey,
-          items: cartItems.map((item) => ({
-            productId: item.product.id,
-            variantId: item.selectedVariant?.id,
-            addOnIds: item.selectedAddOns.map((a) => a.id),
-            quantity: item.quantity,
-            itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
-          })),
-        });
+        const pendingItems = cartItems.filter((item) => !item.isDispatched);
+        if (pendingItems.length > 0) {
+          const idempotencyKey = `ADD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+          const updated = await posApiClient.addOrderItems(runningOrder.id, {
+            idempotencyKey,
+            items: pendingItems.map((item) => ({
+              productId: item.product.id,
+              variantId: item.selectedVariant?.id,
+              addOnIds: item.selectedAddOns.map((a) => a.id),
+              quantity: item.quantity,
+              itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+            })),
+          });
 
-        setOrderSuccessMessage(
-          `Items added to Order #${updated.orderNumber}! New Total: ₹${updated.totalAmount.toFixed(2)} (Add-on KOT dispatched)`
-        );
-        setLastPlacedOrder(updated);
-        setIsReviewOpen(false);
-        setCartItems([]);
-        setCustomerNotes('');
-        setBackendCalculation(null);
-        setRunningOrder(null);
-        setIsKotSent(false);
-        await loadTables();
-        setTimeout(() => setOrderSuccessMessage(null), 6000);
+          setOrderSuccessMessage(
+            `Items added to Order #${updated.orderNumber}! New Total: ₹${updated.totalAmount.toFixed(2)} (Add-on KOT dispatched)`
+          );
+          setLastPlacedOrder(updated);
+          setIsReviewOpen(false);
+          setCartItems([]);
+          setCustomerNotes('');
+          setBackendCalculation(null);
+          setRunningOrder(null);
+          setIsKotSent(false);
+          await loadTables();
+          setTimeout(() => setOrderSuccessMessage(null), 6000);
+        } else {
+          setIsReviewOpen(false);
+        }
       } catch (err: unknown) {
         setApiError(err instanceof Error ? err.message : 'Failed to add items to running order');
       } finally {
@@ -730,27 +799,33 @@ export function App() {
         try {
           if (runningOrder) {
             // Adding more items to active running dine-in order
-            const idempotencyKey = `KOT-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-            const updated = await posApiClient.addOrderItems(runningOrder.id, {
-              idempotencyKey,
-              items: cartItems.map((item) => ({
-                productId: item.product.id,
-                variantId: item.selectedVariant?.id,
-                addOnIds: item.selectedAddOns.map((a) => a.id),
-                quantity: item.quantity,
-                itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
-              })),
-            });
-            orderToPrint = updated;
-            setLastPlacedOrder(updated);
-            setRunningOrder(updated);
-            setCartItems([]);
-            await loadTables();
-            if (orderType === 'DINE_IN') {
-              setIsChoosingTable(true);
+            const pendingItems = cartItems.filter((item) => !item.isDispatched);
+            if (pendingItems.length > 0) {
+              const idempotencyKey = `KOT-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+              const updated = await posApiClient.addOrderItems(runningOrder.id, {
+                idempotencyKey,
+                items: pendingItems.map((item) => ({
+                  productId: item.product.id,
+                  variantId: item.selectedVariant?.id,
+                  addOnIds: item.selectedAddOns.map((a) => a.id),
+                  quantity: item.quantity,
+                  itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+                })),
+              });
+              orderToPrint = updated;
+              setLastPlacedOrder(updated);
+              setRunningOrder(updated);
+              setCartItems([]);
+              await loadTables();
+              if (orderType === 'DINE_IN') {
+                setIsChoosingTable(true);
+              }
+              setOrderSuccessMessage(`👨‍🍳 Add-on KOT dispatched for Table ${selectedTable?.tableNumber || ''}! New Total: ₹${updated.totalAmount.toFixed(2)}`);
+              setTimeout(() => setOrderSuccessMessage(null), 5000);
+            } else {
+              // No new items to dispatch; print existing KOT ticket for the table's running order
+              orderToPrint = runningOrder;
             }
-            setOrderSuccessMessage(`👨‍🍳 Add-on KOT dispatched for Table ${selectedTable?.tableNumber || ''}! New Total: ₹${updated.totalAmount.toFixed(2)}`);
-            setTimeout(() => setOrderSuccessMessage(null), 5000);
           } else {
             // Placing first KOT order for the table
             const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
