@@ -67,18 +67,20 @@
   color: #fff;
 }
 
-/* Thermal Paper Styling - Bold & Bigger Typography */
+/* Thermal Paper Styling - Bold & High-Contrast Typography */
 .thermal-slip {
   background-color: #ffffff;
   margin: 16px;
   padding: 24px 22px;
   border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-  font-family: 'Courier New', 'SF Mono', 'Roboto Mono', Menlo, Consolas, monospace;
-  font-size: 0.94rem;
-  font-weight: 700;
-  color: #000;
+  font-family: 'Courier New', Consolas, 'Roboto Mono', 'SF Mono', monospace;
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #000000;
   line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
   overflow-y: auto;
   max-height: calc(92vh - 100px);
 }
@@ -89,25 +91,26 @@
 }
 
 .brand-name {
-  font-size: 1.55rem;
+  font-size: 1.65rem;
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   margin: 0;
-  color: #000;
+  color: #000000;
+  text-transform: uppercase;
 }
 
 .brand-sub {
-  font-size: 0.95rem;
+  font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: 0.6px;
   margin: 3px 0 5px;
-  color: #111;
+  color: #000000;
 }
 
 .brand-contact {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: #222;
+  color: #111111;
   line-height: 1.35;
   max-width: 400px;
   margin: 0 auto;
@@ -193,27 +196,27 @@
 
 .item-main-row {
   display: flex;
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   font-weight: 800;
-  color: #000;
+  color: #000000;
 }
 
-.item-title { flex: 2; line-height: 1.25; }
-.item-qty { width: 36px; text-align: center; font-weight: 900; }
-.item-rate { width: 62px; text-align: right; }
-.item-amount { width: 72px; text-align: right; font-weight: 900; }
+.item-title { flex: 2; line-height: 1.25; font-weight: 800; color: #000000; }
+.item-qty { width: 36px; text-align: center; font-weight: 900; color: #000000; }
+.item-rate { width: 62px; text-align: right; font-weight: 800; color: #000000; }
+.item-amount { width: 72px; text-align: right; font-weight: 900; color: #000000; }
 
 .item-sub-addon {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #333;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #111111;
   padding-left: 8px;
 }
 
 .item-sub-note {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #b45309;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #92400e;
   padding-left: 8px;
 }
 
@@ -221,24 +224,28 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #000000;
 }
 
 .calc-row {
   display: flex;
   justify-content: space-between;
+  font-weight: 800;
+  color: #000000;
 }
 
 .grand-total {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 900;
-  color: #000;
+  color: #000000;
 }
 
 .grand-val {
   font-weight: 900;
   letter-spacing: 0.5px;
+  color: #000000;
 }
 
 .paid-tag {
@@ -635,30 +642,223 @@
   color: #ffffff;
 }
 
-/* Print Media Query */
+/* Print Media Query - Optimized for 80mm & 58mm Thermal Printers */
 @media print {
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
+  
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
   .receipt-modal-backdrop {
-    position: absolute;
-    left: 0;
-    top: 0;
-    background: transparent;
-    padding: 0;
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
+
+  .receipt-modal-container {
+    background: transparent !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   .printable-area, .printable-area * {
-    visibility: visible;
+    visibility: visible !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
+    -webkit-text-stroke: 0.22px #000000;
+    text-shadow: none !important;
   }
+
   .printable-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm;
-    margin: 0;
-    padding: 10px;
-    box-shadow: none;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 74mm !important;
+    max-width: 74mm !important;
+    margin: 0 auto !important;
+    padding: 3mm 1mm !important;
+    box-shadow: none !important;
+    font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
+    font-size: 10.5pt !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
+    background: #ffffff !important;
   }
+
+  .brand-name {
+    font-size: 16pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    color: #000000 !important;
+    text-align: center !important;
+  }
+
+  .brand-sub {
+    font-size: 10.5pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    text-align: center !important;
+  }
+
+  .brand-contact, .brand-tax-info {
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    text-align: center !important;
+  }
+
+  .slip-divider {
+    font-size: 9pt !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.5px !important;
+    color: #000000 !important;
+    margin: 4px 0 !important;
+  }
+
+  .slip-title {
+    font-size: 11pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 1px !important;
+    color: #000000 !important;
+  }
+
+  .meta-bold {
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .thermal-meta {
+    font-size: 9.5pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .thermal-items-header {
+    font-size: 10pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .item-main-row {
+    font-size: 10.5pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .item-title {
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .item-qty {
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .item-rate, .item-amount {
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .item-sub-addon {
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .item-sub-note {
+    font-size: 9pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .calc-row {
+    font-size: 10.5pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .grand-total, .grand-val {
+    font-size: 14pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .paid-tag {
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .kot-badge {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .kot-number-banner {
+    border: 2px solid #000000 !important;
+    background: transparent !important;
+  }
+
+  .kot-number {
+    font-size: 19pt !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    color: #000000 !important;
+  }
+
+  .kot-qty {
+    font-size: 19pt !important;
+    font-weight: 900 !important;
+    border: 2px solid #000000 !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .kot-item-title {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  .kot-item-sub {
+    font-size: 10pt !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+  }
+
+  .highlight-table {
+    font-size: 12.5pt !important;
+    font-weight: 900 !important;
+    border: 2px solid #000000 !important;
+    background: transparent !important;
+    color: #000000 !important;
+  }
+
+  .time-highlight {
+    background: transparent !important;
+    color: #000000 !important;
+    font-weight: 900 !important;
+  }
+
   .no-print {
     display: none !important;
   }
