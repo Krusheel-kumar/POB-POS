@@ -39,7 +39,7 @@ export class PosApiClient {
 
   constructor(config?: Partial<PosApiConfig>) {
     this.config = {
-      baseUrl: config?.baseUrl || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_API_BASE_URL : '') || 'http://localhost:8080',
+      baseUrl: config?.baseUrl || (typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_API_URL) : '') || 'http://localhost:8080',
       tenantId: config?.tenantId || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_TENANT_ID : '') || 'demo-tenant-id',
       outletId: config?.outletId || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_OUTLET_ID : '') || INITIAL_OUTLET.id,
       authHeader: config?.authHeader || (typeof import.meta !== 'undefined' ? import.meta.env?.VITE_AUTH_HEADER : undefined),
