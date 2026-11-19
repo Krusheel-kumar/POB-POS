@@ -492,25 +492,29 @@ export class PosApiClient {
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to create product: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || errData?.message || `Failed to create product: ${res.status}`);
       }
 
       return res.json();
-    } catch {
-      return mockStore.createProduct({
-        name: req.name,
-        basePrice: req.basePrice,
-        categoryId: req.categoryId,
-        description: req.description,
-        sku: req.sku,
-        subcategory: req.subcategory,
-        imageUrl: req.imageUrl,
-        badge: req.badge,
-        dietaryType: req.dietaryType,
-        prepTimeMinutes: req.prepTimeMinutes,
-        variants: req.variants,
-        addOnIds: req.addOnIds,
-      });
+    } catch (err) {
+      if (this.demoMode) {
+        return mockStore.createProduct({
+          name: req.name,
+          basePrice: req.basePrice,
+          categoryId: req.categoryId,
+          description: req.description,
+          sku: req.sku,
+          subcategory: req.subcategory,
+          imageUrl: req.imageUrl,
+          badge: req.badge,
+          dietaryType: req.dietaryType,
+          prepTimeMinutes: req.prepTimeMinutes,
+          variants: req.variants,
+          addOnIds: req.addOnIds,
+        });
+      }
+      throw err;
     }
   }
 
@@ -550,12 +554,16 @@ export class PosApiClient {
       });
 
       if (!res.ok) {
-        throw new Error(`Failed to update product: ${res.status}`);
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || errData?.message || `Failed to update product: ${res.status}`);
       }
 
       return res.json();
-    } catch {
-      return mockStore.updateProduct(id, req);
+    } catch (err) {
+      if (this.demoMode) {
+        return mockStore.updateProduct(id, req);
+      }
+      throw err;
     }
   }
 

@@ -13,6 +13,7 @@ const kitchenRoutes_js_1 = require("./routes/kitchenRoutes.js");
 const reportRoutes_js_1 = require("./routes/reportRoutes.js");
 const outletRoutes_js_1 = require("./routes/outletRoutes.js");
 const fastify = (0, fastify_1.default)({
+    bodyLimit: 50 * 1024 * 1024, // 50 MB body limit to support base64 item photos
     logger: {
         transport: {
             target: 'pino-pretty',

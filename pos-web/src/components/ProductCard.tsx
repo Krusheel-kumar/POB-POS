@@ -8,6 +8,12 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) => {
   const [isStarred, setIsStarred] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  React.useEffect(() => {
+    setImageFailed(false);
+  }, [product.imageUrl, product.id]);
+
   const isAvailable = product.isActive;
   const startingPrice = product.variants.length > 0
     ? Math.min(...product.variants.map((v) => v.price))
@@ -43,6 +49,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
     return 'badge-slate';
   };
 
+  const getCategoryFallback = () => {
+    const text = `${product.name} ${product.category?.name || ''}`.toLowerCase();
+    if (text.includes('boba') || text.includes('tea') || text.includes('pearl')) return '🧋';
+    if (text.includes('coffee') || text.includes('espresso') || text.includes('latte')) return '☕';
+    if (text.includes('shake') || text.includes('smoothie') || text.includes('juice')) return '🥤';
+    if (text.includes('cake') || text.includes('pastry') || text.includes('croissant') || text.includes('snack')) return '🥐';
+    return '🍽️';
+  };
+
   return (
     <div
       className={`retail-product-card ${!isAvailable ? 'sold-out' : ''}`}
@@ -59,20 +74,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onSelect }) =
     >
       {/* Product Image Box */}
       <div className="card-image-wrapper">
-        {product.imageUrl ? (
+        {product.imageUrl && !imageFailed ? (
           <img
             src={product.imageUrl}
             alt={product.name}
             className="card-image"
             loading="lazy"
-            onError={(e) => {
-              // fallback if image fails
-              (e.target as HTMLElement).style.display = 'none';
-            }}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="card-image-placeholder">
-            <span>🍽️</span>
+            <span>{getCategoryFallback()}</span>
           </div>
         )}
 

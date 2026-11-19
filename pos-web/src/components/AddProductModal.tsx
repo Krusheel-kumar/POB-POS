@@ -114,7 +114,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxDim = 800;
+        const maxDim = 500;
         let width = img.width;
         let height = img.height;
 
@@ -133,7 +133,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
           setProdImageUrl(compressedDataUrl);
         } else {
           setProdImageUrl(result);
@@ -901,16 +901,33 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 </div>
 
                 {/* Secondary Option: Paste URL */}
-                <input
-                  type="url"
-                  className="min-input min-url-input"
-                  placeholder="...or paste photo web link (https://...)"
-                  value={prodImageUrl.startsWith('data:') ? '' : prodImageUrl}
-                  onChange={(e) => {
-                    setUploadedFileName(null);
-                    setProdImageUrl(e.target.value);
-                  }}
-                />
+                {prodImageUrl.startsWith('data:') ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', fontSize: '0.82rem', color: '#065f46' }}>
+                    <span>✅ Local photo loaded & attached ({Math.round((prodImageUrl.length * 0.75) / 1024)} KB)</span>
+                    <button
+                      type="button"
+                      style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#047857', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                      onClick={() => {
+                        setUploadedFileName(null);
+                        setProdImageUrl('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="url"
+                    className="min-input min-url-input"
+                    placeholder="...or paste photo web link (https://...)"
+                    value={prodImageUrl}
+                    onChange={(e) => {
+                      setUploadedFileName(null);
+                      setProdImageUrl(e.target.value);
+                    }}
+                  />
+                )}
 
                 <div className="min-image-chips">
                   <span style={{ fontSize: '0.72rem', color: '#64748b', marginRight: '4px' }}>Sample Photos:</span>

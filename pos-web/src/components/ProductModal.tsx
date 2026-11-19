@@ -157,26 +157,46 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       <div className="lux-modal-container">
         {/* Luxury Header */}
         <div className="lux-modal-header">
-          <div className="lux-header-left">
-            <h2 id="modal-title" className="lux-item-title">
-              {product.name}
-            </h2>
-            <div className="lux-header-meta">
-              {product.dietaryType && (
-                <span className={`lux-dietary-badge ${product.dietaryType.toLowerCase()}`}>
-                  {product.dietaryType === 'BEVERAGE'
-                    ? '🧋 Drink'
-                    : product.dietaryType === 'VEG'
-                    ? '🟢 Veg'
-                    : product.dietaryType === 'NON_VEG'
-                    ? '🔴 Non-Veg'
-                    : '🌱 Vegan'}
-                </span>
-              )}
-              {product.sku && <span>{product.sku}</span>}
-              {product.prepTimeMinutes && (
-                <span>• Prep: {product.prepTimeMinutes} mins</span>
-              )}
+          <div className="lux-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            {product.imageUrl && (
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '10px',
+                  objectFit: 'cover',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                  flexShrink: 0,
+                }}
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            )}
+            <div>
+              <h2 id="modal-title" className="lux-item-title">
+                {product.name}
+              </h2>
+              <div className="lux-header-meta">
+                {product.dietaryType && (
+                  <span className={`lux-dietary-badge ${product.dietaryType.toLowerCase()}`}>
+                    {product.dietaryType === 'BEVERAGE'
+                      ? '🧋 Drink'
+                      : product.dietaryType === 'VEG'
+                      ? '🟢 Veg'
+                      : product.dietaryType === 'NON_VEG'
+                      ? '🔴 Non-Veg'
+                      : '🌱 Vegan'}
+                  </span>
+                )}
+                {product.sku && <span>{product.sku}</span>}
+                {product.prepTimeMinutes && (
+                  <span>• Prep: {product.prepTimeMinutes} mins</span>
+                )}
+              </div>
             </div>
           </div>
           <button type="button" className="lux-close-btn" onClick={onClose} aria-label="Close dialog">

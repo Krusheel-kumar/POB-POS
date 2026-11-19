@@ -9,6 +9,7 @@ import { reportRoutes } from './routes/reportRoutes.js';
 import { outletRoutes } from './routes/outletRoutes.js';
 
 const fastify = Fastify({
+  bodyLimit: 50 * 1024 * 1024, // 50 MB body limit to support base64 item photos
   logger: {
     transport: {
       target: 'pino-pretty',
