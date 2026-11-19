@@ -120,6 +120,12 @@ async function orderRoutes(fastify) {
                 args: [orderId, tableId],
             });
         }
+        else if (tableNumber && outletId) {
+            await database_js_1.db.execute({
+                sql: "UPDATE tables SET status = 'OCCUPIED', current_order_id = ? WHERE outlet_id = ? AND table_number = ?",
+                args: [orderId, outletId, tableNumber],
+            });
+        }
         const createdOrder = {
             id: orderId,
             orderNumber,

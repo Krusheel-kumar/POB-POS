@@ -75,18 +75,60 @@ export async function outletRoutes(fastify: FastifyInstance): Promise<void> {
   const handleGetTables = async (req: FastifyRequest<{ Params: { outletId: string } }>, reply: FastifyReply) => {
     const { outletId } = req.params;
     const res = await db.execute({
-      sql: 'SELECT * FROM tables WHERE outlet_id = ? ORDER BY table_number ASC',
+      sql: `
+        SELECT 
+          t.id, t.outlet_id, t.table_number, t.capacity, t.status, t.current_order_id,
+          o.order_number, o.total_amount, o.subtotal, o.created_at as order_created_at
+        FROM tables t
+        LEFT JOIN orders o ON t.current_order_id = o.id
+        WHERE t.outlet_id = ?
+        ORDER BY t.table_number ASC
+      `,
       args: [outletId],
     });
 
-    const tables = res.rows.map((row) => ({
-      id: String(row.id),
-      outletId: String(row.outlet_id),
-      tableNumber: String(row.table_number),
-      capacity: Number(row.capacity),
-      status: String(row.status),
-      currentOrderId: row.current_order_id ? String(row.current_order_id) : undefined,
-    }));
+    const tables = await Promise.all(
+      res.rows.map(async (row) => {
+        const currentOrderId = row.current_order_id ? String(row.current_order_id) : undefined;
+        let items: { name: string; variant?: string; quantity: number; lineTotal?: number }[] = [];
+
+        if (currentOrderId) {
+          try {
+            const itemRes = await db.execute({
+              sql: 'SELECT product_name_snapshot, variant_name_snapshot, quantity, line_total_snapshot FROM order_items WHERE order_id = ?',
+              args: [currentOrderId],
+            });
+            items = itemRes.rows.map((ir) => ({
+              name: String(ir.product_name_snapshot),
+              variant: ir.variant_name_snapshot ? String(ir.variant_name_snapshot) : undefined,
+              quantity: Number(ir.quantity),
+              lineTotal: Number(ir.line_total_snapshot),
+            }));
+          } catch (e) {
+            console.warn('Failed to load table items:', e);
+          }
+        }
+
+        const orderTotal = row.total_amount != null ? Number(row.total_amount) : 0;
+        const durationMinutes = row.order_created_at
+          ? Math.max(1, Math.round((Date.now() - new Date(String(row.order_created_at)).getTime()) / 60000))
+          : undefined;
+
+        return {
+          id: String(row.id),
+          outletId: String(row.outlet_id),
+          tableNumber: String(row.table_number),
+          capacity: Number(row.capacity),
+          status: String(row.status),
+          currentOrderId,
+          orderNumber: row.order_number ? String(row.order_number) : undefined,
+          currentTotal: orderTotal,
+          amountDue: orderTotal,
+          durationMinutes,
+          items,
+        };
+      })
+    );
 
     return reply.send(tables);
   };

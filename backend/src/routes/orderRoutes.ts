@@ -150,6 +150,11 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
         sql: "UPDATE tables SET status = 'OCCUPIED', current_order_id = ? WHERE id = ?",
         args: [orderId, tableId],
       });
+    } else if (tableNumber && outletId) {
+      await db.execute({
+        sql: "UPDATE tables SET status = 'OCCUPIED', current_order_id = ? WHERE outlet_id = ? AND table_number = ?",
+        args: [orderId, outletId, tableNumber],
+      });
     }
 
     const createdOrder = {

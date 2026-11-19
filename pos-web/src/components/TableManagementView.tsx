@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import type { RestaurantTable, TableStatus } from '../types/pos';
+import type { RestaurantTable, TableStatus, CartItem, RestaurantTableItem } from '../types/pos';
+import './TableManagementView.css';
 
 interface TableManagementViewProps {
   tables: RestaurantTable[];
   selectedTableId: string | null;
+  activeCartTableId?: string | null;
+  activeCartItems?: CartItem[];
+  activeCartTotal?: number;
   onSelectTable: (table: RestaurantTable) => void;
   onOpenRunningOrder: (orderId: string) => void;
   onCollectPayment?: (orderId: string) => void;
@@ -21,6 +25,9 @@ interface TableManagementViewProps {
 export const TableManagementView: React.FC<TableManagementViewProps> = ({
   tables,
   selectedTableId,
+  activeCartTableId,
+  activeCartItems = [],
+  activeCartTotal = 0,
   onSelectTable,
   onOpenRunningOrder,
   onCollectPayment,
@@ -59,75 +66,76 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
 
   const filteredTables = tables.filter((t) => {
     if (selectedStatusFilter === 'ALL') return true;
+    if (selectedStatusFilter === 'OCCUPIED' || selectedStatusFilter === 'RUNNING') {
+      return t.status === 'RUNNING' || t.status === 'OCCUPIED';
+    }
     return t.status === selectedStatusFilter;
   });
 
   const getStatusBadge = (status: TableStatus) => {
     switch (status) {
       case 'AVAILABLE':
-        return { label: 'Available', bg: '#dcfce7', color: '#15803d', border: '#bbf7d0' };
+        return { label: 'Available', bg: '#ecfdf5', color: '#059669', border: '#a7f3d0' };
       case 'RUNNING':
-        return { label: 'Running Order', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' };
+      case 'OCCUPIED':
+        return { label: 'Occupied', bg: '#f0f9ff', color: '#0284c7', border: '#bae6fd' };
       case 'BILL_REQUESTED':
-        return { label: 'Bill Issued', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
+        return { label: 'Bill Issued', bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
       case 'PAYMENT_DUE':
-        return { label: 'Payment Due', bg: '#fee2e2', color: '#b91c1c', border: '#fecaca' };
+        return { label: 'Payment Due', bg: '#fef2f2', color: '#dc2626', border: '#fecaca' };
       case 'PAID_CLEARING':
-        return { label: 'Paid / Clearing', bg: '#f3e8ff', color: '#6b21a8', border: '#e9d5ff' };
+        return { label: 'Paid / Clearing', bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
       case 'CLOSED':
-        return { label: 'Closed', bg: '#f1f5f9', color: '#64748b', border: '#e2e8f0' };
+        return { label: 'Closed', bg: '#f8fafc', color: '#64748b', border: '#cbd5e1' };
       default:
         return { label: status, bg: '#f1f5f9', color: '#475569', border: '#cbd5e1' };
     }
   };
 
   return (
-    <div className="table-management-container" style={{ padding: isInlineMode ? '16px 20px' : '20px', height: '100%', overflowY: 'auto' }}>
-      {/* Header bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+    <div
+      className="table-management-container"
+      style={{ padding: isInlineMode ? '16px 20px' : '20px' }}
+    >
+      {/* Header Bar */}
+      <div className="table-header-bar">
         <div>
-          <h2 style={{ margin: 0, fontSize: isInlineMode ? '1.3rem' : '1.4rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
+          <h2
+            className="table-header-title"
+            style={{ fontSize: isInlineMode ? '1.25rem' : '1.4rem' }}
+          >
             <span>🪑</span> {isInlineMode ? 'Dine-In Table Selection' : 'Table Overview & Running Orders'}
           </h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+          <p className="table-header-sub">
             {isInlineMode
-              ? 'Tap any available table to open menu and take an order, or tap a running table to view/add items.'
-              : 'Live status of dining tables, active ticket durations, and outstanding balances.'}
+              ? 'Tap any table card to open menu, view live items, or add items to an active order.'
+              : 'Live status of dining tables, active ticket durations, ordered items, and outstanding balances.'}
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="table-header-actions">
           {onCancelSelectTable && (
             <button
               type="button"
+              className="table-btn-back"
               onClick={onCancelSelectTable}
-              style={{
-                padding: '8px 14px',
-                borderRadius: '8px',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                background: '#3b82f6',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              title="Return to active menu catalog"
             >
               ← Back to Menu
             </button>
           )}
           <button
             type="button"
-            className="btn btn-secondary"
+            className="table-btn-refresh"
             onClick={onRefresh}
-            style={{ padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem' }}
+            title="Refresh table list from server"
           >
             ↻ Refresh
           </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="table-btn-add"
             onClick={() => setIsAdding(!isAdding)}
-            style={{ padding: '8px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '0.85rem', background: '#0f172a', color: '#fff', border: 'none' }}
           >
             {isAdding ? '✕ Cancel' : '➕ Add Table'}
           </button>
@@ -136,20 +144,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
 
       {/* Add Table Form */}
       {isAdding && (
-        <form
-          onSubmit={handleCreate}
-          style={{
-            background: '#f8fafc',
-            border: '1px solid #cbd5e1',
-            borderRadius: '10px',
-            padding: '16px',
-            marginBottom: '20px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-end',
-            flexWrap: 'wrap',
-          }}
-        >
+        <form onSubmit={handleCreate} className="table-create-form">
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px', color: '#334155' }}>
               Table Number / Label
@@ -180,8 +175,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', borderRadius: '6px', border: 'none', fontWeight: 700 }}
+            style={{ padding: '8px 18px', background: '#2563eb', color: '#fff', borderRadius: '6px', border: 'none', fontWeight: 700, cursor: 'pointer' }}
           >
             Save Table
           </button>
@@ -189,259 +183,233 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
       )}
 
       {errorMsg && (
-        <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
+        <div style={{ padding: '10px 14px', background: '#fee2e2', color: '#b91c1c', borderRadius: '8px', marginBottom: '16px', fontSize: '0.88rem', fontWeight: 600 }}>
           ⚠ {errorMsg}
         </div>
       )}
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {['ALL', 'AVAILABLE', 'RUNNING', 'BILL_REQUESTED', 'PAYMENT_DUE', 'PAID_CLEARING', 'CLOSED'].map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setSelectedStatusFilter(f)}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '20px',
-              border: selectedStatusFilter === f ? '2px solid #2563eb' : '1px solid #cbd5e1',
-              background: selectedStatusFilter === f ? '#eff6ff' : '#fff',
-              color: selectedStatusFilter === f ? '#1d4ed8' : '#475569',
-              fontWeight: 700,
-              fontSize: '0.8rem',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {f.replace('_', ' ')}
-          </button>
-        ))}
+      <div className="table-filter-bar">
+        {['ALL', 'AVAILABLE', 'OCCUPIED', 'BILL_REQUESTED', 'CLOSED'].map((f) => {
+          const isActive =
+            selectedStatusFilter === f ||
+            (f === 'OCCUPIED' && selectedStatusFilter === 'RUNNING');
+          const count = tables.filter((t) => {
+            if (f === 'ALL') return true;
+            if (f === 'OCCUPIED') return t.status === 'RUNNING' || t.status === 'OCCUPIED';
+            return t.status === f;
+          }).length;
+
+          return (
+            <button
+              key={f}
+              type="button"
+              className={`table-filter-pill ${isActive ? 'active' : ''}`}
+              onClick={() => setSelectedStatusFilter(f)}
+            >
+              {f.replace('_', ' ')} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {/* Table Cards Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
-        }}
-      >
+      <div className="table-cards-grid">
         {filteredTables.map((tbl) => {
-          const badge = getStatusBadge(tbl.status);
           const isSelected = selectedTableId === tbl.id;
-          const hasOrder = Boolean(tbl.currentOrderId);
+          const isCartActiveOnThisTable =
+            activeCartTableId === tbl.id && Boolean(activeCartItems && activeCartItems.length > 0);
+
+          // 1. Committed items from server/order
+          const committedItems: RestaurantTableItem[] = tbl.items || [];
+
+          // 2. Pending items being staged in active POS cart for this table
+          const pendingCartItems: RestaurantTableItem[] = isCartActiveOnThisTable
+            ? activeCartItems.map((ci) => ({
+                name: ci.product.name,
+                variant: ci.selectedVariant?.name,
+                quantity: ci.quantity,
+                lineTotal: ci.lineTotal,
+                isPending: true,
+              }))
+            : [];
+
+          // 3. Combined items list
+          const allTableItems: RestaurantTableItem[] = [...committedItems, ...pendingCartItems];
+          const totalUnits = allTableItems.reduce((sum, it) => sum + it.quantity, 0);
+
+          // 4. Real-time Bill Amount Calculation
+          const committedTotal = tbl.currentTotal || 0;
+          const pendingTotal = isCartActiveOnThisTable ? activeCartTotal : 0;
+          const displayTotal = committedTotal + pendingTotal;
+
+          const hasOrder = Boolean(tbl.currentOrderId) || isCartActiveOnThisTable || allTableItems.length > 0;
+          const effectiveStatus: TableStatus =
+            isCartActiveOnThisTable && tbl.status === 'AVAILABLE'
+              ? 'OCCUPIED'
+              : tbl.status;
+          const badge = getStatusBadge(effectiveStatus);
+
+          // Dynamic Card Class
+          let cardStatusClass = 'card-available';
+          if (effectiveStatus === 'RUNNING' || effectiveStatus === 'OCCUPIED') cardStatusClass = 'card-occupied';
+          else if (effectiveStatus === 'BILL_REQUESTED') cardStatusClass = 'card-billed';
+          if (isSelected) cardStatusClass += ' card-selected';
 
           return (
-            <div
-              key={tbl.id}
-              style={{
-                background: isSelected ? '#f0fdf4' : '#fff',
-                border: isSelected
-                  ? '2px solid #16a34a'
-                  : tbl.status === 'AVAILABLE'
-                  ? '1.5px solid #86efac'
-                  : tbl.status === 'RUNNING'
-                  ? '1.5px solid #7dd3fc'
-                  : '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                boxShadow: isSelected ? '0 4px 14px rgba(22, 163, 74, 0.2)' : '0 2px 5px rgba(0,0,0,0.04)',
-                transition: 'all 0.15s ease',
-              }}
-            >
+            <div key={tbl.id} className={`pos-table-card ${cardStatusClass}`}>
+              {/* Entire upper body is 1-tap clickable */}
               <div
+                className="table-card-clickable"
                 onClick={() => {
-                  if (hasOrder && tbl.currentOrderId) {
+                  if (tbl.currentOrderId) {
                     onOpenRunningOrder(tbl.currentOrderId);
                   } else {
                     onSelectTable(tbl);
                   }
                 }}
-                style={{ cursor: 'pointer' }}
                 title={
                   hasOrder
-                    ? `Table ${tbl.tableNumber}: Tap to open order & add more items`
-                    : `Table ${tbl.tableNumber}: Tap to select and open menu`
+                    ? `Table ${tbl.tableNumber}: Tap to open menu & add items`
+                    : `Table ${tbl.tableNumber}: Tap to select table & start order`
                 }
               >
-                {/* Header: Table Number & Status Badge */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 800 }}>
-                      Table {tbl.tableNumber}
-                    </h3>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                      Capacity: {tbl.capacity} seats {tbl.name ? `• ${tbl.name}` : ''}
+                {/* Header: Table Number, Seats & Status Badge */}
+                <div className="table-card-header">
+                  <div className="table-card-title-group">
+                    <h3 className="table-card-num">Table {tbl.tableNumber}</h3>
+                    <span className="table-card-meta">
+                      👥 {tbl.capacity} seats {tbl.name ? `• ${tbl.name}` : ''}
                     </span>
                   </div>
                   <span
-                    style={{
-                      background: badge.bg,
-                      color: badge.color,
-                      border: `1px solid ${badge.border}`,
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      padding: '3px 8px',
-                      borderRadius: '12px',
-                    }}
+                    className="table-status-pill"
+                    style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
                   >
-                    {badge.label}
+                    <span className="status-dot" />
+                    {isCartActiveOnThisTable ? 'In Cart' : badge.label}
                   </span>
                 </div>
 
-                {/* Running Order Info */}
+                {/* Hero Bill Amount Block (High-Brand Minimal Display) */}
                 {hasOrder ? (
-                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', marginBottom: '12px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      <span style={{ color: '#475569' }}>Order:</span>
-                      <strong style={{ color: '#0f172a' }}>{tbl.orderNumber || 'Active Order'}</strong>
+                  <div className="table-card-bill-hero">
+                    <div className="bill-hero-top">
+                      <span className="bill-hero-label">BILL TOTAL</span>
+                      <span className="bill-hero-ticket">
+                        {tbl.orderNumber || (isCartActiveOnThisTable ? 'Draft Cart' : 'Active Ticket')}
+                      </span>
                     </div>
 
-                    {tbl.durationMinutes !== undefined && (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                        <span style={{ color: '#475569' }}>Seated For:</span>
-                        <span style={{ color: '#0369a1', fontWeight: 600 }}>⏱ {tbl.durationMinutes} mins</span>
+                    <div className="bill-hero-amount-row">
+                      <span className="bill-hero-amount">₹{displayTotal.toFixed(2)}</span>
+                      {tbl.durationMinutes !== undefined && (
+                        <span className="bill-hero-timer">⏱ {tbl.durationMinutes}m</span>
+                      )}
+                    </div>
+
+                    {isCartActiveOnThisTable && (
+                      <div className="bill-hero-pending-alert">
+                        <span>⚡ New In Cart (+{pendingCartItems.length} items)</span>
+                        <span>+₹{pendingTotal.toFixed(2)}</span>
                       </div>
                     )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
-                      <span style={{ color: '#475569' }}>Total:</span>
-                      <strong>₹{(tbl.currentTotal || 0).toFixed(2)}</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                      <span style={{ color: '#475569' }}>Balance Due:</span>
-                      <strong style={{ color: (tbl.amountDue || 0) > 0 ? '#dc2626' : '#15803d' }}>
-                        ₹{(tbl.amountDue || 0).toFixed(2)}
-                      </strong>
-                    </div>
                   </div>
                 ) : (
-                  <div style={{ color: '#16a34a', background: '#f0fdf4', borderRadius: '8px', padding: '10px', fontSize: '0.82rem', marginBottom: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>●</span> Available • Tap card to open menu
+                  <div className="table-card-available-block">
+                    <span>●</span> Table Available • Tap to open menu
+                  </div>
+                )}
+
+                {/* Itemized Items Section (What items are on this table) */}
+                {allTableItems.length > 0 && (
+                  <div className="table-card-items-section">
+                    <div className="items-section-header">
+                      <span>Ordered Items ({allTableItems.length})</span>
+                      <span className="items-section-count">{totalUnits} units</span>
+                    </div>
+
+                    <div className="table-card-items-list">
+                      {allTableItems.map((item, idx) => (
+                        <div key={idx} className="table-item-row">
+                          <div className="item-left">
+                            <span className="item-qty-pill">{item.quantity}×</span>
+                            <span className="item-name-span">{item.name}</span>
+                            {item.variant && (
+                              <span className="item-variant-span">({item.variant})</span>
+                            )}
+                            {item.isPending && (
+                              <span className="item-pending-badge">In Cart</span>
+                            )}
+                          </div>
+                          {item.lineTotal != null && (
+                            <span className="item-price-span">₹{item.lineTotal.toFixed(2)}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                {/* Select for POS */}
+              {/* Action Buttons Row */}
+              <div className="table-card-actions">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className={`btn-card-action ${isSelected ? 'btn-card-current' : 'btn-card-take'}`}
                   onClick={() => onSelectTable(tbl)}
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    borderRadius: '6px',
-                    background: isSelected ? '#2563eb' : '#f1f5f9',
-                    color: isSelected ? '#fff' : '#1e293b',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
                 >
-                  {isSelected ? '✓ Current' : 'Take Order'}
+                  {isSelected ? '✓ In Menu' : 'Take Order'}
                 </button>
 
-                {/* If running order exists, allow viewing and adding items */}
-                {hasOrder && tbl.currentOrderId && (
+                {hasOrder && (
                   <>
                     <button
                       type="button"
-                      className="btn btn-primary"
-                      onClick={() => onOpenRunningOrder(tbl.currentOrderId!)}
-                      style={{
-                        padding: '8px 12px',
-                        fontSize: '0.8rem',
-                        fontWeight: 700,
-                        borderRadius: '6px',
-                        background: '#0284c7',
-                        color: '#fff',
-                        border: 'none',
-                        cursor: 'pointer',
+                      className="btn-card-action btn-card-add-items"
+                      onClick={() => {
+                        if (tbl.currentOrderId) {
+                          onOpenRunningOrder(tbl.currentOrderId);
+                        } else {
+                          onSelectTable(tbl);
+                        }
                       }}
+                      title="Add more items to this table"
                     >
                       ➕ Add Items
                     </button>
 
-                    {onGenerateBill && tbl.status === 'RUNNING' && (
+                    {onPrintKot && tbl.currentOrderId && (
                       <button
                         type="button"
-                        onClick={() => onGenerateBill(tbl.currentOrderId!)}
-                        style={{
-                          padding: '8px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: '#f59e0b',
-                          color: '#fff',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        🧾 Bill
-                      </button>
-                    )}
-
-                    {onPrintKot && (
-                      <button
-                        type="button"
+                        className="btn-card-action btn-card-kot"
                         onClick={() => onPrintKot(tbl.currentOrderId!)}
-                        title="Print Kitchen Ticket for Table"
-                        style={{
-                          padding: '8px 10px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: '#f1f5f9',
-                          color: '#475569',
-                          border: '1px solid #cbd5e1',
-                          cursor: 'pointer',
-                        }}
+                        title="Print Kitchen Order Ticket (KOT)"
                       >
                         👨‍🍳 KOT
                       </button>
                     )}
 
-                    {onPrintBill && (
+                    {(onPrintBill || onGenerateBill) && tbl.currentOrderId && (
                       <button
                         type="button"
-                        onClick={() => onPrintBill(tbl.currentOrderId!)}
-                        title="Print Bill Receipt for Table"
-                        style={{
-                          padding: '8px 10px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: '#fef3c7',
-                          color: '#b45309',
-                          border: '1px solid #fde68a',
-                          cursor: 'pointer',
+                        className="btn-card-action btn-card-bill"
+                        onClick={() => {
+                          if (onPrintBill) onPrintBill(tbl.currentOrderId!);
+                          else if (onGenerateBill) onGenerateBill(tbl.currentOrderId!);
                         }}
+                        title="Print Tax Invoice / Bill"
                       >
-                        🖨️ Print
+                        🧾 Bill
                       </button>
                     )}
 
-                    {onCollectPayment && (tbl.status === 'RUNNING' || tbl.status === 'BILL_REQUESTED' || tbl.status === 'PAYMENT_DUE') && (
+                    {onCollectPayment && tbl.currentOrderId && (
                       <button
                         type="button"
+                        className="btn-card-action btn-card-pay"
                         onClick={() => onCollectPayment(tbl.currentOrderId!)}
-                        style={{
-                          padding: '8px 12px',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          borderRadius: '6px',
-                          background: '#10b981',
-                          color: '#fff',
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
+                        title="Collect Payment & Settle Table"
                       >
                         💳 Pay
                       </button>
@@ -449,44 +417,25 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
                   </>
                 )}
 
-                {/* Mark Available / Release Table */}
                 {tbl.status === 'PAID_CLEARING' && (
                   <button
                     type="button"
+                    className="btn-card-action btn-card-pay"
                     onClick={() => onUpdateTableStatus(tbl.id, 'AVAILABLE')}
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      borderRadius: '6px',
-                      background: '#15803d',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
                   >
                     Clear & Free
                   </button>
                 )}
 
-                {/* Delete table if available */}
-                {(tbl.status === 'AVAILABLE' || tbl.status === 'CLOSED') && (
+                {(tbl.status === 'AVAILABLE' || tbl.status === 'CLOSED') && !isCartActiveOnThisTable && (
                   <button
                     type="button"
+                    className="btn-card-delete"
                     title="Delete Table"
                     onClick={() => {
                       if (window.confirm(`Delete Table ${tbl.tableNumber}?`)) {
                         onDeleteTable(tbl.id);
                       }
-                    }}
-                    style={{
-                      padding: '6px 8px',
-                      fontSize: '0.8rem',
-                      borderRadius: '6px',
-                      background: 'transparent',
-                      color: '#94a3b8',
-                      border: '1px solid #e2e8f0',
-                      cursor: 'pointer',
                     }}
                   >
                     🗑

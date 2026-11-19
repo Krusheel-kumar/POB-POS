@@ -198,7 +198,22 @@ export interface CalculationResponse {
 
 export type PaymentPolicy = 'PAY_FIRST' | 'PAY_LATER' | 'FLEXIBLE';
 
-export type TableStatus = 'AVAILABLE' | 'RUNNING' | 'BILL_REQUESTED' | 'PAYMENT_DUE' | 'PAID_CLEARING' | 'CLOSED';
+export interface RestaurantTableItem {
+  name: string;
+  variant?: string;
+  quantity: number;
+  lineTotal?: number;
+  isPending?: boolean;
+}
+
+export type TableStatus =
+  | 'AVAILABLE'
+  | 'RUNNING'
+  | 'OCCUPIED'
+  | 'BILL_REQUESTED'
+  | 'PAYMENT_DUE'
+  | 'PAID_CLEARING'
+  | 'CLOSED';
 
 export interface RestaurantTable {
   id: string;
@@ -212,6 +227,7 @@ export interface RestaurantTable {
   currentTotal?: number;
   amountPaid?: number;
   amountDue?: number;
+  items?: RestaurantTableItem[];
 }
 
 export interface TableRequest {

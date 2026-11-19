@@ -1185,6 +1185,9 @@ export function App() {
           <TableManagementView
             tables={tables}
             selectedTableId={selectedTable?.id ?? null}
+            activeCartTableId={orderType === 'DINE_IN' && selectedTable ? selectedTable.id : null}
+            activeCartItems={orderType === 'DINE_IN' && selectedTable ? cartItems : []}
+            activeCartTotal={orderType === 'DINE_IN' && selectedTable ? (backendCalculation?.totalAmount ?? cartItems.reduce((s, i) => s + i.lineTotal, 0)) : 0}
             onSelectTable={handleSelectTable}
             onOpenRunningOrder={handleOpenRunningOrder}
             onCollectPayment={handleOpenPayment}
@@ -1205,6 +1208,9 @@ export function App() {
               <TableManagementView
                 tables={tables}
                 selectedTableId={selectedTable?.id ?? null}
+                activeCartTableId={orderType === 'DINE_IN' && selectedTable ? selectedTable.id : null}
+                activeCartItems={orderType === 'DINE_IN' && selectedTable ? cartItems : []}
+                activeCartTotal={orderType === 'DINE_IN' && selectedTable ? (backendCalculation?.totalAmount ?? cartItems.reduce((s, i) => s + i.lineTotal, 0)) : 0}
                 onSelectTable={handleSelectTable}
                 onOpenRunningOrder={handleOpenRunningOrder}
                 onCollectPayment={handleOpenPayment}

@@ -951,7 +951,29 @@ class MockStore {
 
   // Tables
   public getTables(): RestaurantTable[] {
-    return this.getStorage('tables', INITIAL_TABLES);
+    const list = this.getStorage('tables', INITIAL_TABLES);
+    const orders = this.getOrders();
+    return list.map((tbl) => {
+      if (tbl.currentOrderId) {
+        const order = orders.find((o) => o.id === tbl.currentOrderId);
+        if (order) {
+          tbl.orderNumber = order.orderNumber;
+          tbl.currentTotal = order.totalAmount;
+          tbl.amountDue = Math.max(0, order.totalAmount - (tbl.amountPaid || 0));
+          tbl.items = (order.items || []).map((it) => ({
+            name: it.productNameSnapshot,
+            variant: it.variantNameSnapshot,
+            quantity: it.quantity,
+            lineTotal: it.lineTotalSnapshot,
+          }));
+          tbl.durationMinutes = Math.max(
+            1,
+            Math.round((Date.now() - new Date(order.createdAt).getTime()) / 60000)
+          );
+        }
+      }
+      return tbl;
+    });
   }
 
   public createTable(tableNumber: string, capacity: number): RestaurantTable {
@@ -980,6 +1002,7 @@ class MockStore {
       tbl.amountPaid = undefined;
       tbl.amountDue = undefined;
       tbl.durationMinutes = undefined;
+      tbl.items = undefined;
     }
     this.setStorage('tables', list);
     return tbl;
@@ -1093,8 +1116,10 @@ class MockStore {
     const totalAmount = Number((subtotal + taxAmount).toFixed(2));
 
     let assignedTable: RestaurantTable | undefined;
-    if (req.tableId) {
-      assignedTable = tables.find((t) => t.id === req.tableId);
+    if (req.tableId || req.tableNumber) {
+      assignedTable = tables.find(
+        (t) => (req.tableId && t.id === req.tableId) || (req.tableNumber && t.tableNumber === req.tableNumber)
+      );
       if (assignedTable) {
         assignedTable.status = 'RUNNING';
         assignedTable.currentOrderId = orderId;
@@ -1103,6 +1128,12 @@ class MockStore {
         assignedTable.currentTotal = totalAmount;
         assignedTable.amountPaid = 0;
         assignedTable.amountDue = totalAmount;
+        assignedTable.items = orderItems.map((it) => ({
+          name: it.productNameSnapshot,
+          variant: it.variantNameSnapshot,
+          quantity: it.quantity,
+          lineTotal: it.lineTotalSnapshot,
+        }));
         this.setStorage('tables', tables);
       }
     }
@@ -1222,10 +1253,16 @@ class MockStore {
     order.totalAmount = Number((order.subtotal + order.taxAmount).toFixed(2));
 
     if (order.table) {
-      const tbl = tables.find((t) => t.id === order.table?.id);
+      const tbl = tables.find((t) => t.id === order.table?.id || t.tableNumber === order.table?.tableNumber);
       if (tbl) {
         tbl.currentTotal = order.totalAmount;
         tbl.amountDue = Math.max(0, order.totalAmount - (tbl.amountPaid || 0));
+        tbl.items = order.items.map((it) => ({
+          name: it.productNameSnapshot,
+          variant: it.variantNameSnapshot,
+          quantity: it.quantity,
+          lineTotal: it.lineTotalSnapshot,
+        }));
         this.setStorage('tables', tables);
       }
     }
