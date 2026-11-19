@@ -71,11 +71,14 @@ export class PosApiClient {
     }
   }
 
-  private getHeaders(): HeadersInit {
+  private getHeaders(hasBody: boolean = true): HeadersInit {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+
+    if (hasBody) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (this.config.tenantId) {
       headers['X-Tenant-ID'] = this.config.tenantId;
@@ -99,7 +102,7 @@ export class PosApiClient {
     try {
       const res = await fetch(`${this.config.baseUrl}/api/v1/categories`, {
         method: 'GET',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(false),
       });
 
       if (!res.ok) {
@@ -129,7 +132,7 @@ export class PosApiClient {
 
       const res = await fetch(url.toString(), {
         method: 'GET',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(false),
       });
 
       if (!res.ok) {
@@ -150,7 +153,7 @@ export class PosApiClient {
     try {
       await fetch(`${this.config.baseUrl}/api/v1/catalog/clear-all`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(false),
       });
     } catch (err) {
       console.warn('Backend clear-all notice:', err);
@@ -374,7 +377,7 @@ export class PosApiClient {
     try {
       const res = await fetch(`${this.config.baseUrl}/api/v1/outlets`, {
         method: 'GET',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(false),
       });
 
       if (!res.ok) {
@@ -578,12 +581,12 @@ export class PosApiClient {
 
     const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
     });
 
     if (!res.ok) {
       const errData = await res.json().catch(() => null);
-      throw new Error(errData?.error || errData?.message || `Failed to delete product: ${res.status}`);
+      throw new Error(errData?.message || errData?.error || `Failed to delete product: ${res.status}`);
     }
   }
 
@@ -598,7 +601,7 @@ export class PosApiClient {
     try {
       const res = await fetch(`${this.config.baseUrl}/api/v1/addons`, {
         method: 'GET',
-        headers: this.getHeaders(),
+        headers: this.getHeaders(false),
       });
 
       if (!res.ok) {
@@ -640,17 +643,17 @@ export class PosApiClient {
    * Delete add-on
    */
   public async deleteAddOn(id: string): Promise<void> {
+    mockStore.deleteAddOn(id);
     if (this.demoMode) {
-      mockStore.deleteAddOn(id);
       return;
     }
-    try {
-      await fetch(`${this.config.baseUrl}/api/v1/addons/${id}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-      });
-    } catch {
-      mockStore.deleteAddOn(id);
+    const res = await fetch(`${this.config.baseUrl}/api/v1/addons/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(false),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || errData?.error || `Failed to delete add-on: ${res.status}`);
     }
   }
 
@@ -828,21 +831,19 @@ export class PosApiClient {
    * Delete table
    */
   public async deleteTable(tableId: string): Promise<void> {
+    mockStore.deleteTable(tableId);
     if (this.demoMode) {
-      return mockStore.deleteTable(tableId);
+      return;
     }
 
-    try {
-      const res = await fetch(`${this.config.baseUrl}/api/v1/tables/${tableId}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-      });
+    const res = await fetch(`${this.config.baseUrl}/api/v1/tables/${tableId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(false),
+    });
 
-      if (!res.ok) {
-        throw new Error(`Failed to delete table: ${res.status}`);
-      }
-    } catch {
-      mockStore.deleteTable(tableId);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || errData?.error || `Failed to delete table: ${res.status}`);
     }
   }
 
@@ -1036,7 +1037,7 @@ export class PosApiClient {
 
     const res = await fetch(url.toString(), {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(false),
     });
 
     if (!res.ok) {

@@ -24,6 +24,19 @@ const fastify = (0, fastify_1.default)({
         },
     },
 });
+// Gracefully handle empty body even if client provides Content-Type: application/json
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || body.trim() === '') {
+        return done(null, {});
+    }
+    try {
+        const json = JSON.parse(body);
+        done(null, json);
+    }
+    catch (err) {
+        done(err, undefined);
+    }
+});
 async function startServer() {
     try {
         // 1. CORS Configuration
