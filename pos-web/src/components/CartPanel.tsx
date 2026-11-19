@@ -61,7 +61,6 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const [localCustomerPhone, setLocalCustomerPhone] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('UPI');
   const [autoPrint, setAutoPrint] = useState(true);
-  const [showBreakdown, setShowBreakdown] = useState(false);
 
   const activeCustomerName = customerName !== undefined ? customerName : localCustomerName;
   const handleNameChange = (val: string) => {
@@ -76,12 +75,15 @@ export const CartPanel: React.FC<CartPanelProps> = ({
     onCustomerPhoneChange?.(cleaned);
   };
 
-  // Estimates
+  // Estimates & GST Tax Calculations
   const estimatedSubtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
   const subtotal = backendCalculation?.subtotal ?? estimatedSubtotal;
   const discount = backendCalculation?.discountAmount ?? 0;
-  const tax = backendCalculation?.taxAmount ?? (subtotal * 0.05);
-  const total = backendCalculation?.totalAmount ?? (subtotal - discount + tax);
+  const taxableAmount = backendCalculation?.taxableAmount ?? (subtotal - discount);
+  const cgst = backendCalculation?.cgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
+  const sgst = backendCalculation?.sgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
+  const tax = backendCalculation?.taxAmount ?? Number((cgst + sgst).toFixed(2));
+  const total = backendCalculation?.totalAmount ?? Number((taxableAmount + tax).toFixed(2));
 
   // Strict KOT item removal / reduction guard (Anti-Fraud Manager Approval)
   const isLocked = isKotSent || Boolean(runningOrderId);
@@ -353,45 +355,41 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         )}
 
-        {/* Calculations Summary Card - Collapsible Tax & Subtotal Breakdown */}
-        <div className={`billing-calc-card ${showBreakdown ? 'expanded' : ''}`}>
+        {/* Calculations Summary Card - Clear GST & Tax Breakdown */}
+        <div className="billing-calc-card expanded">
+          <div className="calc-breakdown-row" style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px dashed #cbd5e1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+              <span>Items Subtotal (Taxable):</span>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{subtotal.toFixed(2)}</span>
+            </div>
+            {discount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#16a34a' }}>
+                <span>Discount:</span>
+                <span style={{ fontWeight: 600 }}>-₹{discount.toFixed(2)}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+              <span>CGST (2.5%):</span>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{cgst.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+              <span>SGST (2.5%):</span>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{sgst.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#2563eb', fontWeight: 600 }}>
+              <span>Total GST (5%):</span>
+              <span>₹{tax.toFixed(2)}</span>
+            </div>
+          </div>
+
           {/* Main Total Row (Always Visible) */}
           <div className="calc-total-row">
             <div className="total-label-wrap">
               <span className="total-label">Total Payable</span>
-              <button
-                type="button"
-                className="breakdown-toggle-btn"
-                onClick={() => setShowBreakdown((prev) => !prev)}
-                title={showBreakdown ? 'Hide Tax & Subtotal details' : 'Show Tax & Subtotal details'}
-                aria-expanded={showBreakdown}
-              >
-                <span>{showBreakdown ? 'Hide details' : 'Tax & breakdown'}</span>
-                <span className="direction-arrow">{showBreakdown ? '▲' : '▼'}</span>
-              </button>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Includes ₹{tax.toFixed(2)} GST</span>
             </div>
             <span className="total-amount">₹{total.toFixed(2)}</span>
           </div>
-
-          {/* Hidden Breakdown: Subtotal, Discount & Tax (Revealed by direction button) */}
-          {showBreakdown && (
-            <div className="calc-breakdown-row expanded-details">
-              <span className="calc-mini-item">
-                <span className="mini-label">Subtotal:</span>
-                <span className="mini-val">₹{subtotal.toFixed(2)}</span>
-              </span>
-              {discount > 0 && (
-                <span className="calc-mini-item discount">
-                  <span className="mini-label">Disc:</span>
-                  <span className="mini-val">-₹{discount.toFixed(2)}</span>
-                </span>
-              )}
-              <span className="calc-mini-item">
-                <span className="mini-label">GST (5%):</span>
-                <span className="mini-val">₹{tax.toFixed(2)}</span>
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Payment Method Selector */}

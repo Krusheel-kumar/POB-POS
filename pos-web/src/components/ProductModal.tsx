@@ -463,6 +463,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             <span>Add to Cart</span>
             <span>—</span>
             <span>₹{(currentUnitPrice * quantity).toFixed(2)}</span>
+            <span style={{ fontSize: '0.85em', opacity: 0.85 }}>(+5% GST)</span>
           </button>
         </div>
       </div>

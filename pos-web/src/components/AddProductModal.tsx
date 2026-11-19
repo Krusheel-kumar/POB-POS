@@ -1150,6 +1150,17 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     required
                   />
                 </div>
+                {prodPrice && Number(prodPrice) > 0 ? (
+                  <div style={{ marginTop: '6px', fontSize: '0.76rem', color: '#475569', background: '#f8fafc', padding: '6px 10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <span>🧾 <strong>GST Calculation (5%):</strong></span>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                      <span>Base: <strong>₹{Number(prodPrice).toFixed(2)}</strong></span>
+                      <span>• CGST (2.5%): <strong>₹{(Number(prodPrice) * 0.025).toFixed(2)}</strong></span>
+                      <span>• SGST (2.5%): <strong>₹{(Number(prodPrice) * 0.025).toFixed(2)}</strong></span>
+                      <span style={{ color: '#0f172a' }}>• Total: <strong>₹{(Number(prodPrice) * 1.05).toFixed(2)}</strong></span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

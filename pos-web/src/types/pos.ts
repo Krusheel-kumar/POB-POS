@@ -188,9 +188,12 @@ export interface CalculationResponse {
   subtotal: number;
   discountAmount: number;
   taxableAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
   taxAmount: number;
   totalAmount: number;
-  items: CalculationItemDetail[];
+  roundOffAmount?: number;
+  items?: CalculationItemDetail[];
 }
 
 export type PaymentPolicy = 'PAY_FIRST' | 'PAY_LATER' | 'FLEXIBLE';

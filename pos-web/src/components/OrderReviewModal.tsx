@@ -31,8 +31,11 @@ export const OrderReviewModal: React.FC<OrderReviewModalProps> = ({
   const estimatedSubtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
   const subtotal = calculation?.subtotal ?? estimatedSubtotal;
   const discount = calculation?.discountAmount ?? 0;
-  const tax = calculation?.taxAmount ?? 0;
-  const total = calculation?.totalAmount ?? (subtotal - discount + tax);
+  const taxableAmount = calculation?.taxableAmount ?? (subtotal - discount);
+  const cgst = calculation?.cgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
+  const sgst = calculation?.sgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
+  const tax = calculation?.taxAmount ?? Number((cgst + sgst).toFixed(2));
+  const total = calculation?.totalAmount ?? Number((taxableAmount + tax).toFixed(2));
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="review-title">
@@ -100,7 +103,15 @@ export const OrderReviewModal: React.FC<OrderReviewModalProps> = ({
               </div>
             )}
             <div className="summary-row">
-              <span>Estimated Taxes:</span>
+              <span>CGST (2.5%):</span>
+              <span>₹{cgst.toFixed(2)}</span>
+            </div>
+            <div className="summary-row">
+              <span>SGST (2.5%):</span>
+              <span>₹{sgst.toFixed(2)}</span>
+            </div>
+            <div className="summary-row" style={{ color: '#2563eb', fontWeight: 600 }}>
+              <span>Total GST (5%):</span>
               <span>₹{tax.toFixed(2)}</span>
             </div>
             <div className="summary-row total-row">
