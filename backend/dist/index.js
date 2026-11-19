@@ -50,9 +50,6 @@ async function startServer() {
             version: '1.0.0',
             timestamp: new Date().toISOString(),
         }));
-        fastify.head('/', async (req, reply) => {
-            reply.status(200).send();
-        });
         fastify.get('/health', async () => ({
             status: 'UP',
             database: database_js_1.isPostgresActive ? 'POSTGRESQL' : 'SQLITE_WAL',
