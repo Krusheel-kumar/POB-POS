@@ -83,7 +83,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const cgst = backendCalculation?.cgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
   const sgst = backendCalculation?.sgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
   const tax = backendCalculation?.taxAmount ?? Number((cgst + sgst).toFixed(2));
-  const total = backendCalculation?.totalAmount ?? Number((taxableAmount + tax).toFixed(2));
+  const rawTotal = Number((taxableAmount + tax).toFixed(2));
+  const total = backendCalculation?.totalAmount ?? Math.round(rawTotal);
+  const roundOff = backendCalculation?.roundOffAmount ?? Number((total - rawTotal).toFixed(2));
 
   // Strict KOT item removal / reduction guard (Anti-Fraud Manager Approval)
   const isLocked = isKotSent || Boolean(runningOrderId);
@@ -380,13 +382,23 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               <span>Total GST (5%):</span>
               <span>₹{tax.toFixed(2)}</span>
             </div>
+            {roundOff !== 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+                <span>Round Off:</span>
+                <span style={{ fontWeight: 600, color: roundOff > 0 ? '#16a34a' : '#475569' }}>
+                  {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Main Total Row (Always Visible) */}
           <div className="calc-total-row">
             <div className="total-label-wrap">
               <span className="total-label">Total Payable</span>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Includes ₹{tax.toFixed(2)} GST</span>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>
+                Includes ₹{tax.toFixed(2)} GST{roundOff !== 0 ? ` (Round Off: ${roundOff > 0 ? '+' : ''}₹${roundOff.toFixed(2)})` : ''}
+              </span>
             </div>
             <span className="total-amount">₹{total.toFixed(2)}</span>
           </div>

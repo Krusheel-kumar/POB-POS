@@ -25,7 +25,8 @@ async function billingRoutes(fastify) {
         const cgstAmount = Number((taxableAmount * 0.025).toFixed(2));
         const sgstAmount = Number((taxableAmount * 0.025).toFixed(2));
         const taxAmount = Number((cgstAmount + sgstAmount).toFixed(2));
-        const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+        const rawTotal = Number((taxableAmount + taxAmount).toFixed(2));
+        const totalAmount = Math.round(rawTotal); // Petpooja nearest rupee round-off
         // Sequential GST Invoice Number: POB-FLG-YYYY-0001
         const year = new Date().getFullYear();
         const seq = await (0, database_js_1.getNextSequence)(`bills-${outletId}-${year}`);
@@ -179,6 +180,7 @@ async function formatBillResponse(row) {
         cgstAmount: Number(row.cgst_amount),
         sgstAmount: Number(row.sgst_amount),
         taxAmount: Number(row.tax_amount),
+        roundOffAmount: Number((Number(row.total_amount) - (Number(row.taxable_amount) + Number(row.tax_amount))).toFixed(2)),
         totalAmount: Number(row.total_amount),
         paidAmount: Number(row.paid_amount),
         status: String(row.status),

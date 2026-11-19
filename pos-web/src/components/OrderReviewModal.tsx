@@ -35,7 +35,9 @@ export const OrderReviewModal: React.FC<OrderReviewModalProps> = ({
   const cgst = calculation?.cgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
   const sgst = calculation?.sgstAmount ?? Number((taxableAmount * 0.025).toFixed(2));
   const tax = calculation?.taxAmount ?? Number((cgst + sgst).toFixed(2));
-  const total = calculation?.totalAmount ?? Number((taxableAmount + tax).toFixed(2));
+  const rawTotal = Number((taxableAmount + tax).toFixed(2));
+  const total = calculation?.totalAmount ?? Math.round(rawTotal);
+  const roundOff = calculation?.roundOffAmount ?? Number((total - rawTotal).toFixed(2));
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="review-title">
@@ -114,6 +116,14 @@ export const OrderReviewModal: React.FC<OrderReviewModalProps> = ({
               <span>Total GST (5%):</span>
               <span>₹{tax.toFixed(2)}</span>
             </div>
+            {roundOff !== 0 && (
+              <div className="summary-row" style={{ color: '#64748b' }}>
+                <span>Round Off:</span>
+                <span style={{ fontWeight: 600, color: roundOff > 0 ? '#16a34a' : '#475569' }}>
+                  {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                </span>
+              </div>
+            )}
             <div className="summary-row total-row">
               <span>Final Total:</span>
               <span>₹{total.toFixed(2)}</span>

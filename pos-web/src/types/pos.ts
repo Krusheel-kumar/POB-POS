@@ -280,6 +280,7 @@ export interface Order {
   discountAmount: number;
   taxableAmount: number;
   taxAmount: number;
+  roundOffAmount?: number;
   totalAmount: number;
   items?: OrderItem[];
   customerNotes?: string;
@@ -309,6 +310,7 @@ export interface Bill {
   cgstAmount?: number;
   sgstAmount?: number;
   taxAmount: number;
+  roundOffAmount?: number;
   totalAmount: number;
   paidAmount: number;
   notes?: string;

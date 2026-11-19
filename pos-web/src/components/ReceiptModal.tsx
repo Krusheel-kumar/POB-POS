@@ -67,6 +67,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const isPaid = bill?.status === 'PAID' || order?.status === 'BILLED';
   const targetOrderId = order?.id || bill?.orderId || bill?.order?.id;
 
+  const billTaxable = bill?.taxableAmount ?? (order?.taxableAmount ?? (bill?.subtotal ?? (order?.subtotal ?? 249)));
+  const billTax = bill?.taxAmount ?? (order?.taxAmount ?? 12.45);
+  const rawTotal = Number((billTaxable + billTax).toFixed(2));
+  const finalTotal = bill?.totalAmount ?? (order?.totalAmount ?? Math.round(rawTotal));
+  const roundOff = bill?.roundOffAmount ?? Number((finalTotal - rawTotal).toFixed(2));
+
   return (
     <div className="receipt-modal-backdrop" role="dialog" aria-modal="true">
       <div className="receipt-modal-container">
@@ -241,16 +247,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <span>SGST @ 2.5%:</span>
                   <span>₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</span>
                 </div>
+                {roundOff !== 0 && (
+                  <div className="calc-row">
+                    <span>Round Off:</span>
+                    <span>{roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
+                  </div>
+                )}
                 <div className="slip-divider">========================================</div>
                 <div className="calc-row grand-total">
                   <span>NET TOTAL:</span>
-                  <span className="grand-val">₹{(bill?.totalAmount || order?.totalAmount || 261.45).toFixed(2)}</span>
+                  <span className="grand-val">₹{finalTotal.toFixed(2)}</span>
                 </div>
                 <div className="slip-divider">========================================</div>
                 <div className="calc-row">
                   <span>Settled Amount:</span>
                   <span className="paid-tag">
-                    ₹{(bill?.paidAmount || order?.totalAmount || 261.45).toFixed(2)}
+                    ₹{(bill?.paidAmount || finalTotal).toFixed(2)}
                   </span>
                 </div>
                 <div className="calc-row">

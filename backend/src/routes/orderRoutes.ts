@@ -88,7 +88,8 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
     const discountAmount = 0.0;
     const taxableAmount = subtotal - discountAmount;
     const taxAmount = Number((taxableAmount * 0.05).toFixed(2)); // 5% GST (2.5% CGST + 2.5% SGST)
-    const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+    const rawTotal = Number((taxableAmount + taxAmount).toFixed(2));
+    const totalAmount = Math.round(rawTotal); // Petpooja nearest rupee round-off
 
     // Insert Order
     await db.execute({
@@ -346,7 +347,9 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
     const cgstAmount = Number((taxableAmount * 0.025).toFixed(2));
     const sgstAmount = Number((taxableAmount * 0.025).toFixed(2));
     const taxAmount = Number((cgstAmount + sgstAmount).toFixed(2));
-    const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+    const rawTotal = Number((taxableAmount + taxAmount).toFixed(2));
+    const totalAmount = Math.round(rawTotal); // Petpooja nearest rupee round-off
+    const roundOffAmount = Number((totalAmount - rawTotal).toFixed(2));
 
     return reply.send({
       subtotal,
@@ -356,7 +359,7 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
       sgstAmount,
       taxAmount,
       totalAmount,
-      roundOffAmount: 0,
+      roundOffAmount,
     });
   });
 

@@ -65,7 +65,8 @@ async function orderRoutes(fastify) {
         const discountAmount = 0.0;
         const taxableAmount = subtotal - discountAmount;
         const taxAmount = Number((taxableAmount * 0.05).toFixed(2)); // 5% GST (2.5% CGST + 2.5% SGST)
-        const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+        const rawTotal = Number((taxableAmount + taxAmount).toFixed(2));
+        const totalAmount = Math.round(rawTotal); // Petpooja nearest rupee round-off
         // Insert Order
         await database_js_1.db.execute({
             sql: `INSERT INTO orders (id, outlet_id, order_number, order_type, status, customer_name, customer_phone, table_id, table_number, customer_notes, subtotal, discount_amount, taxable_amount, tax_amount, total_amount)
@@ -296,7 +297,9 @@ async function orderRoutes(fastify) {
         const cgstAmount = Number((taxableAmount * 0.025).toFixed(2));
         const sgstAmount = Number((taxableAmount * 0.025).toFixed(2));
         const taxAmount = Number((cgstAmount + sgstAmount).toFixed(2));
-        const totalAmount = Number((taxableAmount + taxAmount).toFixed(2));
+        const rawTotal = Number((taxableAmount + taxAmount).toFixed(2));
+        const totalAmount = Math.round(rawTotal); // Petpooja nearest rupee round-off
+        const roundOffAmount = Number((totalAmount - rawTotal).toFixed(2));
         return reply.send({
             subtotal,
             discountAmount,
@@ -305,7 +308,7 @@ async function orderRoutes(fastify) {
             sgstAmount,
             taxAmount,
             totalAmount,
-            roundOffAmount: 0,
+            roundOffAmount,
         });
     });
     // --- ADD ITEMS TO EXISTING ORDER (Table Top-up) ---
