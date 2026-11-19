@@ -1825,6 +1825,17 @@
   50% { opacity: 0.75; }
 }
 
+/* Print Rules - Ensure viewport height constraints do not clip output or show scrollbars */
+@media print {
+  html, body, #root, .pos-app-root {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+}
+
 .cart-badge-locked {
   display: inline-flex;
   align-items: center;

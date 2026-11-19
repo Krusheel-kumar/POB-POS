@@ -15,7 +15,7 @@
   border-radius: 12px;
   width: 100%;
   max-width: 490px;
-  max-height: 92vh;
+  max-height: 94vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
@@ -29,6 +29,7 @@
   padding: 12px 16px;
   background-color: #0f172a;
   color: #fff;
+  flex-shrink: 0;
 }
 
 .modal-title-pill {
@@ -67,13 +68,45 @@
   color: #fff;
 }
 
+/* Scrollable Container outside the paper slip */
+.receipt-modal-scrollable-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px;
+  background-color: #0f172a10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.receipt-modal-scrollable-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.receipt-modal-scrollable-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.receipt-modal-scrollable-body::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+.receipt-modal-scrollable-body::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
 /* Thermal Paper Styling - Bold & High-Contrast Typography */
 .thermal-slip {
   background-color: #ffffff;
-  margin: 16px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
   padding: 24px 22px;
-  border-radius: 6px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   font-family: 'Courier New', Consolas, 'Roboto Mono', 'SF Mono', monospace;
   font-size: 0.96rem;
   font-weight: 800;
@@ -81,8 +114,9 @@
   line-height: 1.45;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
-  overflow-y: auto;
-  max-height: calc(92vh - 100px);
+  overflow: visible;
+  height: auto;
+  max-height: none;
 }
 
 .thermal-header {
@@ -649,10 +683,27 @@
     size: 80mm auto;
   }
   
+  /* Suppress all scrollbars in print mode across ALL elements */
+  *, *::before, *::after {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -661,46 +712,56 @@
     visibility: hidden;
   }
 
-  .receipt-modal-backdrop {
+  .receipt-modal-backdrop,
+  .receipt-modal-container,
+  .receipt-modal-scrollable-body {
     position: static !important;
+    display: block !important;
     background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
-  }
-
-  .receipt-modal-container {
-    background: transparent !important;
+    border: none !important;
     box-shadow: none !important;
     max-width: 100% !important;
+    width: 100% !important;
     max-height: none !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    height: auto !important;
     overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
   }
 
   .printable-area, .printable-area * {
     visibility: visible !important;
     color: #000000 !important;
     border-color: #000000 !important;
-    -webkit-text-stroke: 0.22px #000000;
+    -webkit-text-stroke: 0.15px #000000;
     text-shadow: none !important;
   }
 
   .printable-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 74mm !important;
-    max-width: 74mm !important;
+    position: static !important;
+    display: block !important;
+    width: 76mm !important;
+    max-width: 76mm !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
     margin: 0 auto !important;
     padding: 3mm 1mm !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    overflow-y: visible !important;
     box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
     font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
-    font-size: 10.5pt !important;
+    font-size: 10pt !important;
     font-weight: 800 !important;
     line-height: 1.35 !important;
     background: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .brand-name {

@@ -51,7 +51,127 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const handlePrint = () => {
     const updated = recordOrderPrint(orderKey, mode);
     setPrintHistory(updated);
-    window.print();
+
+    const printElement = document.getElementById('printable-thermal-slip');
+    if (!printElement) {
+      window.print();
+      return;
+    }
+
+    try {
+      // Remove any prior print iframe to keep DOM completely clean
+      const existingIframe = document.getElementById('pos-receipt-print-iframe');
+      if (existingIframe && document.body.contains(existingIframe)) {
+        document.body.removeChild(existingIframe);
+      }
+
+      // Create isolated hidden printing iframe
+      const iframe = document.createElement('iframe');
+      iframe.id = 'pos-receipt-print-iframe';
+      iframe.setAttribute(
+        'style',
+        'position:fixed;top:-9999px;left:-9999px;width:80mm;height:0;border:none;visibility:hidden;'
+      );
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (!doc) {
+        window.print();
+        return;
+      }
+
+      // Preserve active fonts and styles
+      const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+        .map((node) => node.outerHTML)
+        .join('\n');
+
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>${mode === 'BILL' ? 'Tax Invoice' : 'Kitchen KOT'}</title>
+            ${stylesheets}
+            <style>
+              @page {
+                margin: 0;
+                size: 80mm auto;
+              }
+              *, *::before, *::after {
+                -ms-overflow-style: none !important;
+                scrollbar-width: none !important;
+                box-sizing: border-box !important;
+              }
+              *::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .thermal-slip {
+                width: 76mm !important;
+                max-width: 76mm !important;
+                margin: 0 auto !important;
+                padding: 3mm 2mm !important;
+                box-shadow: none !important;
+                border: none !important;
+                border-radius: 0 !important;
+                background: #ffffff !important;
+                overflow: visible !important;
+                overflow-y: visible !important;
+                max-height: none !important;
+                height: auto !important;
+                font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
+                font-size: 10pt !important;
+                font-weight: 800 !important;
+                line-height: 1.35 !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="thermal-slip printable-area">
+              ${printElement.innerHTML}
+            </div>
+          </body>
+        </html>
+      `);
+      doc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.warn('Iframe print error, falling back to window.print():', err);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 2000);
+        }
+      }, 250);
+    } catch (e) {
+      console.warn('Print iframe creation error, using window.print():', e);
+      window.print();
+    }
   };
 
   const formattedDate = new Date().toLocaleString('en-IN', {
@@ -123,8 +243,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </div>
         </div>
 
-        {/* Printable Thermal Slip Area */}
-        <div className="thermal-slip printable-area">
+        {/* Scrollable Modal Body (For Screen Preview Only) */}
+        <div className="receipt-modal-scrollable-body">
+          {/* Printable Thermal Slip Area */}
+          <div className="thermal-slip printable-area" id="printable-thermal-slip">
           {mode === 'BILL' ? (
             /* TAX INVOICE */
             <div className="thermal-bill">
@@ -488,5 +610,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
