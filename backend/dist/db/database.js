@@ -308,7 +308,7 @@ async function getNextSequence(sequenceName) {
     return nextVal;
 }
 async function seedInitialData() {
-    // Outlet
+    // Outlet (Flagship outlet required for POS operations)
     await exports.db.execute({
         sql: `INSERT INTO outlets (id, name, code, address, phone, manager_name, payment_policy)
           VALUES ('outlet-demo-flagship', 'POP O'' BOB - Flagship Film Nagar', 'POB-FN-01',
@@ -316,108 +316,6 @@ async function seedInitialData() {
                   '+91 98765 43210', 'Arjun Varma', 'FLEXIBLE')`,
         args: [],
     });
-    // Categories
-    const categories = [
-        { id: 'cat-boba', name: '🧋 Boba & Specialty Teas', desc: 'Handcrafted boba and specialty milk teas', subcats: JSON.stringify(['Milk Teas', 'Fruit Teas', 'Cheese Foam']) },
-        { id: 'cat-snacks', name: '🍟 Korean Street Snacks', desc: 'Crispy snacks, corn dogs and loaded fries', subcats: JSON.stringify(['Corn Dogs', 'Fries & Dips', 'Bites']) },
-        { id: 'cat-waffles', name: '🧇 Bubble Waffles & Desserts', desc: 'Warm egg waffles with fresh gelato', subcats: JSON.stringify(['Egg Waffles', 'Gelato']) },
-    ];
-    for (const c of categories) {
-        await exports.db.execute({
-            sql: 'INSERT INTO categories (id, name, description, subcategories) VALUES (?, ?, ?, ?)',
-            args: [c.id, c.name, c.desc, c.subcats],
-        });
-    }
-    // Add-ons
-    const addOns = [
-        { id: 'addon-size-reg', name: 'Regular (400ml)', price: 0, cat: 'Choice Of Size', type: 'SINGLE' },
-        { id: 'addon-size-med', name: 'Medium (500ml)', price: 40, cat: 'Choice Of Size', type: 'SINGLE' },
-        { id: 'addon-size-lg', name: 'Large (700ml)', price: 70, cat: 'Choice Of Size', type: 'SINGLE' },
-        { id: 'addon-sweet-100', name: '100% Normal Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-        { id: 'addon-sweet-70', name: '70% Less Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-        { id: 'addon-sweet-50', name: '50% Half Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-        { id: 'addon-sweet-0', name: '0% Sugar-Free', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-        { id: 'addon-ice-reg', name: 'Regular Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-        { id: 'addon-ice-less', name: 'Less Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-        { id: 'addon-ice-none', name: 'No Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-        { id: 'addon-pearls', name: 'Extra Brown Sugar Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-        { id: 'addon-golden-boba', name: 'Golden Honey Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-        { id: 'addon-crystal-boba', name: 'Chewy Crystal Boba', price: 40, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-        { id: 'addon-mango-popping', name: 'Mango Popping Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-        { id: 'addon-lychee-jelly', name: 'Lychee Coconut Jelly', price: 30, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-        { id: 'addon-cheese-foam', name: 'Velvet Cheese Foam Cap', price: 45, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-    ];
-    for (const a of addOns) {
-        await exports.db.execute({
-            sql: 'INSERT INTO add_ons (id, name, price, category, selection_type) VALUES (?, ?, ?, ?, ?)',
-            args: [a.id, a.name, a.price, a.cat, a.type],
-        });
-    }
-    // Products
-    const products = [
-        {
-            id: 'prod-boba-1',
-            catId: 'cat-boba',
-            subcat: 'Milk Teas',
-            name: 'Tiger Brown Sugar Boba',
-            desc: 'Fresh organic milk with warm chewy tapioca pearls and caramelized brown sugar.',
-            sku: 'TEA-TGR-01',
-            price: 240,
-            image: 'https://images.unsplash.com/photo-1558857563-b371f30ca6a5?w=500&auto=format&fit=crop&q=80',
-            badge: 'Bestseller',
-            dietary: 'BEVERAGE',
-        },
-        {
-            id: 'prod-boba-2',
-            catId: 'cat-boba',
-            subcat: 'Milk Teas',
-            name: 'Kyoto Ceremonial Matcha',
-            desc: 'First-harvest Uji matcha hand-whisked over silky textured milk and honey.',
-            sku: 'TEA-MTC-02',
-            price: 260,
-            image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=500&auto=format&fit=crop&q=80',
-            badge: 'Chef Special',
-            dietary: 'BEVERAGE',
-        },
-        {
-            id: 'prod-boba-3',
-            catId: 'cat-boba',
-            subcat: 'Fruit Teas',
-            name: 'Mango Passion Popping Tea',
-            desc: 'Refreshing jasmine green tea infused with ripe alphonso mango purée and popping pearls.',
-            sku: 'TEA-MNG-03',
-            price: 220,
-            image: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=500&auto=format&fit=crop&q=80',
-            badge: 'Summer Special',
-            dietary: 'BEVERAGE',
-        },
-        {
-            id: 'prod-boba-4',
-            catId: 'cat-boba',
-            subcat: 'Milk Teas',
-            name: 'Royal Taro Milk Tea',
-            desc: 'Slow-cooked organic taro paste blended with Ceylon black tea and velvety creamer.',
-            sku: 'TEA-TRO-04',
-            price: 230,
-            image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80',
-            badge: 'Customer Fav',
-            dietary: 'BEVERAGE',
-        },
-    ];
-    for (const p of products) {
-        await exports.db.execute({
-            sql: `INSERT INTO products (id, category_id, subcategory, name, description, sku, base_price, image_url, badge, dietary_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            args: [p.id, p.catId, p.subcat, p.name, p.desc, p.sku, p.price, p.image, p.badge, p.dietary],
-        });
-        // Map all standard add-ons to each boba drink
-        for (const a of addOns) {
-            await exports.db.execute({
-                sql: 'INSERT INTO product_addons (product_id, addon_id) VALUES (?, ?)',
-                args: [p.id, a.id],
-            });
-        }
-    }
     // Restaurant Tables (T1 to T8)
     for (let i = 1; i <= 8; i++) {
         await exports.db.execute({

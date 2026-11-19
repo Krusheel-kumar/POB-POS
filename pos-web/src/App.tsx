@@ -967,15 +967,18 @@ export function App() {
           <button
             type="button"
             className="header-action-pill"
-            onClick={() => {
-              mockStore.resetToDefaults();
-              loadCatalog();
-              setOrderSuccessMessage('Demo data restored to defaults!');
-              setTimeout(() => setOrderSuccessMessage(null), 4000);
+            style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontWeight: 600 }}
+            onClick={async () => {
+              if (window.confirm('Clear all demo products, categories, orders, and reports to start completely fresh?')) {
+                await posApiClient.clearAllDemoData();
+                await loadCatalog();
+                setOrderSuccessMessage('✨ Clean slate activated! All demo data cleared. Ready for your real menu!');
+                setTimeout(() => setOrderSuccessMessage(null), 5000);
+              }
             }}
-            title="Reset demo data"
+            title="Clear all demo products and start fresh with real items"
           >
-            ↻ Reset
+            🧹 Fresh Start (Clear Demo)
           </button>
           <div className="user-avatar-pill">
             <span className="avatar-initials">JD</span>
@@ -1127,37 +1130,32 @@ export function App() {
                 <p>Loading menu from server...</p>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="no-products-view">
-                {categories.filter((c) => c.id !== 'cat-all').length === 0 ? (
-                  <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', margin: '2rem auto', maxWidth: '420px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.4rem' }}>No Menu Items</h3>
-                    <p style={{ color: '#64748b', fontSize: '0.84rem', margin: '0 0 1.25rem' }}>
-                      Add a category and item to get started.
-                    </p>
-                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddProductOpen(true)}
-                        style={{ background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '0.55rem 1.15rem', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer' }}
-                      >
-                        + Add Item
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleLoadSampleCatalog}
-                        style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0.55rem 1rem', fontWeight: 600, fontSize: '0.84rem', cursor: 'pointer' }}
-                      >
-                        Load Sample Menu
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p>
-                    {apiError
-                      ? 'Unable to load catalog from server. Check backend connection.'
-                      : `No products found matching "${searchQuery}"`}
-                  </p>
-                )}
+              <div className="no-products-view" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', background: '#ffffff', borderRadius: '16px', border: '2px dashed #cbd5e1', margin: '2rem auto', maxWidth: '480px' }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✨</div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.5rem' }}>
+                  {products.length === 0 ? 'Fresh Clean Menu Canvas' : 'No Items Found'}
+                </h3>
+                <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 1.5rem', lineHeight: '1.5' }}>
+                  {products.length === 0
+                    ? 'All demo items have been cleared. Ready to start fresh! Click below to add your first real product with your laptop images.'
+                    : `No items found matching "${searchQuery || 'selected category'}".`}
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddProductOpen(true)}
+                    style={{ background: '#7c3aed', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '0.75rem 1.75rem', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)' }}
+                  >
+                    + Add Real Product
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddCategoryOpen(true)}
+                    style={{ background: '#f8fafc', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.75rem 1.25rem', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer' }}
+                  >
+                    + New Category
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="product-grid">

@@ -267,4 +267,35 @@ async function catalogRoutes(fastify) {
         }
         return reply.send({ productId: id, addOnIds });
     });
+    // --- CLEAR ALL DEMO DATA FOR FRESH PRODUCTION ---
+    fastify.post('/api/v1/catalog/clear-all', async (_req, reply) => {
+        try {
+            await database_js_1.db.execute('DELETE FROM order_item_addons');
+            await database_js_1.db.execute('DELETE FROM order_items');
+            await database_js_1.db.execute('DELETE FROM payments');
+            await database_js_1.db.execute('DELETE FROM bills');
+            await database_js_1.db.execute('DELETE FROM kitchen_ticket_item_addons');
+            await database_js_1.db.execute('DELETE FROM kitchen_ticket_items');
+            await database_js_1.db.execute('DELETE FROM kitchen_tickets');
+            await database_js_1.db.execute('DELETE FROM orders');
+            await database_js_1.db.execute('DELETE FROM product_addons');
+            await database_js_1.db.execute('DELETE FROM product_variants');
+            await database_js_1.db.execute('DELETE FROM products');
+            await database_js_1.db.execute('DELETE FROM add_ons');
+            await database_js_1.db.execute('DELETE FROM categories');
+            try {
+                await database_js_1.db.execute("UPDATE sequences SET last_value = 0 WHERE name IN ('invoice_number', 'kot_number', 'order_number')");
+            }
+            catch {
+                // ignore sequence reset error if table schema differs
+            }
+            return reply.send({
+                success: true,
+                message: 'All demo products, categories, orders, and reports have been permanently removed. System is ready for fresh real items.',
+            });
+        }
+        catch (err) {
+            return reply.status(500).send({ error: 'Failed to clear data: ' + err.message });
+        }
+    });
 }

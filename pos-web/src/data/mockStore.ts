@@ -645,6 +645,17 @@ class MockStore {
     this.setStorage('addons', []);
   }
 
+  public clearAllDemoData(): void {
+    if (typeof window === 'undefined') return;
+    this.setStorage('catalog_cleared', true);
+    this.setStorage('categories', []);
+    this.setStorage('products', []);
+    this.setStorage('addons', []);
+    this.setStorage('orders', []);
+    this.setStorage('bills', []);
+    this.setStorage('kitchen_tickets', []);
+  }
+
   public loadSampleCatalog(): void {
     if (typeof window === 'undefined') return;
     this.setStorage('catalog_cleared', false);

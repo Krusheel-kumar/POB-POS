@@ -143,6 +143,21 @@ export class PosApiClient {
   }
 
   /**
+   * Clear all demo products, categories, orders, and reports for a fresh production start
+   */
+  public async clearAllDemoData(): Promise<void> {
+    mockStore.clearAllDemoData();
+    try {
+      await fetch(`${this.config.baseUrl}/api/v1/catalog/clear-all`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+    } catch (err) {
+      console.warn('Backend clear-all notice:', err);
+    }
+  }
+
+  /**
    * Pricing calculation
    */
   public async calculatePricing(items: { productId: string; variantId?: string; addOnIds: string[]; quantity: number }[]): Promise<CalculationResponse | null> {

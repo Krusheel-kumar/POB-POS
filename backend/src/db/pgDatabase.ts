@@ -365,7 +365,7 @@ export class PgDatabase {
   public async seedData(): Promise<void> {
     const pool = this.getPool();
 
-    // Outlets
+    // Outlets (Only seed the flagship outlet so system has an active store)
     await pool.query(`
       INSERT INTO outlets (id, name, code, address, phone, manager_name, payment_policy)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -379,157 +379,6 @@ export class PgDatabase {
       'Arjun Varma',
       'FLEXIBLE'
     ]);
-
-    // Categories
-    const categories = [
-      { id: 'cat-boba', name: '🧋 Boba & Specialty Teas', desc: 'Handcrafted boba and specialty milk teas', subcats: JSON.stringify(['Milk Teas', 'Fruit Teas', 'Cheese Foam']) },
-      { id: 'cat-snacks', name: '🍟 Korean Street Snacks', desc: 'Crispy snacks, corn dogs and loaded fries', subcats: JSON.stringify(['Corn Dogs', 'Fries & Dips', 'Bites']) },
-      { id: 'cat-waffles', name: '🧇 Bubble Waffles & Desserts', desc: 'Warm egg waffles with fresh gelato', subcats: JSON.stringify(['Egg Waffles', 'Gelato']) },
-    ];
-
-    for (const c of categories) {
-      await pool.query(`
-        INSERT INTO categories (id, name, description, subcategories)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (id) DO NOTHING
-      `, [c.id, c.name, c.desc, c.subcats]);
-    }
-
-    // Addons
-    const addOns = [
-      { id: 'addon-size-reg', name: 'Regular (400ml)', price: 0, cat: 'Choice Of Size', type: 'SINGLE' },
-      { id: 'addon-size-med', name: 'Medium (500ml)', price: 40, cat: 'Choice Of Size', type: 'SINGLE' },
-      { id: 'addon-size-lg', name: 'Large (700ml)', price: 70, cat: 'Choice Of Size', type: 'SINGLE' },
-      { id: 'addon-sweet-100', name: '100% Normal Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-      { id: 'addon-sweet-70', name: '70% Less Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-      { id: 'addon-sweet-50', name: '50% Half Sugar', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-      { id: 'addon-sweet-0', name: '0% Sugar-Free', price: 0, cat: 'Choice Of Sweetness', type: 'SINGLE' },
-      { id: 'addon-ice-reg', name: 'Regular Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-      { id: 'addon-ice-less', name: 'Less Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-      { id: 'addon-ice-none', name: 'No Ice', price: 0, cat: 'Choice Of Ice Level', type: 'SINGLE' },
-      { id: 'addon-pearls', name: 'Extra Brown Sugar Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-      { id: 'addon-golden-boba', name: 'Golden Honey Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-      { id: 'addon-crystal-boba', name: 'Chewy Crystal Boba', price: 40, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-      { id: 'addon-mango-popping', name: 'Mango Popping Boba', price: 35, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-      { id: 'addon-lychee-jelly', name: 'Lychee Coconut Jelly', price: 30, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-      { id: 'addon-cheese-foam', name: 'Velvet Cheese Foam Cap', price: 45, cat: 'Choice Of Boba & Toppings', type: 'MULTI' },
-    ];
-
-    for (const a of addOns) {
-      await pool.query(`
-        INSERT INTO add_ons (id, name, price, category, selection_type)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (id) DO NOTHING
-      `, [a.id, a.name, a.price, a.cat, a.type]);
-    }
-
-    // Products
-    const products = [
-      {
-        id: 'prod-boba-1',
-        catId: 'cat-boba',
-        subcat: 'Milk Teas',
-        name: 'Tiger Brown Sugar Boba',
-        desc: 'Fresh organic milk with warm chewy tapioca pearls and caramelized brown sugar.',
-        sku: 'TEA-TGR-01',
-        price: 240,
-        image: 'https://images.unsplash.com/photo-1558857563-b371f30ca6a5?w=500&auto=format&fit=crop&q=80',
-        badge: 'Bestseller',
-        dietary: 'BEVERAGE',
-      },
-      {
-        id: 'prod-boba-2',
-        catId: 'cat-boba',
-        subcat: 'Milk Teas',
-        name: 'Kyoto Ceremonial Matcha',
-        desc: 'First-harvest Uji matcha hand-whisked over silky textured milk and honey.',
-        sku: 'TEA-MTC-02',
-        price: 260,
-        image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=500&auto=format&fit=crop&q=80',
-        badge: 'Chef Special',
-        dietary: 'BEVERAGE',
-      },
-      {
-        id: 'prod-boba-3',
-        catId: 'cat-boba',
-        subcat: 'Fruit Teas',
-        name: 'Mango Passion Popping Tea',
-        desc: 'Refreshing jasmine green tea infused with ripe alphonso mango purée and popping pearls.',
-        sku: 'TEA-MNG-03',
-        price: 220,
-        image: 'https://images.unsplash.com/photo-1546173159-315724a31696?w=500&auto=format&fit=crop&q=80',
-        badge: 'Summer Special',
-        dietary: 'BEVERAGE',
-      },
-      {
-        id: 'prod-boba-4',
-        catId: 'cat-boba',
-        subcat: 'Milk Teas',
-        name: 'Royal Taro Milk Tea',
-        desc: 'Slow-cooked organic taro paste blended with Ceylon black tea and velvety creamer.',
-        sku: 'TEA-TRO-04',
-        price: 230,
-        image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&auto=format&fit=crop&q=80',
-        badge: 'Customer Fav',
-        dietary: 'BEVERAGE',
-      },
-      {
-        id: 'prod-snack-1',
-        catId: 'cat-snacks',
-        subcat: 'Corn Dogs',
-        name: 'Crispy Mozzarella Corn Dog',
-        desc: 'Half mozzarella cheese, half chicken sausage coated in crispy panko and sweet mustard.',
-        sku: 'SNK-CRN-01',
-        price: 180,
-        image: 'https://images.unsplash.com/photo-1628294895950-9805252327bc?w=500&auto=format&fit=crop&q=80',
-        badge: 'Street Hit',
-        dietary: 'NON_VEG',
-      },
-      {
-        id: 'prod-snack-2',
-        catId: 'cat-snacks',
-        subcat: 'Fries & Dips',
-        name: 'Truffle Parmesan Shaker Fries',
-        desc: 'Double-fried crisp potato fries tossed in aromatic white truffle oil and aged parmesan.',
-        sku: 'SNK-FRS-02',
-        price: 160,
-        image: 'https://images.unsplash.com/photo-1576107232684-1279f3908594?w=500&auto=format&fit=crop&q=80',
-        badge: 'New',
-        dietary: 'VEG',
-      },
-      {
-        id: 'prod-waffle-1',
-        catId: 'cat-waffles',
-        subcat: 'Egg Waffles',
-        name: 'Hong Kong Nutella Egg Waffle',
-        desc: 'Freshly baked bubble waffle folded and loaded with Nutella drizzle and crushed hazelnuts.',
-        sku: 'WFL-NUT-01',
-        price: 210,
-        image: 'https://images.unsplash.com/photo-1562376552-0d160a2f238d?w=500&auto=format&fit=crop&q=80',
-        badge: 'Dessert Must',
-        dietary: 'VEG',
-      },
-    ];
-
-    for (const p of products) {
-      await pool.query(`
-        INSERT INTO products (id, category_id, subcategory, name, description, sku, base_price, image_url, badge, dietary_type)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (id) DO NOTHING
-      `, [p.id, p.catId, p.subcat, p.name, p.desc, p.sku, p.price, p.image, p.badge, p.dietary]);
-
-      // Map boba add-ons
-      if (p.catId === 'cat-boba') {
-        for (const a of addOns) {
-          await pool.query(`
-            INSERT INTO product_addons (product_id, addon_id)
-            VALUES ($1, $2)
-            ON CONFLICT DO NOTHING
-          `, [p.id, a.id]);
-        }
-      }
-    }
-
     // Tables
     for (let i = 1; i <= 8; i++) {
       await pool.query(`
@@ -539,7 +388,7 @@ export class PgDatabase {
       `, [`tbl-fn-${i}`, 'outlet-demo-flagship', `T${i}`, i <= 2 ? 2 : (i <= 6 ? 4 : 6), 'AVAILABLE']);
     }
 
-    console.log('[PostgreSQL] Seed data loaded successfully.');
+    console.log('[PostgreSQL] Outlets and tables initialized (clean catalog ready for real items).');
   }
 
   public async getNextSequence(sequenceName: string): Promise<number> {
