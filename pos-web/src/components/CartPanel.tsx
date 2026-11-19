@@ -63,6 +63,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const [localCustomerPhone, setLocalCustomerPhone] = useState('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('UPI');
   const [autoPrint, setAutoPrint] = useState(true);
+  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
 
   const activeCustomerName = customerName !== undefined ? customerName : localCustomerName;
   const handleNameChange = (val: string) => {
@@ -133,88 +134,95 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
   return (
     <aside className="retail-cart-panel" aria-label="Current Order Cart">
-      {/* Top Header */}
+      {/* Top Clean Header */}
       <div className="retail-cart-header">
         <div className="cart-header-top">
           <div className="cart-header-title">
-            <span className="cart-icon">🧾</span>
-            <strong>
-              {orderType === 'DINE_IN'
-                ? (selectedTableNumber ? `Table ${selectedTableNumber}` : 'Select Table')
-                : 'Counter Bill'}
-            </strong>
-            <span className="counter-status-pill">
-              {orderType === 'DINE_IN'
-                ? (selectedTableNumber ? '● Table Active' : '● No Table')
-                : '● Counter #01'}
-            </span>
-            {orderType === 'DINE_IN' && onChangeTable && (
-              <button
-                type="button"
-                className="cart-change-table-pill-btn"
-                onClick={onChangeTable}
-                title="Change or reassign table"
-              >
-                ⇄ {selectedTableNumber ? 'Change Table' : 'Pick Table'}
-              </button>
+            {orderType === 'DINE_IN' ? (
+              <>
+                <span className="cart-header-table-name">
+                  🪑 {selectedTableNumber ? `Table ${selectedTableNumber}` : 'Select Table'}
+                </span>
+                {runningOrderId && (
+                  <span className="cart-badge-addon-order" title="Adding more items to running check">
+                    Add-on
+                  </span>
+                )}
+                {runningOrderId && onCancelRunningOrder && (
+                  <button
+                    type="button"
+                    className="cart-cancel-addon-link"
+                    onClick={onCancelRunningOrder}
+                    title="Cancel adding items to active check"
+                  >
+                    ✕ Cancel
+                  </button>
+                )}
+                {onChangeTable && (
+                  <button
+                    type="button"
+                    className="cart-change-table-pill-btn"
+                    onClick={onChangeTable}
+                    title="Change or reassign table"
+                  >
+                    ⇄ {selectedTableNumber ? 'Switch' : 'Pick'}
+                  </button>
+                )}
+              </>
+            ) : orderType === 'TAKEAWAY' ? (
+              <span className="cart-header-table-name">🛍️ Takeaway</span>
+            ) : (
+              <span className="cart-header-table-name">⚡ Counter</span>
             )}
-            {isLocked && (
+
+            {isLocked && items.length > 0 && (
               <span className="kot-locked-indicator" title="KOT Dispatched to Kitchen. Modifying items requires Manager PIN.">
-                🔒 KOT Active
+                🔒 KOT Sent
               </span>
             )}
           </div>
-          {items.length > 0 && (
-            <button type="button" className="cart-clear-btn" onClick={handleCartClear}>
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="cart-header-sub">
-          <span className="invoice-preview-tag">#INV-2026-3332</span>
-          <span className="cashier-name-tag">Staff: Cashier JD</span>
+
+          <div className="cart-header-right-actions">
+            <span className="cart-meta-tag">#3332 • Cashier JD</span>
+            {items.length > 0 && (
+              <button
+                type="button"
+                className="cart-clear-btn"
+                onClick={handleCartClear}
+                title="Clear all cart items"
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Customer Name & Mobile Number Card */}
-      <div className="customer-phone-card">
-        <div className="customer-inputs-grid">
-          {/* Customer Name */}
-          <div className="customer-field-box">
-            <div className="phone-card-label">
-              <span>👤 Customer Name</span>
-            </div>
-            <div className="single-input-wrapper">
-              <input
-                type="text"
-                placeholder="e.g. Rahul Sharma"
-                value={activeCustomerName}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className="customer-name-input"
-                aria-label="Customer Name"
-              />
-            </div>
-          </div>
-
-          {/* Customer Mobile */}
-          <div className="customer-field-box">
-            <div className="phone-card-label">
-              <span>📱 Mobile / WhatsApp</span>
-              <span className="digits-hint">10 Digits</span>
-            </div>
-            <div className="phone-input-group">
-              <span className="country-code">+91</span>
-              <input
-                type="tel"
-                maxLength={10}
-                placeholder="98765 43210"
-                value={activeCustomerPhone}
-                onChange={(e) => handlePhoneChange(e.target.value)}
-                className="phone-input"
-                aria-label="Customer Mobile"
-              />
-            </div>
-          </div>
+      {/* Compact Customer Inputs Row */}
+      <div className="customer-compact-card">
+        <div className="customer-compact-input-group">
+          <span className="customer-compact-icon">👤</span>
+          <input
+            type="text"
+            placeholder="Customer Name"
+            value={activeCustomerName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="customer-compact-input"
+            aria-label="Customer Name"
+          />
+        </div>
+        <div className="customer-compact-input-group">
+          <span className="customer-compact-icon">📱</span>
+          <span className="customer-compact-prefix">+91</span>
+          <input
+            type="tel"
+            maxLength={10}
+            placeholder="Mobile (10 digits)"
+            value={activeCustomerPhone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            className="customer-compact-input"
+            aria-label="Customer Mobile"
+          />
         </div>
       </div>
 
@@ -251,27 +259,6 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           );
         })}
       </div>
-
-      {/* Selected Table or Running Order Banner */}
-      {selectedTableNumber && (
-        <div className="table-status-strip">
-          <div>
-            <strong>Table: {selectedTableNumber}</strong>
-            {runningOrderId && (
-              <span className="running-order-subtext"> (Adding to active order)</span>
-            )}
-          </div>
-          {runningOrderId && onCancelRunningOrder && (
-            <button
-              type="button"
-              onClick={onCancelRunningOrder}
-              className="cancel-running-btn"
-            >
-              Cancel Add-on
-            </button>
-          )}
-        </div>
-      )}
 
       {/* Cart Items Area */}
       <div className="retail-cart-body">
@@ -400,50 +387,65 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         )}
 
-        {/* Calculations Summary Card - Clear GST & Tax Breakdown */}
-        <div className="billing-calc-card expanded">
-          <div className="calc-breakdown-row" style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px dashed #cbd5e1' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
-              <span>Items Subtotal (Taxable):</span>
-              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{subtotal.toFixed(2)}</span>
-            </div>
-            {discount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#16a34a' }}>
-                <span>Discount:</span>
-                <span style={{ fontWeight: 600 }}>-₹{discount.toFixed(2)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
-              <span>CGST (2.5%):</span>
-              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{cgst.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
-              <span>SGST (2.5%):</span>
-              <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{sgst.toFixed(2)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#2563eb', fontWeight: 600 }}>
-              <span>Total GST (5%):</span>
-              <span>₹{tax.toFixed(2)}</span>
-            </div>
-            {roundOff !== 0 && (
+        {/* Calculations Summary Card - Collapsible GST & Tax Breakdown */}
+        <div className={`billing-calc-card ${isBreakdownExpanded ? 'expanded' : 'collapsed'}`}>
+          {isBreakdownExpanded && (
+            <div className="calc-breakdown-row" style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px dashed #cbd5e1' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
-                <span>Round Off:</span>
-                <span style={{ fontWeight: 600, color: roundOff > 0 ? '#16a34a' : '#475569' }}>
-                  {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                <span>Items Subtotal (Taxable):</span>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{subtotal.toFixed(2)}</span>
+              </div>
+              {discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#16a34a' }}>
+                  <span>Discount:</span>
+                  <span style={{ fontWeight: 600 }}>-₹{discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+                <span>CGST (2.5%):</span>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{cgst.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+                <span>SGST (2.5%):</span>
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>₹{sgst.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#2563eb', fontWeight: 600 }}>
+                <span>Total GST (5%):</span>
+                <span>₹{tax.toFixed(2)}</span>
+              </div>
+              {roundOff !== 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#64748b' }}>
+                  <span>Round Off:</span>
+                  <span style={{ fontWeight: 600, color: roundOff > 0 ? '#16a34a' : '#475569' }}>
+                    {roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Main Total Row (Always Visible with Direction Chevron) */}
+          <div
+            className="calc-total-row"
+            onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
+            title={isBreakdownExpanded ? 'Click to minimize tax breakdown' : 'Click to view GST breakdown'}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+          >
+            <div className="total-label-wrap">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="total-label">Total Payable</span>
+                <span className="calc-toggle-pill">
+                  {isBreakdownExpanded ? '▲ Hide' : '▼ Details'}
                 </span>
               </div>
-            )}
-          </div>
-
-          {/* Main Total Row (Always Visible) */}
-          <div className="calc-total-row">
-            <div className="total-label-wrap">
-              <span className="total-label">Total Payable</span>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>
-                Includes ₹{tax.toFixed(2)} GST{roundOff !== 0 ? ` (Round Off: ${roundOff > 0 ? '+' : ''}₹${roundOff.toFixed(2)})` : ''}
+              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '1px' }}>
+                Incl. ₹{tax.toFixed(2)} GST{roundOff !== 0 ? ` (Round Off: ${roundOff > 0 ? '+' : ''}₹${roundOff.toFixed(2)})` : ''}
               </span>
             </div>
-            <span className="total-amount">₹{total.toFixed(2)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="total-amount">₹{total.toFixed(2)}</span>
+              <span className="calc-direction-arrow">{isBreakdownExpanded ? '▲' : '▼'}</span>
+            </div>
           </div>
         </div>
 
