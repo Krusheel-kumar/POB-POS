@@ -35,7 +35,7 @@ jobs:
 
       - name: Package Windows Installer
         working-directory: pos-web
-        run: npx electron-builder --win -c.publish=never
+        run: npx electron-builder --win -p never
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
