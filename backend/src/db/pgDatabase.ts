@@ -26,12 +26,14 @@ export class PgDatabase {
       `postgresql://${process.env.PGUSER || 'postgres'}:${encodeURIComponent(process.env.PGPASSWORD || 'postgres')}@${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || '5432'}/${process.env.PGDATABASE || 'pob_pos'}`;
 
     const isRemote =
+      connectionString.includes('dpg-') ||
       connectionString.includes('render.com') ||
       connectionString.includes('neon.tech') ||
       connectionString.includes('supabase.co') ||
       connectionString.includes('railway') ||
       connectionString.includes('sslmode=require') ||
-      process.env.PGSSLMODE === 'require';
+      process.env.PGSSLMODE === 'require' ||
+      (!connectionString.includes('127.0.0.1') && !connectionString.includes('localhost') && Boolean(process.env.DATABASE_URL));
 
     this.pool = new Pool({
       connectionString,
