@@ -21,8 +21,12 @@ export const db = {
 };
 
 export async function initDatabase(): Promise<void> {
+  const isProd = process.env.NODE_ENV === 'production';
+  const connStr = process.env.DATABASE_URL || '';
+  const isLocalDbUrl = connStr.includes('127.0.0.1') || connStr.includes('localhost');
+
   // Test and initialize PostgreSQL if requested or configured
-  if (process.env.DATABASE_TYPE === 'postgres' || process.env.DATABASE_URL) {
+  if ((process.env.DATABASE_TYPE === 'postgres' || process.env.DATABASE_URL) && !(isProd && isLocalDbUrl)) {
     try {
       console.log('[Database] Initializing PostgreSQL schema & connection...');
       await pgDatabase.initSchema();
@@ -31,9 +35,7 @@ export async function initDatabase(): Promise<void> {
         isPostgresActive = true;
         console.log('====================================================');
         console.log('🚀 [Database] CONNECTED TO POSTGRESQL PRODUCTION DB!');
-        console.log(`   Host: ${process.env.PGHOST || 'localhost'}:${process.env.PGPORT || '5432'}`);
         console.log(`   Database: ${process.env.PGDATABASE || 'pob_pos'}`);
-        console.log(`   User: ${process.env.PGUSER || 'postgres'}`);
         console.log('====================================================');
         return;
       }
@@ -41,6 +43,8 @@ export async function initDatabase(): Promise<void> {
       console.warn('[Database] PostgreSQL connection attempt failed:', err.message);
       console.warn('[Database] Falling back to SQLite WAL engine until PostgreSQL credentials are provided.');
     }
+  } else if (isProd && isLocalDbUrl) {
+    console.log('[Database] ℹ️ Cloud production detected. Add your Render PostgreSQL Internal URL to DATABASE_URL in Render Dashboard.');
   }
 
   isPostgresActive = false;

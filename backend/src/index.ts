@@ -18,7 +18,6 @@ const fastify = Fastify({
       },
     },
   },
-  disableRequestLogging: false,
 });
 
 async function startServer() {
@@ -43,7 +42,19 @@ async function startServer() {
     await fastify.register(reportRoutes);
     await fastify.register(outletRoutes);
 
-    // 4. Health Check
+    // 4. Root Welcome & Health Check
+    fastify.get('/', async () => ({
+      name: "Pop O' Bob POS High-Performance Backend API",
+      status: 'ONLINE',
+      database: isPostgresActive ? 'POSTGRESQL' : 'SQLITE_WAL',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+    }));
+
+    fastify.head('/', async (req, reply) => {
+      reply.status(200).send();
+    });
+
     fastify.get('/health', async () => ({
       status: 'UP',
       database: isPostgresActive ? 'POSTGRESQL' : 'SQLITE_WAL',
