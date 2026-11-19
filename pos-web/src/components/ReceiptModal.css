@@ -180,6 +180,64 @@
   margin: 4px 0;
 }
 
+/* Metadata Structured Table (NO Gaps) */
+.thermal-meta-box {
+  margin: 6px 0;
+}
+
+.receipt-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0;
+  font-family: inherit;
+  font-size: 0.90rem;
+  line-height: 1.4;
+}
+
+.receipt-meta-table tr {
+  vertical-align: top;
+}
+
+.receipt-meta-table .meta-key {
+  width: 100px;
+  font-weight: 800;
+  color: #000000;
+  white-space: nowrap;
+  padding: 1.5px 0;
+}
+
+.receipt-meta-table .meta-colon {
+  width: 12px;
+  text-align: center;
+  font-weight: 800;
+  color: #000000;
+  padding: 1.5px 0;
+}
+
+.receipt-meta-table .meta-val {
+  font-weight: 700;
+  color: #000000;
+  padding: 1.5px 0 1.5px 4px;
+  word-break: break-word;
+}
+
+.kot-location-banner {
+  border: 1.5px solid #000000;
+  background-color: #fee2e2;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.kot-location-val {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #991b1b;
+  letter-spacing: 0.5px;
+}
+
+/* Fallback legacy meta-row */
 .thermal-meta {
   display: flex;
   flex-direction: column;
@@ -204,6 +262,79 @@
   color: #000;
 }
 
+/* Fixed HTML Table for Items */
+.thermal-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 6px 0;
+  font-family: inherit;
+}
+
+.thermal-items-table th {
+  font-weight: 900;
+  font-size: 0.88rem;
+  color: #000000;
+  padding: 3px 0;
+  border-bottom: 1px dashed #000000;
+  letter-spacing: 0.5px;
+}
+
+.thermal-items-table td {
+  padding: 4px 0;
+  vertical-align: top;
+  font-size: 0.92rem;
+  color: #000000;
+}
+
+.th-item, .td-item {
+  width: 44%;
+  text-align: left;
+  word-break: break-word;
+}
+
+.th-qty, .td-qty {
+  width: 14%;
+  text-align: center;
+  font-weight: 800;
+}
+
+.th-rate, .td-rate {
+  width: 21%;
+  text-align: right;
+  font-weight: 700;
+  padding-right: 4px;
+}
+
+.th-amt, .td-amt {
+  width: 21%;
+  text-align: right;
+  font-weight: 900;
+}
+
+.table-item-name {
+  font-weight: 800;
+  line-height: 1.25;
+  color: #000000;
+}
+
+.table-item-sub {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #222222;
+  padding-left: 4px;
+  margin-top: 2px;
+}
+
+.table-item-note {
+  font-size: 0.80rem;
+  font-weight: 700;
+  color: #854d0e;
+  padding-left: 4px;
+  margin-top: 1px;
+}
+
+/* Legacy items support */
 .thermal-items-header {
   display: flex;
   font-weight: 900;
@@ -254,6 +385,52 @@
   padding-left: 8px;
 }
 
+/* Totals Structured Table */
+.thermal-totals-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-family: inherit;
+}
+
+.thermal-totals-table td {
+  padding: 2.5px 0;
+}
+
+.calc-label {
+  font-weight: 700;
+  font-size: 0.90rem;
+  color: #000000;
+  text-align: left;
+}
+
+.calc-val {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #000000;
+  text-align: right;
+}
+
+.grand-total-tr .grand-label {
+  font-size: 1.28rem;
+  font-weight: 900;
+  color: #000000;
+  padding: 4px 0;
+}
+
+.grand-total-tr .grand-val {
+  font-size: 1.28rem;
+  font-weight: 900;
+  color: #000000;
+  text-align: right;
+  padding: 4px 0;
+}
+
+.payment-mode-val {
+  font-weight: 800;
+}
+
+/* Legacy totals support */
 .thermal-totals {
   display: flex;
   flex-direction: column;
@@ -804,6 +981,153 @@
   .meta-bold {
     font-weight: 900 !important;
     color: #000000 !important;
+  }
+
+  .thermal-meta-box {
+    margin: 4px 0 !important;
+  }
+
+  .receipt-meta-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 3px 0 !important;
+    font-size: 9pt !important;
+    line-height: 1.35 !important;
+  }
+
+  .receipt-meta-table tr {
+    vertical-align: top !important;
+  }
+
+  .receipt-meta-table .meta-key {
+    width: 30% !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    white-space: nowrap !important;
+    padding: 1.5px 0 !important;
+  }
+
+  .receipt-meta-table .meta-colon {
+    width: 4% !important;
+    text-align: center !important;
+    font-weight: 800 !important;
+    color: #000000 !important;
+    padding: 1.5px 0 !important;
+  }
+
+  .receipt-meta-table .meta-val {
+    width: 66% !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    word-break: break-word !important;
+    padding: 1.5px 0 1.5px 4px !important;
+  }
+
+  .thermal-items-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    margin: 4px 0 !important;
+  }
+
+  .thermal-items-table th {
+    font-weight: 900 !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+    padding: 2px 0 !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 1px dashed #000000 !important;
+  }
+
+  .thermal-items-table td {
+    padding: 3px 0 !important;
+    vertical-align: top !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+  }
+
+  .th-item, .td-item {
+    width: 44% !important;
+    text-align: left !important;
+    word-break: break-word !important;
+  }
+
+  .th-qty, .td-qty {
+    width: 14% !important;
+    text-align: center !important;
+    font-weight: 800 !important;
+  }
+
+  .th-rate, .td-rate {
+    width: 21% !important;
+    text-align: right !important;
+    font-weight: 800 !important;
+    padding-right: 4px !important;
+  }
+
+  .th-amt, .td-amt {
+    width: 21% !important;
+    text-align: right !important;
+    font-weight: 900 !important;
+  }
+
+  .table-item-name {
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    color: #000000 !important;
+  }
+
+  .table-item-sub {
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #111111 !important;
+    padding-left: 4px !important;
+  }
+
+  .table-item-note {
+    font-size: 8pt !important;
+    font-weight: 700 !important;
+    color: #111111 !important;
+    padding-left: 4px !important;
+  }
+
+  .thermal-totals-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 4px 0 !important;
+  }
+
+  .thermal-totals-table td {
+    padding: 1.5px 0 !important;
+  }
+
+  .calc-label {
+    font-weight: 700 !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+    text-align: left !important;
+  }
+
+  .calc-val {
+    font-weight: 800 !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+    text-align: right !important;
+  }
+
+  .grand-total-tr .grand-label {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    padding: 3px 0 !important;
+  }
+
+  .grand-total-tr .grand-val {
+    font-size: 13pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+    text-align: right !important;
+    padding: 3px 0 !important;
   }
 
   .thermal-meta {

@@ -133,12 +133,59 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 max-height: none !important;
                 height: auto !important;
                 font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
-                font-size: 10pt !important;
+                font-size: 9.5pt !important;
                 font-weight: 800 !important;
                 line-height: 1.35 !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
               }
+              .thermal-header { text-align: center !important; margin-bottom: 6px !important; }
+              .brand-name { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1.5px !important; margin: 0 !important; color: #000 !important; text-transform: uppercase !important; }
+              .brand-sub { font-size: 9.5pt !important; font-weight: 800 !important; margin: 2px 0 4px !important; color: #000 !important; }
+              .brand-contact { font-size: 8.5pt !important; font-weight: 700 !important; color: #000 !important; line-height: 1.3 !important; max-width: 74mm !important; margin: 0 auto !important; }
+              .brand-tax-info { font-size: 9pt !important; font-weight: 900 !important; color: #000 !important; margin-top: 4px !important; }
+              .brand-gstin { letter-spacing: 0.5px !important; }
+              .slip-divider { font-size: 8pt !important; letter-spacing: -1px !important; color: #000 !important; font-weight: 900 !important; margin: 4px 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; }
+              .slip-copy-badge { font-size: 8.5pt !important; font-weight: 900 !important; margin: 2px 0 !important; text-align: center !important; }
+              .slip-title { font-weight: 900 !important; font-size: 10.5pt !important; letter-spacing: 0.5px !important; margin: 2px 0 !important; text-align: center !important; }
+              .thermal-meta-box { margin: 6px 0 !important; }
+              .receipt-meta-table { width: 100% !important; border-collapse: collapse !important; margin: 3px 0 !important; font-size: 9pt !important; line-height: 1.35 !important; }
+              .receipt-meta-table tr { vertical-align: top !important; }
+              .receipt-meta-table .meta-key { width: 30% !important; font-weight: 800 !important; color: #000 !important; white-space: nowrap !important; padding: 1.5px 0 !important; }
+              .receipt-meta-table .meta-colon { width: 4% !important; text-align: center !important; font-weight: 800 !important; color: #000 !important; padding: 1.5px 0 !important; }
+              .receipt-meta-table .meta-val { width: 66% !important; font-weight: 700 !important; color: #000 !important; word-break: break-word !important; padding: 1.5px 0 1.5px 4px !important; }
+              .thermal-items-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 4px 0 !important; }
+              .thermal-items-table th { font-weight: 900 !important; font-size: 9pt !important; color: #000 !important; padding: 2px 0 !important; letter-spacing: 0.5px !important; border-bottom: 1px dashed #000 !important; }
+              .thermal-items-table td { padding: 3px 0 !important; vertical-align: top !important; font-size: 9pt !important; color: #000 !important; }
+              .th-item, .td-item { width: 44% !important; text-align: left !important; word-break: break-word !important; }
+              .th-qty, .td-qty { width: 14% !important; text-align: center !important; font-weight: 800 !important; }
+              .th-rate, .td-rate { width: 21% !important; text-align: right !important; font-weight: 800 !important; padding-right: 4px !important; }
+              .th-amt, .td-amt { width: 21% !important; text-align: right !important; font-weight: 900 !important; }
+              .table-item-name { font-weight: 800 !important; line-height: 1.25 !important; color: #000 !important; }
+              .table-item-sub { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
+              .table-item-note { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
+              .thermal-totals-table { width: 100% !important; border-collapse: collapse !important; margin: 4px 0 !important; }
+              .thermal-totals-table td { padding: 1.5px 0 !important; }
+              .calc-label { font-weight: 700 !important; font-size: 9pt !important; color: #000 !important; text-align: left !important; }
+              .calc-val { font-weight: 800 !important; font-size: 9pt !important; color: #000 !important; text-align: right !important; }
+              .grand-total-tr .grand-label { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; padding: 3px 0 !important; }
+              .grand-total-tr .grand-val { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; text-align: right !important; padding: 3px 0 !important; }
+              .paid-tag { font-weight: 900 !important; color: #000 !important; }
+              .slip-footer { text-align: center !important; margin-top: 8px !important; }
+              .footer-fssai-box { font-size: 9pt !important; font-weight: 800 !important; margin: 4px 0 !important; color: #000 !important; }
+              .fssai-number { font-weight: 900 !important; letter-spacing: 0.5px !important; }
+              .qr-box { display: flex !important; flex-direction: column !important; align-items: center !important; margin: 6px 0 !important; }
+              .simulated-qr { font-size: 11pt !important; letter-spacing: 3px !important; color: #000 !important; }
+              .qr-box span { font-size: 7.5pt !important; font-weight: 700 !important; color: #000 !important; }
+              .thank-you-msg { font-weight: 900 !important; font-size: 9.5pt !important; margin: 4px 0 2px !important; color: #000 !important; }
+              .visit-again-sub { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; margin: 0 0 4px !important; }
+              .footer-software { font-size: 7.5pt !important; font-weight: 600 !important; color: #222 !important; }
+              .kot-badge { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; }
+              .kot-number-banner { border: 2px solid #000 !important; padding: 3px 6px !important; display: flex !important; justify-content: center !important; gap: 8px !important; align-items: center !important; }
+              .kot-num-title { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
+              .kot-number { font-size: 18pt !important; font-weight: 900 !important; color: #000 !important; }
+              .kot-location-banner { border: 1.5px solid #000 !important; padding: 4px 6px !important; margin-bottom: 6px !important; font-weight: 900 !important; text-align: center !important; }
+              .kot-location-val { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
               .no-print {
                 display: none !important;
               }
@@ -257,7 +304,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   407, Mezzanine, Road No. 81, Film Nagar, Hyderabad, Telangana
                 </div>
                 <div className="brand-tax-info">
-                  <span className="brand-gstin">GSTIN: 36AABCP1234A1Z9</span>
+                  <span className="brand-gstin">GSTIN/UIN: 36AANFN9623R1Z9</span>
                 </div>
                 <div className="slip-divider">========================================</div>
                 {isDuplicate ? (
@@ -280,122 +327,157 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="slip-divider">========================================</div>
               </div>
 
-              <div className="thermal-meta">
-                <div className="meta-row">
-                  <span className="meta-bold">Invoice:</span>
-                  <span>{bill?.invoiceNumber || (order?.orderNumber ? order.orderNumber.replace('ORD', 'INV') : 'INV-2026-089')}</span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-bold">Date & Time:</span>
-                  <span>{formattedDate}</span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-bold">Order No:</span>
-                  <span>#{order?.orderNumber || bill?.order?.orderNumber || 'ORD-2026-4095'}</span>
-                </div>
-                <div className="meta-row">
-                  <span className="meta-bold">Order Type:</span>
-                  <span>
-                    {order?.orderType ? order.orderType.replace('_', ' ') : 'DINE IN'}
-                    {order?.table ? ` (Table ${order.table.tableNumber})` : ' (Counter Pickup)'}
-                  </span>
-                </div>
-                {(activeCustomerName || activeCustomerPhone) && (
-                  <div className="meta-row customer-row">
-                    <span className="meta-bold">Customer:</span>
-                    <span>{activeCustomerName || 'Walk-in Guest'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}</span>
-                  </div>
-                )}
-                <div className="meta-row">
-                  <span className="meta-bold">Cashier:</span>
-                  <span>POS Terminal #1 (JD)</span>
-                </div>
-              </div>
-
-              <div className="slip-divider">----------------------------------------</div>
-              <div className="thermal-items-header">
-                <span className="col-desc">ITEM</span>
-                <span className="col-qty">QTY</span>
-                <span className="col-rate">RATE</span>
-                <span className="col-amt">AMT</span>
-              </div>
-              <div className="slip-divider">----------------------------------------</div>
-
-              <div className="thermal-items-list">
-                {order?.items && order.items.length > 0 ? (
-                  order.items.map((item, idx) => (
-                    <div key={idx} className="thermal-item-entry">
-                      <div className="item-main-row">
-                        <span className="item-title">{item.productNameSnapshot}</span>
-                        <span className="item-qty">{item.quantity}</span>
-                        <span className="item-rate">
-                          ₹{(item.lineTotalSnapshot / item.quantity).toFixed(2)}
-                        </span>
-                        <span className="item-amount">₹{item.lineTotalSnapshot.toFixed(2)}</span>
-                      </div>
-                      {item.variantNameSnapshot && (
-                        <div className="item-sub-addon">• {item.variantNameSnapshot}</div>
-                      )}
-                      {item.itemNotes && (
-                        <div className="item-sub-note">* Note: {item.itemNotes}</div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="thermal-item-entry">
-                    <div className="item-main-row">
-                      <span className="item-title">AUTHENTIC MILK TEA</span>
-                      <span className="item-qty">1</span>
-                      <span className="item-rate">₹249.00</span>
-                      <span className="item-amount">₹249.00</span>
-                    </div>
-                    <div className="item-sub-addon">• Regular (350ml)</div>
-                  </div>
-                )}
+              {/* Customer, Date & Order Meta (Clean structured table - NO sentence gaps) */}
+              <div className="thermal-meta-box">
+                <table className="receipt-meta-table">
+                  <tbody>
+                    <tr>
+                      <td className="meta-key">Customer</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">{activeCustomerName || 'Walk-in Guest'}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Mobile No</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">
+                        {activeCustomerPhone
+                          ? activeCustomerPhone.startsWith('+91')
+                            ? activeCustomerPhone
+                            : `+91 ${activeCustomerPhone}`
+                          : 'Walk-in'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Date & Time</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">{formattedDate}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Invoice No</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">
+                        {bill?.invoiceNumber || (order?.orderNumber ? order.orderNumber.replace('ORD', 'INV') : 'INV-2026-089')}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Order No</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">
+                        #{order?.orderNumber || bill?.order?.orderNumber || 'ORD-2026-4095'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Order Type</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">
+                        {order?.orderType ? order.orderType.replace('_', ' ') : 'DINE IN'}
+                        {order?.table ? ` (Table ${order.table.tableNumber})` : ' (Counter Pickup)'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Cashier</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">POS Terminal #1 (JD)</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
 
               <div className="slip-divider">----------------------------------------</div>
 
-              <div className="thermal-totals">
-                <div className="calc-row">
-                  <span>Item Subtotal:</span>
-                  <span>₹{(bill?.subtotal || order?.subtotal || 249).toFixed(2)}</span>
-                </div>
-                <div className="calc-row">
-                  <span>CGST @ 2.5%:</span>
-                  <span>₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</span>
-                </div>
-                <div className="calc-row">
-                  <span>SGST @ 2.5%:</span>
-                  <span>₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</span>
-                </div>
-                {roundOff !== 0 && (
-                  <div className="calc-row">
-                    <span>Round Off:</span>
-                    <span>{roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</span>
-                  </div>
-                )}
-                <div className="slip-divider">========================================</div>
-                <div className="calc-row grand-total">
-                  <span>NET TOTAL:</span>
-                  <span className="grand-val">₹{finalTotal.toFixed(2)}</span>
-                </div>
-                <div className="slip-divider">========================================</div>
-                <div className="calc-row">
-                  <span>Settled Amount:</span>
-                  <span className="paid-tag">
-                    ₹{(bill?.paidAmount || finalTotal).toFixed(2)}
-                  </span>
-                </div>
-                <div className="calc-row">
-                  <span>Payment Mode:</span>
-                  <span>
-                    {bill?.payments && bill.payments.length > 0
-                      ? bill.payments.map((p) => p.paymentMethod).join(', ')
-                      : 'CASH / UPI'}
-                  </span>
-                </div>
-              </div>
+              {/* Fixed HTML Table for Items to guarantee column alignment without collision */}
+              <table className="thermal-items-table">
+                <thead>
+                  <tr>
+                    <th className="th-item">ITEM</th>
+                    <th className="th-qty">QTY</th>
+                    <th className="th-rate">RATE</th>
+                    <th className="th-amt">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order?.items && order.items.length > 0 ? (
+                    order.items.map((item, idx) => (
+                      <tr key={idx} className="thermal-item-row">
+                        <td className="td-item">
+                          <div className="table-item-name">{item.productNameSnapshot}</div>
+                          {item.variantNameSnapshot && (
+                            <div className="table-item-sub">• {item.variantNameSnapshot}</div>
+                          )}
+                          {item.itemNotes && (
+                            <div className="table-item-note">* Note: {item.itemNotes}</div>
+                          )}
+                        </td>
+                        <td className="td-qty">{item.quantity}</td>
+                        <td className="td-rate">₹{(item.lineTotalSnapshot / item.quantity).toFixed(2)}</td>
+                        <td className="td-amt">₹{item.lineTotalSnapshot.toFixed(2)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr className="thermal-item-row">
+                      <td className="td-item">
+                        <div className="table-item-name">AUTHENTIC MILK TEA</div>
+                        <div className="table-item-sub">• Regular (350ml)</div>
+                      </td>
+                      <td className="td-qty">1</td>
+                      <td className="td-rate">₹249.00</td>
+                      <td className="td-amt">₹249.00</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              <div className="slip-divider">----------------------------------------</div>
+
+              {/* Totals Table */}
+              <table className="thermal-totals-table">
+                <tbody>
+                  <tr>
+                    <td className="calc-label">Item Subtotal:</td>
+                    <td className="calc-val">₹{(bill?.subtotal || order?.subtotal || 249).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="calc-label">CGST @ 2.5%:</td>
+                    <td className="calc-val">₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="calc-label">SGST @ 2.5%:</td>
+                    <td className="calc-val">₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</td>
+                  </tr>
+                  {roundOff !== 0 && (
+                    <tr>
+                      <td className="calc-label">Round Off:</td>
+                      <td className="calc-val">{roundOff > 0 ? `+₹${roundOff.toFixed(2)}` : `-₹${Math.abs(roundOff).toFixed(2)}`}</td>
+                    </tr>
+                  )}
+                  <tr className="calc-divider-tr">
+                    <td colSpan={2}>
+                      <div className="slip-divider">========================================</div>
+                    </td>
+                  </tr>
+                  <tr className="grand-total-tr">
+                    <td className="grand-label">NET PAYABLE:</td>
+                    <td className="grand-val">₹{finalTotal.toFixed(2)}</td>
+                  </tr>
+                  <tr className="calc-divider-tr">
+                    <td colSpan={2}>
+                      <div className="slip-divider">========================================</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="calc-label">Settled Amount:</td>
+                    <td className="calc-val paid-tag">₹{(bill?.paidAmount || finalTotal).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="calc-label">Payment Mode:</td>
+                    <td className="calc-val payment-mode-val">
+                      {bill?.payments && bill.payments.length > 0
+                        ? bill.payments.map((p) => p.paymentMethod).join(', ')
+                        : 'CASH / UPI'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
               {/* Bill Ending: FSSAI Licence & Thank You */}
               <div className="slip-footer">
@@ -449,43 +531,54 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <div className="slip-divider">========================================</div>
               </div>
 
-              <div className="thermal-meta">
-                <div className="meta-row highlight-table">
-                  <span className="table-bold">
+              <div className="thermal-meta-box">
+                <div className="kot-location-banner">
+                  <span className="kot-location-val">
                     {order?.table
                       ? `🪑 TABLE: ${order.table.tableNumber}`
                       : ticket?.customerNotesSnapshot?.includes('Table')
                       ? `🪑 ${ticket.customerNotesSnapshot.split('•')[0]}`
                       : '⚡ COUNTER / TAKEAWAY'}
                   </span>
-                  <span className="ord-num">
-                    #{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-4095'}
-                  </span>
                 </div>
 
-                <div className="meta-row" style={{ marginTop: '4px' }}>
-                  <span className="meta-bold">Date:</span>
-                  <span>{formattedDate.split(',')[0]}</span>
-                  <span className="meta-bold" style={{ marginLeft: '12px' }}>Time:</span>
-                  <span className="time-highlight">{formattedDate.split(',')[1]}</span>
-                </div>
-
-                <div className="meta-row">
-                  <span className="meta-bold">Order Type:</span>
-                  <span>{ticket?.orderTypeSnapshot || order?.orderType ? (ticket?.orderTypeSnapshot || order?.orderType || '').replace('_', ' ') : 'DINE IN'}</span>
-                </div>
-
-                {(activeCustomerName || activeCustomerPhone) && (
-                  <div className="meta-row customer-row">
-                    <span className="meta-bold">Guest:</span>
-                    <span>{activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}</span>
-                  </div>
-                )}
-
-                <div className="meta-row">
-                  <span className="meta-bold">Biller / Staff:</span>
-                  <span>POS Terminal #1 (Cashier JD)</span>
-                </div>
+                <table className="receipt-meta-table kot-meta-table">
+                  <tbody>
+                    <tr>
+                      <td className="meta-key">Order No</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">#{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-4095'}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Date & Time</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">{formattedDate}</td>
+                    </tr>
+                    <tr>
+                      <td className="meta-key">Order Type</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">
+                        {ticket?.orderTypeSnapshot || order?.orderType
+                          ? (ticket?.orderTypeSnapshot || order?.orderType || '').replace('_', ' ')
+                          : 'DINE IN'}
+                      </td>
+                    </tr>
+                    {(activeCustomerName || activeCustomerPhone) && (
+                      <tr>
+                        <td className="meta-key">Guest</td>
+                        <td className="meta-colon">:</td>
+                        <td className="meta-val">
+                          {activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}
+                        </td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td className="meta-key">Staff / Biller</td>
+                      <td className="meta-colon">:</td>
+                      <td className="meta-val">POS Terminal #1 (JD)</td>
+                    </tr>
+                  </tbody>
+                </table>
 
                 {(ticket?.customerNotesSnapshot || order?.customerNotes) && (
                   <div className="kot-special-notes">
