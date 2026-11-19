@@ -165,6 +165,8 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
 
           const cgst = b.cgstAmount ?? Number((b.taxAmount / 2).toFixed(2));
           const sgst = b.sgstAmount ?? Number((b.taxAmount / 2).toFixed(2));
+          const rawTotal = Number((b.taxableAmount + b.taxAmount).toFixed(2));
+          const roundOff = b.roundOffAmount ?? Number((b.totalAmount - rawTotal).toFixed(2));
 
           return {
             id: b.id,
@@ -188,6 +190,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
             cgst,
             sgst,
             taxAmount: b.taxAmount,
+            roundOff,
             totalAmount: b.totalAmount,
             paidAmount: b.paidAmount || b.totalAmount,
             paymentMethod: method,
@@ -290,6 +293,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
     const netSales = filteredSettledInvoices.reduce((sum, inv) => sum + (inv.taxableAmount || 0), 0);
     const totalTax = filteredSettledInvoices.reduce((sum, inv) => sum + (inv.taxAmount || 0), 0);
     const totalRev = filteredSettledInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    const totalRoundOff = Number((totalRev - (netSales + totalTax)).toFixed(2));
     const averageOrderValue = totalOrders > 0 ? Number((totalRev / totalOrders).toFixed(2)) : 0;
 
     let cashAmount = 0;
@@ -325,6 +329,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
       grossSales,
       netSales,
       totalTax,
+      totalRoundOff,
       discounts,
       totalOrders,
       averageOrderValue,
@@ -526,9 +531,9 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   };
 
   const handleExportSalesReportCSV = () => {
-    let csv = 'Invoice No,Order No,Date,Time,Customer Name,Mobile,Table/Channel,Order Type,Items Summary,Taxable Value (INR),CGST 2.5%,SGST 2.5%,Total Tax,Net Total (INR),Payment Mode,Payment Ref,Status\n';
+    let csv = 'Invoice No,Order No,Date,Time,Customer Name,Mobile,Table/Channel,Order Type,Items Summary,Taxable Value (INR),CGST 2.5%,SGST 2.5%,Total Tax,Round Off (INR),Net Total (INR),Payment Mode,Payment Ref,Status\n';
     filteredSettledInvoices.forEach((inv) => {
-      csv += `"${inv.invoiceNumber}","${inv.orderNumber}","${inv.dateFormatted}","${inv.timeFormatted}","${inv.customerName}","${inv.customerPhone}","${inv.tableOrChannel}","${inv.orderType}","${inv.itemsSummary.replace(/"/g, '""')}","${inv.taxableAmount.toFixed(2)}","${inv.cgst.toFixed(2)}","${inv.sgst.toFixed(2)}","${inv.taxAmount.toFixed(2)}","${inv.totalAmount.toFixed(2)}","${inv.paymentMethod}","${inv.transactionReference}","${inv.status}"\n`;
+      csv += `"${inv.invoiceNumber}","${inv.orderNumber}","${inv.dateFormatted}","${inv.timeFormatted}","${inv.customerName}","${inv.customerPhone}","${inv.tableOrChannel}","${inv.orderType}","${inv.itemsSummary.replace(/"/g, '""')}","${inv.taxableAmount.toFixed(2)}","${inv.cgst.toFixed(2)}","${inv.sgst.toFixed(2)}","${inv.taxAmount.toFixed(2)}","${(inv.roundOff || 0).toFixed(2)}","${inv.totalAmount.toFixed(2)}","${inv.paymentMethod}","${inv.transactionReference}","${inv.status}"\n`;
     });
     downloadCSV(`POB_Settled_Sales_Report_${Date.now()}.csv`, csv, 'Settled Invoices Sales Report CSV Downloaded');
   };
@@ -537,9 +542,10 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
     const cgst = dailySummary.totalTax / 2;
     const sgst = dailySummary.totalTax / 2;
     const grossTaxable = dailySummary.netSales;
-    const netTotal = grossTaxable + dailySummary.totalTax;
-    const csv = `GSTIN,State,Supply Type,Rate %,Gross Taxable Value,Central Tax (CGST),State Tax (SGST),Total Cess,Net Invoice Value
-36AAACK1234F1Z5,Telangana (36),Intra-State B2C,5.00%,${grossTaxable.toFixed(2)},${cgst.toFixed(2)},${sgst.toFixed(2)},0.00,${netTotal.toFixed(2)}
+    const roundOff = dailySummary.totalRoundOff || 0;
+    const netTotal = grossTaxable + dailySummary.totalTax + roundOff;
+    const csv = `GSTIN,State,Supply Type,Rate %,Gross Taxable Value,Central Tax (CGST),State Tax (SGST),Total Cess,Round Off,Net Invoice Value
+36AAACK1234F1Z5,Telangana (36),Intra-State B2C,5.00%,${grossTaxable.toFixed(2)},${cgst.toFixed(2)},${sgst.toFixed(2)},0.00,${roundOff.toFixed(2)},${netTotal.toFixed(2)}
 `;
     downloadCSV('GSTR1_Table_7_B2C_Consolidated.csv', csv, 'GSTR-1 Table 7 (B2C Consolidated) CSV Downloaded');
   };
@@ -781,6 +787,22 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
               <div className="kpi-card-value">{formatINR(dailySummary.discounts)}</div>
               <div className="kpi-card-subtitle">
                 <span>Promos & Coupons Applied</span>
+              </div>
+            </div>
+
+            <div className="kpi-card">
+              <div className="kpi-card-indicator" style={{ background: '#64748b' }} />
+              <div className="kpi-card-header">
+                <span className="kpi-card-title">Net Round-Off</span>
+                <div className="kpi-card-icon" style={{ background: '#f1f5f9', color: '#475569' }}>
+                  <Receipt size={18} />
+                </div>
+              </div>
+              <div className="kpi-card-value" style={{ color: (dailySummary.totalRoundOff || 0) < 0 ? '#475569' : '#16a34a' }}>
+                {dailySummary.totalRoundOff ? (dailySummary.totalRoundOff > 0 ? `+₹${dailySummary.totalRoundOff.toFixed(2)}` : `-₹${Math.abs(dailySummary.totalRoundOff).toFixed(2)}`) : '₹0.00'}
+              </div>
+              <div className="kpi-card-subtitle">
+                <span>GST Sec 170 Audited Ledger</span>
               </div>
             </div>
           </div>
@@ -1043,6 +1065,7 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
                   <th>Items Summary</th>
                   <th>Taxable</th>
                   <th>Tax (GST 5%)</th>
+                  <th>Round Off</th>
                   <th>Total Amount</th>
                   <th>Payment</th>
                   <th>Actions</th>
@@ -1051,7 +1074,7 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
               <tbody>
                 {filteredSettledInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
                       <p style={{ margin: 0, fontWeight: 600 }}>No settled sales invoices found for this timeline</p>
                       <span style={{ fontSize: '0.85rem' }}>Checkout a live order on the POS counter to see transactions here</span>
                     </td>
@@ -1084,6 +1107,9 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
                       </td>
                       <td style={{ fontWeight: 500 }}>{formatINR(inv.taxableAmount)}</td>
                       <td style={{ color: '#047857', fontWeight: 500 }}>{formatINR(inv.taxAmount)}</td>
+                      <td style={{ fontSize: '0.85rem', fontWeight: 600, color: (inv.roundOff || 0) < 0 ? '#475569' : (inv.roundOff || 0) > 0 ? '#16a34a' : '#64748b' }}>
+                        {inv.roundOff ? (inv.roundOff > 0 ? `+₹${inv.roundOff.toFixed(2)}` : `-₹${Math.abs(inv.roundOff).toFixed(2)}`) : '₹0.00'}
+                      </td>
                       <td>
                         <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>
                           {formatINR(inv.totalAmount)}

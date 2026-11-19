@@ -13,6 +13,7 @@ export interface DailySummary {
   grossSales: number;
   netSales: number;
   totalTax: number;
+  totalRoundOff?: number;
   discounts: number;
   totalOrders: number;
   averageOrderValue: number;
@@ -271,6 +272,7 @@ export interface SettledInvoiceRecord {
   cgst: number;
   sgst: number;
   taxAmount: number;
+  roundOff?: number;
   totalAmount: number;
   paidAmount: number;
   paymentMethod: 'UPI' | 'CASH' | 'CARD';
@@ -341,6 +343,7 @@ export function getSettledSalesInvoices(): SettledInvoiceRecord[] {
         cgst,
         sgst,
         taxAmount: b.taxAmount,
+        roundOff: b.roundOffAmount ?? Number((b.totalAmount - (b.taxableAmount + b.taxAmount)).toFixed(2)),
         totalAmount: b.totalAmount,
         paidAmount: b.paidAmount || b.totalAmount,
         paymentMethod: method,
