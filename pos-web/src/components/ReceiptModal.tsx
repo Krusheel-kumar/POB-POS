@@ -13,7 +13,129 @@ interface ReceiptModalProps {
   customerName?: string;
   customerPhone?: string;
   onOpenPayment?: (orderId: string) => void;
+  autoPrint?: boolean;
 }
+
+export const buildThermalPrintHtml = (slipHtml: string, title: string): string => {
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+      @page {
+        margin: 0;
+        size: 80mm auto;
+      }
+      *, *::before, *::after {
+        -ms-overflow-style: none !important;
+        scrollbar-width: none !important;
+        box-sizing: border-box !important;
+      }
+      *::-webkit-scrollbar {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .thermal-slip {
+        width: 76mm !important;
+        max-width: 76mm !important;
+        margin: 0 auto !important;
+        padding: 3mm 2mm !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: #ffffff !important;
+        overflow: visible !important;
+        overflow-y: visible !important;
+        max-height: none !important;
+        height: auto !important;
+        font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
+        font-size: 9.5pt !important;
+        font-weight: 800 !important;
+        line-height: 1.35 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        color: #000000 !important;
+      }
+      .thermal-header { text-align: center !important; margin-bottom: 6px !important; }
+      .brand-name { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1.5px !important; margin: 0 !important; color: #000 !important; text-transform: uppercase !important; }
+      .brand-sub { font-size: 9.5pt !important; font-weight: 800 !important; margin: 2px 0 4px !important; color: #000 !important; }
+      .brand-contact { font-size: 8.5pt !important; font-weight: 700 !important; color: #000 !important; line-height: 1.3 !important; max-width: 74mm !important; margin: 0 auto !important; }
+      .brand-tax-info { font-size: 9pt !important; font-weight: 900 !important; color: #000 !important; margin-top: 4px !important; }
+      .brand-gstin { letter-spacing: 0.5px !important; }
+      .slip-divider { font-size: 8pt !important; letter-spacing: -1px !important; color: #000 !important; font-weight: 900 !important; margin: 4px 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; }
+      .slip-copy-badge { font-size: 8.5pt !important; font-weight: 900 !important; margin: 2px 0 !important; text-align: center !important; }
+      .slip-title { font-weight: 900 !important; font-size: 10.5pt !important; letter-spacing: 0.5px !important; margin: 2px 0 !important; text-align: center !important; }
+      .duplicate-alert-banner { border: 1.5px dashed #000 !important; padding: 4px !important; text-align: center !important; margin: 4px 0 !important; }
+      .dup-title { font-weight: 900 !important; font-size: 10pt !important; }
+      .dup-sub { font-weight: 800 !important; font-size: 8.5pt !important; }
+      .dup-timestamp { font-weight: 700 !important; font-size: 8pt !important; }
+      .dup-warning { font-weight: 900 !important; font-size: 8.5pt !important; }
+      .duplicate-kot-banner { border: 2px solid #000 !important; padding: 5px !important; text-align: center !important; margin: 4px 0 !important; }
+      .dup-kot-title { font-weight: 900 !important; font-size: 11pt !important; }
+      .dup-kot-sub { font-weight: 800 !important; font-size: 9pt !important; }
+      .dup-kot-alert { font-weight: 900 !important; font-size: 9.5pt !important; }
+      .dup-kot-alert-sub { font-weight: 700 !important; font-size: 8pt !important; }
+      .thermal-meta-box { margin: 6px 0 !important; }
+      .receipt-meta-table { width: 100% !important; border-collapse: collapse !important; margin: 3px 0 !important; font-size: 9pt !important; line-height: 1.35 !important; }
+      .receipt-meta-table tr { vertical-align: top !important; }
+      .receipt-meta-table .meta-key { width: 30% !important; font-weight: 800 !important; color: #000 !important; white-space: nowrap !important; padding: 1.5px 0 !important; }
+      .receipt-meta-table .meta-colon { width: 4% !important; text-align: center !important; font-weight: 800 !important; color: #000 !important; padding: 1.5px 0 !important; }
+      .receipt-meta-table .meta-val { width: 66% !important; font-weight: 700 !important; color: #000 !important; word-break: break-word !important; padding: 1.5px 0 1.5px 4px !important; }
+      .thermal-items-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 4px 0 !important; }
+      .thermal-items-table th { font-weight: 900 !important; font-size: 9pt !important; color: #000 !important; padding: 2px 0 !important; letter-spacing: 0.5px !important; border-bottom: 1px dashed #000 !important; }
+      .thermal-items-table td { padding: 3px 0 !important; vertical-align: top !important; font-size: 9pt !important; color: #000 !important; }
+      .th-item, .td-item { width: 44% !important; text-align: left !important; word-break: break-word !important; }
+      .th-qty, .td-qty { width: 14% !important; text-align: center !important; font-weight: 800 !important; }
+      .th-rate, .td-rate { width: 21% !important; text-align: right !important; font-weight: 800 !important; padding-right: 4px !important; }
+      .th-amt, .td-amt { width: 21% !important; text-align: right !important; font-weight: 900 !important; }
+      .table-item-name { font-weight: 800 !important; line-height: 1.25 !important; color: #000 !important; }
+      .table-item-sub { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
+      .table-item-note { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
+      .thermal-totals-table { width: 100% !important; border-collapse: collapse !important; margin: 4px 0 !important; }
+      .thermal-totals-table td { padding: 1.5px 0 !important; }
+      .calc-label { font-weight: 700 !important; font-size: 9pt !important; color: #000 !important; text-align: left !important; }
+      .calc-val { font-weight: 800 !important; font-size: 9pt !important; color: #000 !important; text-align: right !important; }
+      .grand-total-tr .grand-label { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; padding: 3px 0 !important; }
+      .grand-total-tr .grand-val { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; text-align: right !important; padding: 3px 0 !important; }
+      .paid-tag { font-weight: 900 !important; color: #000 !important; }
+      .slip-footer { text-align: center !important; margin-top: 8px !important; }
+      .footer-fssai-box { font-size: 9pt !important; font-weight: 800 !important; margin: 4px 0 !important; color: #000 !important; }
+      .fssai-number { font-weight: 900 !important; letter-spacing: 0.5px !important; }
+      .qr-box { display: flex !important; flex-direction: column !important; align-items: center !important; margin: 6px 0 !important; }
+      .simulated-qr { font-size: 11pt !important; letter-spacing: 3px !important; color: #000 !important; }
+      .qr-box span { font-size: 7.5pt !important; font-weight: 700 !important; color: #000 !important; }
+      .thank-you-msg { font-weight: 900 !important; font-size: 9.5pt !important; margin: 4px 0 2px !important; color: #000 !important; }
+      .visit-again-sub { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; margin: 0 0 4px !important; }
+      .footer-software { font-size: 7.5pt !important; font-weight: 600 !important; color: #222 !important; }
+      .kot-badge { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-number-banner { border: 2px solid #000 !important; padding: 3px 6px !important; display: flex !important; justify-content: center !important; gap: 8px !important; align-items: center !important; }
+      .kot-num-title { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-number { font-size: 18pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-location-banner { border: 1.5px solid #000 !important; padding: 4px 6px !important; margin-bottom: 6px !important; font-weight: 900 !important; text-align: center !important; }
+      .kot-location-val { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
+      .no-print { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="thermal-slip printable-area">
+      ${slipHtml}
+    </div>
+  </body>
+</html>`;
+};
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
@@ -25,6 +147,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   customerName,
   customerPhone,
   onOpenPayment,
+  autoPrint = false,
 }) => {
   const orderKey =
     order?.orderNumber ||
@@ -38,34 +161,36 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [printHistory, setPrintHistory] = useState<OrderPrintHistory>(() =>
     getOrderPrintHistory(orderKey)
   );
+  const [isPrinting, setIsPrinting] = useState<boolean>(false);
+  const [printStatusMessage, setPrintStatusMessage] = useState<string | null>(null);
+  const [defaultPrinterName, setDefaultPrinterName] = useState<string | null>(null);
 
   useEffect(() => {
     setPrintHistory(getOrderPrintHistory(orderKey));
   }, [orderKey, isOpen]);
 
-  if (!isOpen) return null;
-
-  const isDuplicate = mode === 'BILL' ? printHistory.billPrintCount >= 1 : printHistory.kotPrintCount >= 1;
-  const printCount = mode === 'BILL' ? printHistory.billPrintCount : printHistory.kotPrintCount;
-
-  const handlePrint = () => {
-    const updated = recordOrderPrint(orderKey, mode);
-    setPrintHistory(updated);
-
-    const printElement = document.getElementById('printable-thermal-slip');
-    if (!printElement) {
-      window.print();
-      return;
+  // Query connected printers when running in Electron desktop app
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.electronAPI?.isElectron) {
+      window.electronAPI
+        .getPrinters()
+        .then((printers) => {
+          const def = printers.find((p) => p.isDefault) || printers[0];
+          if (def) {
+            setDefaultPrinterName(def.displayName || def.name);
+          }
+        })
+        .catch(console.warn);
     }
+  }, []);
 
+  const fallbackIframePrint = (fullHtml: string) => {
     try {
-      // Remove any prior print iframe to keep DOM completely clean
       const existingIframe = document.getElementById('pos-receipt-print-iframe');
       if (existingIframe && document.body.contains(existingIframe)) {
         document.body.removeChild(existingIframe);
       }
 
-      // Create isolated hidden printing iframe
       const iframe = document.createElement('iframe');
       iframe.id = 'pos-receipt-print-iframe';
       iframe.setAttribute(
@@ -80,124 +205,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         return;
       }
 
-      // Preserve active fonts and styles
-      const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map((node) => node.outerHTML)
-        .join('\n');
-
       doc.open();
-      doc.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <title>${mode === 'BILL' ? 'Tax Invoice' : 'Kitchen KOT'}</title>
-            ${stylesheets}
-            <style>
-              @page {
-                margin: 0;
-                size: 80mm auto;
-              }
-              *, *::before, *::after {
-                -ms-overflow-style: none !important;
-                scrollbar-width: none !important;
-                box-sizing: border-box !important;
-              }
-              *::-webkit-scrollbar {
-                display: none !important;
-                width: 0 !important;
-                height: 0 !important;
-              }
-              html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                width: 100% !important;
-                height: auto !important;
-                min-height: auto !important;
-                overflow: visible !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              .thermal-slip {
-                width: 76mm !important;
-                max-width: 76mm !important;
-                margin: 0 auto !important;
-                padding: 3mm 2mm !important;
-                box-shadow: none !important;
-                border: none !important;
-                border-radius: 0 !important;
-                background: #ffffff !important;
-                overflow: visible !important;
-                overflow-y: visible !important;
-                max-height: none !important;
-                height: auto !important;
-                font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
-                font-size: 9.5pt !important;
-                font-weight: 800 !important;
-                line-height: 1.35 !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
-              .thermal-header { text-align: center !important; margin-bottom: 6px !important; }
-              .brand-name { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1.5px !important; margin: 0 !important; color: #000 !important; text-transform: uppercase !important; }
-              .brand-sub { font-size: 9.5pt !important; font-weight: 800 !important; margin: 2px 0 4px !important; color: #000 !important; }
-              .brand-contact { font-size: 8.5pt !important; font-weight: 700 !important; color: #000 !important; line-height: 1.3 !important; max-width: 74mm !important; margin: 0 auto !important; }
-              .brand-tax-info { font-size: 9pt !important; font-weight: 900 !important; color: #000 !important; margin-top: 4px !important; }
-              .brand-gstin { letter-spacing: 0.5px !important; }
-              .slip-divider { font-size: 8pt !important; letter-spacing: -1px !important; color: #000 !important; font-weight: 900 !important; margin: 4px 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; }
-              .slip-copy-badge { font-size: 8.5pt !important; font-weight: 900 !important; margin: 2px 0 !important; text-align: center !important; }
-              .slip-title { font-weight: 900 !important; font-size: 10.5pt !important; letter-spacing: 0.5px !important; margin: 2px 0 !important; text-align: center !important; }
-              .thermal-meta-box { margin: 6px 0 !important; }
-              .receipt-meta-table { width: 100% !important; border-collapse: collapse !important; margin: 3px 0 !important; font-size: 9pt !important; line-height: 1.35 !important; }
-              .receipt-meta-table tr { vertical-align: top !important; }
-              .receipt-meta-table .meta-key { width: 30% !important; font-weight: 800 !important; color: #000 !important; white-space: nowrap !important; padding: 1.5px 0 !important; }
-              .receipt-meta-table .meta-colon { width: 4% !important; text-align: center !important; font-weight: 800 !important; color: #000 !important; padding: 1.5px 0 !important; }
-              .receipt-meta-table .meta-val { width: 66% !important; font-weight: 700 !important; color: #000 !important; word-break: break-word !important; padding: 1.5px 0 1.5px 4px !important; }
-              .thermal-items-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 4px 0 !important; }
-              .thermal-items-table th { font-weight: 900 !important; font-size: 9pt !important; color: #000 !important; padding: 2px 0 !important; letter-spacing: 0.5px !important; border-bottom: 1px dashed #000 !important; }
-              .thermal-items-table td { padding: 3px 0 !important; vertical-align: top !important; font-size: 9pt !important; color: #000 !important; }
-              .th-item, .td-item { width: 44% !important; text-align: left !important; word-break: break-word !important; }
-              .th-qty, .td-qty { width: 14% !important; text-align: center !important; font-weight: 800 !important; }
-              .th-rate, .td-rate { width: 21% !important; text-align: right !important; font-weight: 800 !important; padding-right: 4px !important; }
-              .th-amt, .td-amt { width: 21% !important; text-align: right !important; font-weight: 900 !important; }
-              .table-item-name { font-weight: 800 !important; line-height: 1.25 !important; color: #000 !important; }
-              .table-item-sub { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
-              .table-item-note { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
-              .thermal-totals-table { width: 100% !important; border-collapse: collapse !important; margin: 4px 0 !important; }
-              .thermal-totals-table td { padding: 1.5px 0 !important; }
-              .calc-label { font-weight: 700 !important; font-size: 9pt !important; color: #000 !important; text-align: left !important; }
-              .calc-val { font-weight: 800 !important; font-size: 9pt !important; color: #000 !important; text-align: right !important; }
-              .grand-total-tr .grand-label { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; padding: 3px 0 !important; }
-              .grand-total-tr .grand-val { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; text-align: right !important; padding: 3px 0 !important; }
-              .paid-tag { font-weight: 900 !important; color: #000 !important; }
-              .slip-footer { text-align: center !important; margin-top: 8px !important; }
-              .footer-fssai-box { font-size: 9pt !important; font-weight: 800 !important; margin: 4px 0 !important; color: #000 !important; }
-              .fssai-number { font-weight: 900 !important; letter-spacing: 0.5px !important; }
-              .qr-box { display: flex !important; flex-direction: column !important; align-items: center !important; margin: 6px 0 !important; }
-              .simulated-qr { font-size: 11pt !important; letter-spacing: 3px !important; color: #000 !important; }
-              .qr-box span { font-size: 7.5pt !important; font-weight: 700 !important; color: #000 !important; }
-              .thank-you-msg { font-weight: 900 !important; font-size: 9.5pt !important; margin: 4px 0 2px !important; color: #000 !important; }
-              .visit-again-sub { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; margin: 0 0 4px !important; }
-              .footer-software { font-size: 7.5pt !important; font-weight: 600 !important; color: #222 !important; }
-              .kot-badge { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; }
-              .kot-number-banner { border: 2px solid #000 !important; padding: 3px 6px !important; display: flex !important; justify-content: center !important; gap: 8px !important; align-items: center !important; }
-              .kot-num-title { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
-              .kot-number { font-size: 18pt !important; font-weight: 900 !important; color: #000 !important; }
-              .kot-location-banner { border: 1.5px solid #000 !important; padding: 4px 6px !important; margin-bottom: 6px !important; font-weight: 900 !important; text-align: center !important; }
-              .kot-location-val { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
-              .no-print {
-                display: none !important;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="thermal-slip printable-area">
-              ${printElement.innerHTML}
-            </div>
-          </body>
-        </html>
-      `);
+      doc.write(fullHtml);
       doc.close();
 
       setTimeout(() => {
@@ -221,6 +230,59 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   };
 
+  const handlePrint = async () => {
+    const updated = recordOrderPrint(orderKey, mode);
+    setPrintHistory(updated);
+
+    const printElement = document.getElementById('printable-thermal-slip');
+    if (!printElement) {
+      window.print();
+      return;
+    }
+
+    const docTitle = mode === 'BILL' ? 'Tax Invoice' : 'Kitchen KOT';
+    const fullHtml = buildThermalPrintHtml(printElement.innerHTML, docTitle);
+
+    // Fast Path: Electron Silent Printing directly to default Windows PC printer (<150ms, no dialog)
+    if (typeof window !== 'undefined' && window.electronAPI?.isElectron) {
+      setIsPrinting(true);
+      setPrintStatusMessage('⚡ Printing directly to PC default printer...');
+      try {
+        const result = await window.electronAPI.silentPrintHtml({
+          html: fullHtml,
+          silent: true,
+        });
+        if (result.success) {
+          setPrintStatusMessage(`✅ Sent to ${defaultPrinterName || 'Default Windows Printer'}`);
+          setTimeout(() => setPrintStatusMessage(null), 4000);
+        } else {
+          console.warn('Silent print returned error:', result.failureReason);
+          setPrintStatusMessage('⚠️ Default printer busy, opening print dialog...');
+          fallbackIframePrint(fullHtml);
+        }
+      } catch (err) {
+        console.warn('Silent print threw error, falling back:', err);
+        fallbackIframePrint(fullHtml);
+      } finally {
+        setIsPrinting(false);
+      }
+      return;
+    }
+
+    // Web Fallback: Isolated Iframe
+    fallbackIframePrint(fullHtml);
+  };
+
+  // Instant Automatic Print when opened with autoPrint=true (e.g. "Print Bill" or "Auto-Print on Settle")
+  useEffect(() => {
+    if (isOpen && autoPrint) {
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoPrint]);
+
   const formattedDate = new Date().toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -240,6 +302,11 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const finalTotal = bill?.totalAmount ?? (order?.totalAmount ?? Math.round(rawTotal));
   const roundOff = bill?.roundOffAmount ?? Number((finalTotal - rawTotal).toFixed(2));
 
+  if (!isOpen) return null;
+
+  const isDuplicate = mode === 'BILL' ? printHistory.billPrintCount >= 1 : printHistory.kotPrintCount >= 1;
+  const printCount = mode === 'BILL' ? printHistory.billPrintCount : printHistory.kotPrintCount;
+
   return (
     <div className="receipt-modal-backdrop" role="dialog" aria-modal="true">
       <div className="receipt-modal-container">
@@ -248,6 +315,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="modal-title-pill">
               {mode === 'BILL' ? '🧾 Customer Tax Invoice' : '🍳 Kitchen Order Ticket (KOT)'}
             </div>
+            {typeof window !== 'undefined' && window.electronAPI?.isElectron && (
+              <span
+                className="modal-print-status-tag"
+                style={{
+                  background: '#e0f2fe',
+                  color: '#0369a1',
+                  borderColor: '#7dd3fc',
+                  fontWeight: 800,
+                }}
+                title="Bills print silently and automatically to this Windows printer"
+              >
+                🖨️ {defaultPrinterName ? `Printer: ${defaultPrinterName}` : 'Windows Default Printer'}
+              </span>
+            )}
             {isPaid ? (
               <span className="modal-print-status-tag original" style={{ background: '#dcfce7', color: '#15803d', borderColor: '#86efac' }}>
                 ✅ PAID & SETTLED
@@ -281,14 +362,47 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 💳 Collect Payment
               </button>
             )}
-            <button type="button" className="receipt-btn-print" onClick={handlePrint}>
-              🖨️ Print {isDuplicate ? 'Duplicate ' : ''}{mode === 'BILL' ? 'Bill' : 'KOT'}
+            <button
+              type="button"
+              className="receipt-btn-print"
+              onClick={handlePrint}
+              disabled={isPrinting}
+            >
+              {isPrinting
+                ? '⚡ Printing...'
+                : `🖨️ Print ${isDuplicate ? 'Duplicate ' : ''}${mode === 'BILL' ? 'Bill' : 'KOT'}`}
             </button>
             <button type="button" className="receipt-btn-close" onClick={onClose}>
               ✕ Close
             </button>
           </div>
         </div>
+
+        {/* Live Automatic Printing Status Banner */}
+        {printStatusMessage && (
+          <div
+            style={{
+              backgroundColor: printStatusMessage.includes('✅')
+                ? '#059669'
+                : printStatusMessage.includes('⚠️')
+                ? '#d97706'
+                : '#2563eb',
+              color: '#ffffff',
+              padding: '8px 16px',
+              fontSize: '0.86rem',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              textAlign: 'center',
+              letterSpacing: '0.3px',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            <span>{printStatusMessage}</span>
+          </div>
+        )}
 
         {/* Scrollable Modal Body (For Screen Preview Only) */}
         <div className="receipt-modal-scrollable-body">

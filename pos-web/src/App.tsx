@@ -53,6 +53,7 @@ export function App() {
     bill?: Bill | null;
     customerName?: string;
     customerPhone?: string;
+    autoPrint?: boolean;
   }>({ isOpen: false, mode: 'BILL' });
 
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
@@ -575,7 +576,7 @@ export function App() {
       );
       setTimeout(() => setOrderSuccessMessage(null), 6000);
 
-      // 5. Open Thermal Receipt preview
+      // 5. Open Thermal Receipt preview & trigger instant silent auto-print to default Windows PC printer
       if (autoPrintReceipt) {
         setReceiptModal({
           isOpen: true,
@@ -584,6 +585,7 @@ export function App() {
           bill: finalBill,
           customerName: customerName.trim() || undefined,
           customerPhone: customerPhone.trim() || undefined,
+          autoPrint: true,
         });
       }
     } catch (err: unknown) {
@@ -696,6 +698,7 @@ export function App() {
       bill: billToPrint,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      autoPrint: true,
     });
   };
 
@@ -760,6 +763,7 @@ export function App() {
       order: orderToPrint,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
+      autoPrint: true,
     });
   };
 
@@ -1310,13 +1314,14 @@ export function App() {
       {/* Thermal Receipt & Kitchen Order Ticket (KOT) Preview Modal */}
       <ReceiptModal
         isOpen={receiptModal.isOpen}
-        onClose={() => setReceiptModal((p) => ({ ...p, isOpen: false }))}
+        onClose={() => setReceiptModal((p) => ({ ...p, isOpen: false, autoPrint: false }))}
         mode={receiptModal.mode}
         order={receiptModal.order}
         bill={receiptModal.bill}
         customerName={receiptModal.customerName || customerName}
         customerPhone={receiptModal.customerPhone || customerPhone}
         onOpenPayment={handleOpenPayment}
+        autoPrint={receiptModal.autoPrint}
       />
 
       {/* Add Product & Category Wizard Modal */}

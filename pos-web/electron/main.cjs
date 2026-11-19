@@ -65,6 +65,83 @@ ipcMain.handle('silent-print', async (_event, options = {}) => {
   });
 });
 
+ipcMain.handle('silent-print-html', async (_event, options = {}) => {
+  const { html = '', printerName = '', silent = true, copies = 1 } = options;
+  if (!html) return { success: false, failureReason: 'Empty HTML content' };
+
+  return new Promise((resolve) => {
+    let hasResolved = false;
+    const printWin = new BrowserWindow({
+      show: false,
+      width: 420,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    const cleanup = () => {
+      if (printWin && !printWin.isDestroyed()) {
+        try {
+          printWin.destroy();
+        } catch {}
+      }
+    };
+
+    const timeout = setTimeout(() => {
+      if (!hasResolved) {
+        hasResolved = true;
+        cleanup();
+        resolve({ success: false, failureReason: 'Print job timed out' });
+      }
+    }, 12000);
+
+    printWin.webContents.on('did-finish-load', () => {
+      setTimeout(() => {
+        if (hasResolved || printWin.isDestroyed()) return;
+        try {
+          printWin.webContents.print(
+            {
+              silent: silent !== false,
+              printBackground: true,
+              deviceName: printerName || undefined, // undefined prints automatically to the Windows system default printer
+              copies: copies || 1,
+              margins: { marginType: 'none' },
+            },
+            (success, failureReason) => {
+              if (!hasResolved) {
+                hasResolved = true;
+                clearTimeout(timeout);
+                setTimeout(cleanup, 300);
+                resolve({ success, failureReason });
+              }
+            }
+          );
+        } catch (err) {
+          if (!hasResolved) {
+            hasResolved = true;
+            clearTimeout(timeout);
+            cleanup();
+            resolve({ success: false, failureReason: String(err) });
+          }
+        }
+      }, 50);
+    });
+
+    printWin.webContents.on('did-fail-load', () => {
+      if (!hasResolved) {
+        hasResolved = true;
+        clearTimeout(timeout);
+        cleanup();
+        resolve({ success: false, failureReason: 'Failed to load receipt HTML for printing' });
+      }
+    });
+
+    printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+  });
+});
+
 ipcMain.handle('toggle-fullscreen', () => {
   if (!mainWindow) return false;
   const isFullScreen = mainWindow.isFullScreen();

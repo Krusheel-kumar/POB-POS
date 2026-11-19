@@ -443,7 +443,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             type="button"
             className="btn-secondary-tool"
             onClick={onPrintBill || onReviewOrder}
-            title="Preview / Print Tax Invoice Receipt"
+            title={
+              typeof window !== 'undefined' && window.electronAPI?.isElectron
+                ? 'Instant automatic silent print to default Windows PC printer'
+                : 'Preview / Print Tax Invoice Receipt'
+            }
           >
             🖨️ Print Bill
           </button>
@@ -459,7 +463,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
             />
             <span>Auto-Print Receipt on Settle</span>
           </label>
-          <span className="auto-print-status">⚡ Auto-Print Enabled</span>
+          <span className="auto-print-status">
+            {typeof window !== 'undefined' && window.electronAPI?.isElectron
+              ? '⚡ Instant Silent Print'
+              : '⚡ Auto-Print Enabled'}
+          </span>
         </div>
 
         {/* Main Checkout Button Group */}
