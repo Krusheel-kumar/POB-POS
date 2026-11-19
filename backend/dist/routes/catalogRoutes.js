@@ -188,9 +188,7 @@ async function catalogRoutes(fastify) {
     fastify.delete('/api/v1/products/:id', async (req, reply) => {
         const { id } = req.params;
         try {
-            await database_js_1.db.execute({ sql: 'DELETE FROM product_addons WHERE product_id = ?', args: [id] });
-            await database_js_1.db.execute({ sql: 'DELETE FROM product_variants WHERE product_id = ?', args: [id] });
-            await database_js_1.db.execute({ sql: 'DELETE FROM order_items WHERE product_id = ?', args: [id] });
+            await database_js_1.db.execute({ sql: 'DELETE FROM product_addons WHERE product_id = ?', args: [id] }).catch(() => { });
             await database_js_1.db.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
             return reply.status(200).send({ success: true, deletedId: id });
         }
@@ -278,19 +276,28 @@ async function catalogRoutes(fastify) {
     // --- CLEAR ALL DEMO DATA FOR FRESH PRODUCTION ---
     fastify.post('/api/v1/catalog/clear-all', async (_req, reply) => {
         try {
-            await database_js_1.db.execute('DELETE FROM order_item_addons');
-            await database_js_1.db.execute('DELETE FROM order_items');
-            await database_js_1.db.execute('DELETE FROM payments');
-            await database_js_1.db.execute('DELETE FROM bills');
-            await database_js_1.db.execute('DELETE FROM kitchen_ticket_item_addons');
-            await database_js_1.db.execute('DELETE FROM kitchen_ticket_items');
-            await database_js_1.db.execute('DELETE FROM kitchen_tickets');
-            await database_js_1.db.execute('DELETE FROM orders');
-            await database_js_1.db.execute('DELETE FROM product_addons');
-            await database_js_1.db.execute('DELETE FROM product_variants');
-            await database_js_1.db.execute('DELETE FROM products');
-            await database_js_1.db.execute('DELETE FROM add_ons');
-            await database_js_1.db.execute('DELETE FROM categories');
+            const tablesToClear = [
+                'order_item_addons',
+                'order_items',
+                'payments',
+                'bills',
+                'kitchen_ticket_item_addons',
+                'kitchen_ticket_items',
+                'kitchen_tickets',
+                'orders',
+                'product_addons',
+                'products',
+                'add_ons',
+                'categories',
+            ];
+            for (const tbl of tablesToClear) {
+                try {
+                    await database_js_1.db.execute(`DELETE FROM ${tbl}`);
+                }
+                catch (e) {
+                    // Table might not exist or already be empty
+                }
+            }
             try {
                 await database_js_1.db.execute("UPDATE sequences SET last_value = 0 WHERE name IN ('invoice_number', 'kot_number', 'order_number')");
             }
