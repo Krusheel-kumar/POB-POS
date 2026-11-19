@@ -91,6 +91,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [prodBadge, setProdBadge] = useState('');
+  const [currentEditingProduct, setCurrentEditingProduct] = useState<Product | null>(editingProduct || null);
   const [deletedProductIds, setDeletedProductIds] = useState<string[]>([]);
   const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([
     'Choice Of Size',
@@ -165,6 +166,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   // Synchronize when editingProduct changes or modal opens
   useEffect(() => {
+    setCurrentEditingProduct(editingProduct || null);
     if (editingProduct) {
       setProdName(editingProduct.name);
       setProdPrice(editingProduct.basePrice);
@@ -273,7 +275,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       }
       return true;
     });
-  }, [products, selectedModalCatId, selectedModalSubcat, modalSearchQuery]);
+  }, [products, selectedModalCatId, selectedModalSubcat, modalSearchQuery, deletedProductIds]);
 
   // Active category object in Petpooja view
   const activeModalCatObj = useMemo(() => {
@@ -351,8 +353,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         prepTimeMinutes: 5,
       };
 
-      if (editingProduct && onProductUpdated) {
-        await onProductUpdated(editingProduct.id, payload);
+      if (currentEditingProduct && onProductUpdated) {
+        await onProductUpdated(currentEditingProduct.id, payload);
         setSuccessMsg(`✓ Updated "${prodName.trim()}"`);
       } else {
         await onProductCreated(payload);
@@ -367,6 +369,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setUploadedFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setProdBadge('');
+      setCurrentEditingProduct(null);
 
       setTimeout(() => {
         onClose();
@@ -746,6 +749,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                                   className="btn btn-secondary btn-sm"
                                   style={{ padding: '2px 7px', fontSize: '0.75rem' }}
                                   onClick={() => {
+                                    setCurrentEditingProduct(p);
                                     setProdName(p.name);
                                     setProdPrice(p.basePrice);
                                     setSelectedCatId(p.category?.id || '');
@@ -765,11 +769,18 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                                     className="btn btn-danger btn-sm"
                                     style={{ padding: '2px 7px', fontSize: '0.75rem' }}
                                     onClick={async () => {
-                                      if (window.confirm(`Delete "${p.name}"?`)) {
+                                      if (window.confirm(`Permanently delete "${p.name}" from menu catalog?`)) {
                                         setDeletedProductIds((prev) => [...prev, p.id]);
-                                        await onProductDeleted(p.id);
+                                        try {
+                                          await onProductDeleted(p.id);
+                                          setSuccessMsg(`✓ Deleted "${p.name}" from catalog`);
+                                          setTimeout(() => setSuccessMsg(null), 3000);
+                                        } catch (err: unknown) {
+                                          setErrorMsg(err instanceof Error ? err.message : 'Failed to delete product');
+                                        }
                                       }
                                     }}
+                                    title={`Delete ${p.name}`}
                                   >
                                     🗑️
                                   </button>
@@ -805,6 +816,43 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         {/* TAB 1: ADD / EDIT MENU ITEM */}
         {activeTab === 'product' && (
           <form onSubmit={handleSaveProduct} className="min-modal-body">
+            {currentEditingProduct && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                marginBottom: '1rem',
+                fontSize: '0.85rem',
+                color: '#1e40af',
+              }}>
+                <span>✏️ Editing Item: <strong>{currentEditingProduct.name}</strong></span>
+                <button
+                  type="button"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                  }}
+                  onClick={() => {
+                    setCurrentEditingProduct(null);
+                    setProdName('');
+                    setProdPrice('');
+                    setProdImageUrl('');
+                    setProdBadge('');
+                  }}
+                >
+                  + Switch to New Item
+                </button>
+              </div>
+            )}
             {/* Image Preview & Local Folder Upload Row */}
             <div
               className={`min-image-upload-section ${isDragging ? 'dragging' : ''}`}
@@ -1194,14 +1242,23 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
             {/* Modal Footer */}
             <div className="min-modal-footer">
-              {editingProduct && onProductDeleted && (
+              {currentEditingProduct && onProductDeleted && (
                 <button
                   type="button"
                   className="min-btn-danger-outline"
                   onClick={async () => {
-                    if (window.confirm(`Are you sure you want to delete "${editingProduct.name}" from catalog?`)) {
-                      await onProductDeleted(editingProduct.id);
-                      onClose();
+                    if (window.confirm(`Are you sure you want to delete "${currentEditingProduct.name}" from catalog?`)) {
+                      setDeletedProductIds((prev) => [...prev, currentEditingProduct.id]);
+                      try {
+                        await onProductDeleted(currentEditingProduct.id);
+                        setCurrentEditingProduct(null);
+                        setSuccessMsg(`✓ Deleted "${currentEditingProduct.name}" from catalog`);
+                        setTimeout(() => {
+                          onClose();
+                        }, 500);
+                      } catch (err: unknown) {
+                        setErrorMsg(err instanceof Error ? err.message : 'Failed to delete product');
+                      }
                     }
                   }}
                 >
@@ -1216,7 +1273,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 disabled={isSubmitting || !prodName.trim() || !prodPrice}
                 className="min-btn-primary"
               >
-                {isSubmitting ? 'Saving...' : editingProduct ? 'Save Changes' : 'Save & Add to POS'}
+                {isSubmitting ? 'Saving...' : currentEditingProduct ? 'Save Changes' : 'Save & Add to POS'}
               </button>
             </div>
           </form>

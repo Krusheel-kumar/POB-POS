@@ -576,17 +576,14 @@ export class PosApiClient {
       return;
     }
 
-    try {
-      const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
-        method: 'DELETE',
-        headers: this.getHeaders(),
-      });
+    const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
 
-      if (!res.ok) {
-        throw new Error(`Failed to delete product: ${res.status}`);
-      }
-    } catch (err) {
-      console.warn('Backend delete product warning:', err);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.error || errData?.message || `Failed to delete product: ${res.status}`);
     }
   }
 

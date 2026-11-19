@@ -8,6 +8,8 @@ interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (item: Omit<CartItem, 'id' | 'lineTotal'>) => void;
+  onEditProduct?: (product: Product) => void;
+  onDeleteProduct?: (productId: string) => Promise<void>;
 }
 
 export const ProductModal: React.FC<ProductModalProps> = ({
@@ -16,6 +18,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   isOpen,
   onClose,
   onAddToCart,
+  onEditProduct,
+  onDeleteProduct,
 }) => {
   const defaultVariant = product.variants.length > 0 ? product.variants[0] : undefined;
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(defaultVariant);
@@ -199,9 +203,60 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </div>
             </div>
           </div>
-          <button type="button" className="lux-close-btn" onClick={onClose} aria-label="Close dialog">
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onEditProduct && (
+              <button
+                type="button"
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#334155',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onClick={() => onEditProduct(product)}
+                title="Edit item name, price, toppings, and photo"
+              >
+                ✏️ Edit
+              </button>
+            )}
+            {onDeleteProduct && (
+              <button
+                type="button"
+                style={{
+                  background: '#fee2e2',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: '#dc2626',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onClick={async () => {
+                  if (window.confirm(`Permanently delete "${product.name}" from catalog?`)) {
+                    await onDeleteProduct(product.id);
+                    onClose();
+                  }
+                }}
+                title="Permanently delete item from menu"
+              >
+                🗑️ Delete
+              </button>
+            )}
+            <button type="button" className="lux-close-btn" onClick={onClose} aria-label="Close dialog">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Customization Body */}
@@ -368,9 +423,38 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
         {/* Footer */}
         <div className="lux-modal-footer">
-          <button type="button" className="lux-cancel-btn" onClick={onClose}>
-            Cancel
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {onDeleteProduct && (
+              <button
+                type="button"
+                style={{
+                  background: 'none',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                onClick={async () => {
+                  if (window.confirm(`Permanently delete "${product.name}" from catalog?`)) {
+                    await onDeleteProduct(product.id);
+                    onClose();
+                  }
+                }}
+                title="Permanently delete item from menu"
+              >
+                🗑️ Delete Item
+              </button>
+            )}
+            <button type="button" className="lux-cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+          </div>
           <button
             type="button"
             className="lux-add-cart-btn"

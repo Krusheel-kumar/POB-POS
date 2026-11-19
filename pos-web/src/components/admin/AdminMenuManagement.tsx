@@ -674,11 +674,26 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                                 {p.isActive && (
                                   <button
                                     type="button"
-                                    className="btn btn-danger btn-sm"
+                                    className="btn btn-warning btn-sm"
                                     style={{ padding: '0.25rem 0.55rem', fontSize: '0.78rem' }}
                                     onClick={() => onDeactivateProduct(p.id)}
                                   >
                                     Deactivate
+                                  </button>
+                                )}
+                                {onDeleteProduct && (
+                                  <button
+                                    type="button"
+                                    className="btn btn-danger btn-sm"
+                                    style={{ padding: '0.25rem 0.55rem', fontSize: '0.78rem' }}
+                                    onClick={async () => {
+                                      if (window.confirm(`Permanently delete "${p.name}" from catalog?`)) {
+                                        await onDeleteProduct(p.id);
+                                      }
+                                    }}
+                                    title="Permanently delete item"
+                                  >
+                                    🗑️ Delete
                                   </button>
                                 )}
                               </div>

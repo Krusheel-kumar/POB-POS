@@ -56,6 +56,7 @@ export function App() {
   }>({ isOpen: false, mode: 'BILL' });
 
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
@@ -1265,6 +1266,15 @@ export function App() {
           isOpen={Boolean(activeModalProduct)}
           onClose={() => setActiveModalProduct(null)}
           onAddToCart={handleAddToCart}
+          onEditProduct={(p) => {
+            setActiveModalProduct(null);
+            setEditingProduct(p);
+            setIsAddProductOpen(true);
+          }}
+          onDeleteProduct={async (productId) => {
+            await handleDeleteProduct(productId);
+            setActiveModalProduct(null);
+          }}
         />
       )}
 
@@ -1312,10 +1322,14 @@ export function App() {
       {/* Add Product & Category Wizard Modal */}
       <AddProductModal
         isOpen={isAddProductOpen}
-        onClose={() => setIsAddProductOpen(false)}
+        onClose={() => {
+          setIsAddProductOpen(false);
+          setEditingProduct(null);
+        }}
         categories={categories.filter((c) => c.id !== 'cat-all')}
         products={products}
         addOns={addOns}
+        editingProduct={editingProduct}
         onProductCreated={handleCreateProduct}
         onProductUpdated={handleUpdateProduct}
         onProductDeleted={handleDeleteProduct}
