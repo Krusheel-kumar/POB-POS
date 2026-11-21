@@ -24,6 +24,7 @@ vi.mock('../../api/posApiClient', () => ({
     updateProductAddOns: vi.fn(),
     toggleAddOn: vi.fn(),
     deleteAddOn: vi.fn(),
+    getVoidLogs: vi.fn().mockResolvedValue([]),
   },
 }));
 

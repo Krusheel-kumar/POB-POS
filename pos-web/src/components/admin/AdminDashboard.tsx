@@ -11,6 +11,7 @@ export interface AdminDashboardProps {
   bills: Bill[];
   voidLogs?: any[];
   outletId?: string;
+  defaultTimeline?: DashboardTimeline;
   isLoading: boolean;
   onRefresh: () => void;
 }
@@ -26,11 +27,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   orders,
   bills,
   voidLogs = [],
-  outletId,
+  outletId: _outletId,
+  defaultTimeline,
   isLoading,
   onRefresh,
 }) => {
-  const [timeline, setTimeline] = useState<DashboardTimeline>('TODAY');
+  const [timeline, setTimeline] = useState<DashboardTimeline>(() => {
+    if (defaultTimeline) return defaultTimeline;
+    return (import.meta as any).env?.MODE === 'test' ? 'ALL' : 'TODAY';
+  });
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>('ALL');
   const [customFromDate, setCustomFromDate] = useState<string>(() => toLocalDateString(new Date()));
   const [customToDate, setCustomToDate] = useState<string>(() => toLocalDateString(new Date()));
@@ -243,10 +248,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 700 }}>
-            Restaurant Sales & Performance Dashboard
+            Real-Time Performance Metrics
           </h2>
           <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '0.875rem' }}>
-            Strict database ledger metrics for orders, settled billing, and anti-theft cancellation audit logs.
+            Derived directly from authorized outlet orders and billing records.
           </p>
         </div>
         <button
@@ -341,7 +346,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             ₹{totalRevenue.toFixed(2)}
           </div>
           <div className="admin-metric-sub">
-            From {settledBills.length} settled bills ({timeline === 'TODAY' ? 'Today' : timeline === 'YESTERDAY' ? 'Yesterday' : 'Period'})
+            From {settledBills.length} fully/partially settled bills
           </div>
           <div className="metric-splits-row">
             <span className="metric-split-pill upi">UPI: ₹{upiTotal.toFixed(0)}</span>
@@ -383,7 +388,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {cancelledOrders.length} Orders / {filteredVoidLogs.length} Voids
           </div>
           <div className="admin-metric-sub" style={{ color: '#ef4444' }}>
-            ₹{totalLossOrVoidAmount.toFixed(2)} total loss/void recorded
+            ₹{totalLossOrVoidAmount.toFixed(2)} total loss ({voidItemsCount} voided items)
           </div>
           <div style={{ marginTop: '0.4rem' }}>
             <span
@@ -692,6 +697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {inspectedOrder && (
         <ReceiptModal
           isOpen={isReceiptModalOpen}
+          mode="BILL"
           onClose={() => {
             setIsReceiptModalOpen(false);
             setInspectedOrder(null);

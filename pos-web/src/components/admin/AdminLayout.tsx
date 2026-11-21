@@ -123,7 +123,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
         const [ordList, billList, voidList] = await Promise.all([
           posApiClient.getOutletOrders(selectedOutletId).catch(() => [] as Order[]),
           posApiClient.getOutletBills(selectedOutletId).catch(() => [] as Bill[]),
-          posApiClient.getVoidLogs(selectedOutletId).catch(() => [] as any[]),
+          (typeof posApiClient.getVoidLogs === 'function'
+            ? posApiClient.getVoidLogs(selectedOutletId)
+            : Promise.resolve([])
+          ).catch(() => [] as any[]),
         ]);
         setOrders(ordList);
         setBills(billList);
@@ -144,7 +147,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
         Promise.all([
           posApiClient.getOutletOrders(selectedOutletId).catch(() => [] as Order[]),
           posApiClient.getOutletBills(selectedOutletId).catch(() => [] as Bill[]),
-          posApiClient.getVoidLogs(selectedOutletId).catch(() => [] as any[]),
+          (typeof posApiClient.getVoidLogs === 'function'
+            ? posApiClient.getVoidLogs(selectedOutletId)
+            : Promise.resolve([])
+          ).catch(() => [] as any[]),
         ]).then(([ordList, billList, voidList]) => {
           setOrders(ordList);
           setBills(billList);
