@@ -176,6 +176,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     await loadAdminData();
   };
 
+  const handleDeleteCategory = async (id: string) => {
+    await posApiClient.deleteCategory(id);
+    await loadAdminData();
+  };
+
+  const handleDeleteSubcategory = async (categoryId: string, subcat: string) => {
+    await posApiClient.deleteSubcategory(categoryId, subcat);
+    await loadAdminData();
+  };
+
   const handleCreateProduct = async (req: ProductRequest) => {
     await posApiClient.createProduct(req);
     await loadAdminData();
@@ -447,6 +457,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
               onRefresh={loadAdminData}
               onCreateCategory={handleCreateCategory}
               onDeactivateCategory={handleDeactivateCategory}
+              onDeleteCategory={handleDeleteCategory}
+              onDeleteSubcategory={handleDeleteSubcategory}
               onCreateProduct={handleCreateProduct}
               onUpdateProduct={handleUpdateProduct}
               onDeleteProduct={handleDeleteProduct}

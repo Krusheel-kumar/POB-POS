@@ -225,6 +225,9 @@ export function App() {
       return Array.from(allSubs);
     }
     const cat = categories.find((c) => c.id === selectedCategoryId);
+    if (!cat) {
+      return [];
+    }
     if (cat?.subcategories && cat.subcategories.length > 0) {
       return cat.subcategories;
     }
@@ -236,6 +239,14 @@ export function App() {
       });
     return Array.from(subSet);
   }, [categories, products, selectedCategoryId]);
+
+  // Keep selectedCategoryId in sync if a category was deleted
+  useEffect(() => {
+    if (selectedCategoryId !== 'cat-all' && categories.length > 0 && !categories.some((c) => c.id === selectedCategoryId)) {
+      setSelectedCategoryId('cat-all');
+      setSelectedSubcategory('all');
+    }
+  }, [categories, selectedCategoryId]);
 
   // Cart Management
   const handleAddToCart = (item: Omit<CartItem, 'id' | 'lineTotal'>) => {
@@ -1305,7 +1316,7 @@ export function App() {
         <div className="pos-main-container">
           {/* Category Navigation Sidebar */}
           <nav className="pos-category-nav" aria-label="Menu categories">
-                {categories.map((cat) => (
+                {categories.filter((cat) => cat.isActive !== false).map((cat) => (
                   <button
                     key={cat.id}
                     type="button"

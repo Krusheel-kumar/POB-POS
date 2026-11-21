@@ -11,6 +11,8 @@ interface AdminMenuManagementProps {
   onRefresh: () => void;
   onCreateCategory: (req: CategoryRequest) => Promise<void>;
   onDeactivateCategory: (id: string) => Promise<void>;
+  onDeleteCategory?: (id: string) => Promise<void>;
+  onDeleteSubcategory?: (categoryId: string, subcat: string) => Promise<void>;
   onCreateProduct: (req: ProductRequest) => Promise<void>;
   onUpdateProduct?: (id: string, req: ProductRequest) => Promise<void>;
   onDeleteProduct?: (id: string) => Promise<void>;
@@ -29,6 +31,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   onRefresh,
   onCreateCategory,
   onDeactivateCategory,
+  onDeleteCategory,
+  onDeleteSubcategory,
   onCreateProduct,
   onUpdateProduct,
   onDeleteProduct,
@@ -415,7 +419,32 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                       title={c.name}
                     >
                       <span className="category-item-name">{c.name}</span>
-                      <span className="category-item-badge">{count}</span>
+                      <div className="category-item-actions">
+                        <span className="category-item-badge">{count}</span>
+                        {onDeleteCategory && (
+                          <button
+                            type="button"
+                            className="btn-cat-row-delete"
+                            title={`Delete category "${c.name}"`}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will also cascade delete all its subcategories and all products in this category.`)) {
+                                try {
+                                  await onDeleteCategory(c.id);
+                                  if (selectedCategoryId === c.id) {
+                                    setSelectedCategoryId('ALL');
+                                  }
+                                  setSuccessMsg(`Category "${c.name}" deleted.`);
+                                } catch (err: any) {
+                                  setErrorMsg(err.message || 'Failed to delete category');
+                                }
+                              }
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -456,14 +485,41 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                         All
                       </button>
                       {activeSubcategories.map((subcat) => (
-                        <button
+                        <div
                           key={subcat}
-                          type="button"
-                          className={`subcat-pill ${selectedSubcategory === subcat ? 'active' : ''}`}
-                          onClick={() => setSelectedSubcategory(subcat)}
+                          className={`subcat-pill-wrapper ${selectedSubcategory === subcat ? 'active' : ''}`}
                         >
-                          {subcat}
-                        </button>
+                          <button
+                            type="button"
+                            className="subcat-pill-label"
+                            onClick={() => setSelectedSubcategory(subcat)}
+                          >
+                            {subcat}
+                          </button>
+                          {onDeleteSubcategory && activeCategoryObj && (
+                            <button
+                              type="button"
+                              className="subcat-pill-delete"
+                              title={`Delete subcategory "${subcat}" and all its items`}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`⚠️ Delete subcategory "${subcat}"?\n\nAll items under "${subcat}" will also be permanently deleted.`)) {
+                                  try {
+                                    await onDeleteSubcategory(activeCategoryObj.id, subcat);
+                                    if (selectedSubcategory === subcat) {
+                                      setSelectedSubcategory('ALL');
+                                    }
+                                    setSuccessMsg(`Subcategory "${subcat}" and its items deleted.`);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || 'Failed to delete subcategory');
+                                  }
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -789,15 +845,38 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                         </span>
                       </td>
                       <td>
-                        {c.isActive !== false && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => onDeactivateCategory(c.id)}
-                          >
-                            Deactivate
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          {c.isActive !== false && (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => onDeactivateCategory(c.id)}
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                          {onDeleteCategory && (
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={async () => {
+                                if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will also cascade delete all its subcategories and all products under this category.`)) {
+                                  try {
+                                    await onDeleteCategory(c.id);
+                                    if (selectedCategoryId === c.id) {
+                                      setSelectedCategoryId('ALL');
+                                    }
+                                    setSuccessMsg(`Category "${c.name}" and all its items deleted.`);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || 'Failed to delete category');
+                                  }
+                                }
+                              }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

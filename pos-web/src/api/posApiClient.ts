@@ -509,6 +509,46 @@ export class PosApiClient {
   }
 
   /**
+   * Delete category (permanently deletes category and cascades to all products and subcategories)
+   */
+  public async deleteCategory(id: string): Promise<void> {
+    mockStore.deleteCategory(id);
+    if (this.demoMode) {
+      return;
+    }
+
+    const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(false),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || errData?.error || `Failed to delete category: ${res.status}`);
+    }
+  }
+
+  /**
+   * Delete subcategory (permanently deletes subcategory and cascades to all products under it)
+   */
+  public async deleteSubcategory(categoryId: string, subcat: string): Promise<void> {
+    mockStore.deleteSubcategory(categoryId, subcat);
+    if (this.demoMode) {
+      return;
+    }
+
+    const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${categoryId}/subcategories/${encodeURIComponent(subcat)}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(false),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData?.message || errData?.error || `Failed to delete subcategory: ${res.status}`);
+    }
+  }
+
+  /**
    * Create product
    */
   public async createProduct(req: ProductRequest): Promise<Product> {

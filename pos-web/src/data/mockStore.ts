@@ -686,6 +686,34 @@ class MockStore {
     return newCat;
   }
 
+  public deleteCategory(id: string): void {
+    // 1. Remove category from list
+    const list = this.getCategories().filter((c) => c.id !== id);
+    this.setStorage('categories', list);
+
+    // 2. Cascade delete all products in this category
+    const prods = this.getProducts().filter((p) => p.category?.id !== id && (p as any).categoryId !== id);
+    this.setStorage('products', prods);
+  }
+
+  public deleteSubcategory(categoryId: string, subcat: string): void {
+    // 1. Remove subcategory from category
+    const list = this.getCategories();
+    const cat = list.find((c) => c.id === categoryId);
+    if (cat && cat.subcategories) {
+      cat.subcategories = cat.subcategories.filter((s) => s.trim().toLowerCase() !== subcat.trim().toLowerCase());
+      this.setStorage('categories', list);
+    }
+
+    // 2. Cascade delete all products under this subcategory
+    const prods = this.getProducts().filter((p) => {
+      const matchCat = p.category?.id === categoryId || (p as any).categoryId === categoryId;
+      const matchSub = p.subcategory && p.subcategory.trim().toLowerCase() === subcat.trim().toLowerCase();
+      return !(matchCat && matchSub);
+    });
+    this.setStorage('products', prods);
+  }
+
   // Addons
   public getAddOns(): AddOn[] {
     const isCleared = this.getStorage('catalog_cleared', false);
