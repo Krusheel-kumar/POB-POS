@@ -221,6 +221,30 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [modMinSelections, setModMinSelections] = useState<number>(1);
   const [modMaxSelections, setModMaxSelections] = useState<number>(1);
 
+  // Available modifier groups (Always declared unconditionally before any early return)
+  const [localAddOns, setLocalAddOns] = useState<AddOn[]>(addOns);
+
+  useEffect(() => {
+    setLocalAddOns(addOns);
+  }, [addOns]);
+
+  const allModifierGroups = useMemo(() => {
+    return Array.from(
+      new Set([
+        ...DEFAULT_MODIFIER_GROUPS,
+        ...localAddOns.map((a) => a.category || 'Choice Of Size'),
+      ])
+    );
+  }, [localAddOns]);
+
+  const addOnsByGroup = useMemo(() => {
+    const map: Record<string, AddOn[]> = {};
+    allModifierGroups.forEach((grp) => {
+      map[grp] = localAddOns.filter((a) => a.category === grp);
+    });
+    return map;
+  }, [allModifierGroups, localAddOns]);
+
   // Auto-sync selected category if not set or invalid
   useEffect(() => {
     if ((!selectedCatId || !categories.some((c) => c.id === selectedCatId)) && categories.length > 0) {
@@ -294,25 +318,6 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   }, [activeModalCatObj, products]);
 
   if (!isOpen) return null;
-
-  // Available modifier groups
-  const [localAddOns, setLocalAddOns] = useState<AddOn[]>(addOns);
-
-  useEffect(() => {
-    setLocalAddOns(addOns);
-  }, [addOns]);
-
-  const allModifierGroups = Array.from(
-    new Set([
-      ...DEFAULT_MODIFIER_GROUPS,
-      ...localAddOns.map((a) => a.category || 'Choice Of Size'),
-    ])
-  );
-
-  const addOnsByGroup: Record<string, AddOn[]> = {};
-  allModifierGroups.forEach((grp) => {
-    addOnsByGroup[grp] = localAddOns.filter((a) => a.category === grp);
-  });
 
   // Handlers
   const handleSaveProduct = async (e: React.FormEvent) => {
