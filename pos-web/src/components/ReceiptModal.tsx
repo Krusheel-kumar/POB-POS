@@ -17,6 +17,89 @@ interface ReceiptModalProps {
   autoPrint?: boolean;
 }
 
+export interface ExtractedTopping {
+  name: string;
+  price: number;
+}
+
+export const extractItemToppings = (item: any): ExtractedTopping[] => {
+  const toppings: ExtractedTopping[] = [];
+  const seen = new Set<string>();
+
+  // 1. Check item.addOns array
+  if (Array.isArray(item?.addOns) && item.addOns.length > 0) {
+    for (const a of item.addOns) {
+      const name = (typeof a === 'string' ? a : (a.name || a.addOnNameSnapshot || a.addon_name || a.addonName || '')).trim();
+      if (!name || seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      const rawPrice = typeof a === 'object' && a !== null ? (a.price ?? a.addon_price ?? a.addon_price_snapshot ?? 0) : 0;
+      toppings.push({
+        name,
+        price: Number(rawPrice) || 0,
+      });
+    }
+  }
+
+  // 2. Check item.selectedAddOns array
+  if (toppings.length === 0 && Array.isArray(item?.selectedAddOns) && item.selectedAddOns.length > 0) {
+    for (const a of item.selectedAddOns) {
+      const name = (a.name || a.addOnNameSnapshot || '').trim();
+      if (!name || seen.has(name.toLowerCase())) continue;
+      seen.add(name.toLowerCase());
+      toppings.push({
+        name,
+        price: Number(a.price) || 0,
+      });
+    }
+  }
+
+  // 3. Fallback: Parse from variantNameSnapshot if present
+  if (toppings.length === 0 && item?.variantNameSnapshot) {
+    const rawVariant = String(item.variantNameSnapshot);
+    let addonPart = '';
+    if (rawVariant.includes('• +')) {
+      addonPart = rawVariant.split('• +')[1];
+    } else if (rawVariant.includes('•')) {
+      addonPart = rawVariant.split('•').slice(1).join('•');
+    } else if (rawVariant.startsWith('+')) {
+      addonPart = rawVariant.substring(1);
+    }
+
+    if (addonPart) {
+      const pieces = addonPart.split(',').map((p) => p.trim()).filter(Boolean);
+      for (const piece of pieces) {
+        const cleanPiece = piece.replace(/^\+/, '').trim();
+        const match = cleanPiece.match(/^(.*?)(?:\s*\(\+?₹?(\d+(?:\.\d+)?)\))?$/);
+        if (match) {
+          const tName = match[1].trim();
+          const tPrice = match[2] ? parseFloat(match[2]) : 0;
+          if (tName && !seen.has(tName.toLowerCase())) {
+            seen.add(tName.toLowerCase());
+            toppings.push({ name: tName, price: tPrice });
+          }
+        } else if (!seen.has(cleanPiece.toLowerCase())) {
+          seen.add(cleanPiece.toLowerCase());
+          toppings.push({ name: cleanPiece, price: 0 });
+        }
+      }
+    }
+  }
+
+  return toppings;
+};
+
+export const extractItemCleanVariant = (item: any): string | null => {
+  const rawVariant = item?.variantNameSnapshot || item?.variant;
+  if (!rawVariant) return null;
+  const str = String(rawVariant).trim();
+  if (str.startsWith('+')) return null;
+  if (str.includes('•')) {
+    const mainPart = str.split('•')[0].trim();
+    return mainPart && !mainPart.startsWith('+') ? mainPart : null;
+  }
+  return str;
+};
+
 export const buildThermalPrintHtml = (slipHtml: string, title: string): string => {
   return `<!DOCTYPE html>
 <html>
@@ -53,7 +136,7 @@ export const buildThermalPrintHtml = (slipHtml: string, title: string): string =
         width: 76mm !important;
         max-width: 76mm !important;
         margin: 0 auto !important;
-        padding: 3mm 2mm !important;
+        padding: 2.5mm 1.5mm !important;
         box-shadow: none !important;
         border: none !important;
         border-radius: 0 !important;
@@ -63,92 +146,95 @@ export const buildThermalPrintHtml = (slipHtml: string, title: string): string =
         max-height: none !important;
         height: auto !important;
         font-family: 'Courier New', Consolas, 'Roboto Mono', monospace !important;
-        font-size: 9.5pt !important;
+        font-size: 9pt !important;
         font-weight: 800 !important;
-        line-height: 1.35 !important;
+        line-height: 1.3 !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         color: #000000 !important;
       }
-      .thermal-header { text-align: center !important; margin-bottom: 6px !important; }
-      .brand-name { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1.5px !important; margin: 0 !important; color: #000 !important; text-transform: uppercase !important; }
-      .brand-sub { font-size: 9.5pt !important; font-weight: 800 !important; margin: 2px 0 4px !important; color: #000 !important; }
-      .brand-contact { font-size: 8.5pt !important; font-weight: 700 !important; color: #000 !important; line-height: 1.3 !important; max-width: 74mm !important; margin: 0 auto !important; }
-      .brand-tax-info { font-size: 9pt !important; font-weight: 900 !important; color: #000 !important; margin-top: 4px !important; }
+      .thermal-header { text-align: center !important; margin-bottom: 3px !important; }
+      .brand-name { font-size: 15pt !important; font-weight: 900 !important; letter-spacing: 1px !important; margin: 0 !important; color: #000 !important; text-transform: uppercase !important; }
+      .brand-sub { font-size: 8.5pt !important; font-weight: 800 !important; margin: 1px 0 2px !important; color: #000 !important; }
+      .brand-contact { font-size: 7.5pt !important; font-weight: 700 !important; color: #000 !important; line-height: 1.2 !important; max-width: 74mm !important; margin: 0 auto !important; }
+      .brand-tax-info { font-size: 8.5pt !important; font-weight: 900 !important; color: #000 !important; margin-top: 2px !important; }
       .brand-gstin { letter-spacing: 0.5px !important; }
-      .slip-divider { font-size: 8pt !important; letter-spacing: -1px !important; color: #000 !important; font-weight: 900 !important; margin: 4px 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; }
-      .slip-copy-badge { font-size: 8.5pt !important; font-weight: 900 !important; margin: 2px 0 !important; text-align: center !important; }
-      .slip-title { font-weight: 900 !important; font-size: 10.5pt !important; letter-spacing: 0.5px !important; margin: 2px 0 !important; text-align: center !important; }
-      .duplicate-alert-banner { border: 1.5px dashed #000 !important; padding: 4px !important; text-align: center !important; margin: 4px 0 !important; }
-      .dup-title { font-weight: 900 !important; font-size: 10pt !important; }
-      .dup-sub { font-weight: 800 !important; font-size: 8.5pt !important; }
-      .dup-timestamp { font-weight: 700 !important; font-size: 8pt !important; }
-      .dup-warning { font-weight: 900 !important; font-size: 8.5pt !important; }
-      .duplicate-kot-banner { border: 2px solid #000 !important; padding: 5px !important; text-align: center !important; margin: 4px 0 !important; }
-      .dup-kot-title { font-weight: 900 !important; font-size: 11pt !important; }
-      .dup-kot-sub { font-weight: 800 !important; font-size: 9pt !important; }
-      .dup-kot-alert { font-weight: 900 !important; font-size: 9.5pt !important; }
-      .dup-kot-alert-sub { font-weight: 700 !important; font-size: 8pt !important; }
-      .thermal-meta-box { margin: 6px 0 !important; }
-      .receipt-meta-table { width: 100% !important; border-collapse: collapse !important; margin: 3px 0 !important; font-size: 9pt !important; line-height: 1.35 !important; }
-      .receipt-meta-table tr { vertical-align: top !important; }
-      .receipt-meta-table .meta-key { width: 30% !important; font-weight: 800 !important; color: #000 !important; white-space: nowrap !important; padding: 1.5px 0 !important; }
-      .receipt-meta-table .meta-colon { width: 4% !important; text-align: center !important; font-weight: 800 !important; color: #000 !important; padding: 1.5px 0 !important; }
-      .receipt-meta-table .meta-val { width: 66% !important; font-weight: 700 !important; color: #000 !important; word-break: break-word !important; padding: 1.5px 0 1.5px 4px !important; }
-      .thermal-items-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 4px 0 !important; }
-      .thermal-items-table th { font-weight: 900 !important; font-size: 9pt !important; color: #000 !important; padding: 2px 0 !important; letter-spacing: 0.5px !important; border-bottom: 1px dashed #000 !important; }
-      .thermal-items-table td { padding: 3px 0 !important; vertical-align: top !important; font-size: 9pt !important; color: #000 !important; }
-      .th-item, .td-item { width: 44% !important; text-align: left !important; word-break: break-word !important; }
-      .th-qty, .td-qty { width: 14% !important; text-align: center !important; font-weight: 800 !important; }
+      .slip-divider { font-size: 7.5pt !important; letter-spacing: -1px !important; color: #000 !important; font-weight: 900 !important; margin: 3px 0 !important; overflow: hidden !important; white-space: nowrap !important; text-align: center !important; }
+      
+      .duplicate-alert-banner { border: 1.5px dashed #000 !important; padding: 2px !important; text-align: center !important; margin: 2px 0 !important; }
+      .dup-title { font-weight: 900 !important; font-size: 9pt !important; }
+      .dup-sub { font-weight: 800 !important; font-size: 8pt !important; }
+      .dup-timestamp { font-weight: 700 !important; font-size: 7.5pt !important; }
+      
+      /* 2x2 Grid Customer & Order Meta */
+      .thermal-meta-box { margin: 3px 0 !important; }
+      .bill-meta-grid { width: 100% !important; border-collapse: collapse !important; margin: 2px 0 !important; font-size: 8.5pt !important; line-height: 1.3 !important; }
+      .bill-meta-grid td { vertical-align: top !important; padding: 1.5px 2px !important; }
+      .grid-cell.cell-left { width: 52% !important; text-align: left !important; }
+      .grid-cell.cell-right { width: 48% !important; text-align: left !important; padding-left: 4px !important; }
+      .grid-row { display: flex !important; gap: 3px !important; overflow: hidden !important; white-space: nowrap !important; }
+      .grid-lbl { font-weight: 800 !important; color: #000 !important; min-width: 38px !important; }
+      .grid-val { font-weight: 700 !important; color: #000 !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+      .grid-val.bold { font-weight: 900 !important; }
+
+      /* Items Table & Toppings */
+      .thermal-items-table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; margin: 2px 0 !important; }
+      .thermal-items-table th { font-weight: 900 !important; font-size: 8.5pt !important; color: #000 !important; padding: 1.5px 0 !important; letter-spacing: 0.5px !important; border-bottom: 1px dashed #000 !important; }
+      .thermal-items-table td { padding: 1.5px 0 !important; vertical-align: top !important; font-size: 8.5pt !important; color: #000 !important; }
+      .th-item, .td-item { width: 46% !important; text-align: left !important; word-break: break-word !important; }
+      .th-qty, .td-qty { width: 12% !important; text-align: center !important; font-weight: 800 !important; }
       .th-rate, .td-rate { width: 21% !important; text-align: right !important; font-weight: 800 !important; padding-right: 4px !important; }
       .th-amt, .td-amt { width: 21% !important; text-align: right !important; font-weight: 900 !important; }
-      .table-item-name { font-weight: 800 !important; line-height: 1.25 !important; color: #000 !important; }
-      .table-item-sub { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
-      .table-item-note { font-size: 8pt !important; font-weight: 700 !important; color: #111 !important; padding-left: 4px !important; }
-      .thermal-totals-table { width: 100% !important; border-collapse: collapse !important; margin: 4px 0 !important; }
-      .thermal-totals-table td { padding: 1.5px 0 !important; }
-      .calc-label { font-weight: 700 !important; font-size: 9pt !important; color: #000 !important; text-align: left !important; }
-      .calc-val { font-weight: 800 !important; font-size: 9pt !important; color: #000 !important; text-align: right !important; }
-      .grand-total-tr .grand-label { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; padding: 3px 0 !important; }
-      .grand-total-tr .grand-val { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; text-align: right !important; padding: 3px 0 !important; }
+      .table-item-name { font-weight: 900 !important; line-height: 1.25 !important; color: #000 !important; }
+      .table-item-sub { font-size: 7.5pt !important; font-weight: 700 !important; color: #222 !important; padding-left: 4px !important; }
+      
+      /* Transparent Toppings Rows */
+      .table-topping-row td { padding: 0.5px 0 !important; font-size: 7.5pt !important; }
+      .td-topping-name { padding-left: 6px !important; font-weight: 700 !important; color: #111 !important; }
+      .td-topping-price { font-weight: 800 !important; color: #000 !important; text-align: right !important; }
+      .table-note-row td { padding: 0.5px 0 !important; font-size: 7.5pt !important; font-style: italic !important; padding-left: 6px !important; }
+
+      /* Totals Table */
+      .thermal-totals-table { width: 100% !important; border-collapse: collapse !important; margin: 2px 0 !important; }
+      .thermal-totals-table td { padding: 1px 0 !important; }
+      .calc-label { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; text-align: left !important; }
+      .calc-val { font-weight: 800 !important; font-size: 8.5pt !important; color: #000 !important; text-align: right !important; }
+      .grand-total-tr .grand-label { font-size: 11.5pt !important; font-weight: 900 !important; color: #000 !important; padding: 2px 0 !important; }
+      .grand-total-tr .grand-val { font-size: 11.5pt !important; font-weight: 900 !important; color: #000 !important; text-align: right !important; padding: 2px 0 !important; }
       .paid-tag { font-weight: 900 !important; color: #000 !important; }
-      .slip-footer { text-align: center !important; margin-top: 8px !important; }
-      .footer-fssai-box { font-size: 9pt !important; font-weight: 800 !important; margin: 4px 0 !important; color: #000 !important; }
+      
+      /* Compact Bill Footer */
+      .slip-footer { text-align: center !important; margin-top: 4px !important; }
+      .footer-fssai-box { font-size: 8pt !important; font-weight: 800 !important; margin: 2px 0 !important; color: #000 !important; }
       .fssai-number { font-weight: 900 !important; letter-spacing: 0.5px !important; }
-      .qr-box { display: flex !important; flex-direction: column !important; align-items: center !important; margin: 6px 0 !important; }
-      .simulated-qr { font-size: 11pt !important; letter-spacing: 3px !important; color: #000 !important; }
-      .qr-box span { font-size: 7.5pt !important; font-weight: 700 !important; color: #000 !important; }
-      .thank-you-msg { font-weight: 900 !important; font-size: 9.5pt !important; margin: 4px 0 2px !important; color: #000 !important; }
-      .visit-again-sub { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; margin: 0 0 4px !important; }
-      .footer-software { font-size: 7.5pt !important; font-weight: 600 !important; color: #222 !important; }
+      .thank-you-msg { font-weight: 900 !important; font-size: 8.5pt !important; margin: 2px 0 1px !important; color: #000 !important; }
+      .visit-again-sub { font-weight: 700 !important; font-size: 7.5pt !important; color: #000 !important; margin: 0 0 2px !important; }
+      .footer-software { font-size: 7pt !important; font-weight: 600 !important; color: #333 !important; }
+
+      /* Minimal KOT Styling */
       .thermal-kot { width: 100% !important; margin: 0 auto !important; }
-      .kot-brand-sub { font-size: 10pt !important; font-weight: 800 !important; letter-spacing: 1px !important; margin: 2px 0 !important; text-align: center !important; }
-      .kot-number-row { display: flex !important; justify-content: space-between !important; align-items: center !important; margin: 4px 0 !important; }
-      .kot-number-text { font-size: 18pt !important; font-weight: 900 !important; letter-spacing: 1px !important; color: #000 !important; }
-      .kot-type-badge { font-size: 11pt !important; font-weight: 900 !important; border: 1.5px solid #000 !important; padding: 2px 6px !important; text-transform: uppercase !important; }
-      .kot-meta-row { display: flex !important; justify-content: space-between !important; font-size: 9pt !important; font-weight: 700 !important; margin: 2px 0 !important; }
-      .kot-special-notes { border: 1.5px dashed #000 !important; padding: 4px !important; margin: 4px 0 !important; font-size: 9pt !important; font-weight: 800 !important; }
-      .kot-items-table-header { display: flex !important; justify-content: space-between !important; font-size: 9pt !important; font-weight: 900 !important; padding: 2px 0 !important; }
-      .col-kot-qty { width: 36px !important; text-align: left !important; font-weight: 900 !important; }
+      .kot-header-minimal { text-align: center !important; margin-bottom: 2px !important; }
+      .kot-brand-title { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1.5px !important; margin: 0 !important; text-transform: uppercase !important; color: #000 !important; }
+      .kot-number-title { font-size: 16pt !important; font-weight: 900 !important; letter-spacing: 1px !important; margin: 2px 0 1px !important; color: #000 !important; }
+      .duplicate-kot-banner-compact { border: 1.5px solid #000 !important; font-weight: 900 !important; font-size: 8.5pt !important; text-align: center !important; padding: 2px !important; margin: 2px 0 !important; }
+      .kot-compact-meta { margin: 2px 0 !important; font-size: 8.5pt !important; line-height: 1.35 !important; }
+      .kot-compact-row { display: flex !important; justify-content: space-between !important; margin: 1px 0 !important; }
+      .kot-compact-note { font-size: 8pt !important; font-weight: 800 !important; border: 1px dashed #000 !important; padding: 1.5px 3px !important; margin: 2px 0 !important; }
+      .kot-items-table-header { display: flex !important; justify-content: space-between !important; font-size: 8.5pt !important; font-weight: 900 !important; padding: 1px 0 !important; }
+      .col-kot-qty { width: 32px !important; text-align: left !important; font-weight: 900 !important; }
       .col-kot-item { flex: 1 !important; text-align: left !important; font-weight: 900 !important; }
-      .kot-items-list { margin: 4px 0 !important; }
-      .kot-item-entry { padding: 4px 0 !important; border-bottom: 1px dashed #444 !important; }
+      .kot-items-list { margin: 2px 0 !important; }
+      .kot-item-entry { padding: 2px 0 !important; border-bottom: 1px dashed #555 !important; }
       .kot-item-entry:last-child { border-bottom: none !important; }
-      .kot-item-main { display: flex !important; align-items: baseline !important; gap: 8px !important; }
-      .kot-qty { font-size: 14pt !important; font-weight: 900 !important; width: 32px !important; text-align: left !important; }
-      .kot-name { font-size: 11pt !important; font-weight: 900 !important; flex: 1 !important; line-height: 1.25 !important; }
-      .kot-detail-line { font-size: 9pt !important; font-weight: 800 !important; padding-left: 36px !important; margin-top: 2px !important; }
+      .kot-item-main { display: flex !important; align-items: baseline !important; gap: 6px !important; }
+      .kot-qty { font-size: 12pt !important; font-weight: 900 !important; width: 28px !important; text-align: left !important; }
+      .kot-name { font-size: 10.5pt !important; font-weight: 900 !important; flex: 1 !important; line-height: 1.25 !important; }
+      .kot-detail-line { font-size: 8.5pt !important; font-weight: 800 !important; padding-left: 28px !important; margin-top: 1px !important; }
       .kot-variant-line { color: #000 !important; }
-      .kot-addons-group { margin: 1px 0 !important; }
-      .kot-addon-line { font-size: 9.5pt !important; font-weight: 900 !important; color: #000 !important; }
-      .kot-item-note { font-size: 8.5pt !important; font-weight: 800 !important; font-style: italic !important; }
-      .kot-footer-summary { display: flex !important; justify-content: space-between !important; font-size: 9.5pt !important; font-weight: 900 !important; margin: 4px 0 !important; }
-      .kot-badge { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; }
-      .kot-number-banner { border: 2px solid #000 !important; padding: 3px 6px !important; display: flex !important; justify-content: center !important; gap: 8px !important; align-items: center !important; }
-      .kot-num-title { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
-      .kot-number { font-size: 18pt !important; font-weight: 900 !important; color: #000 !important; }
-      .kot-location-banner { border: 1.5px solid #000 !important; padding: 4px 6px !important; margin-bottom: 6px !important; font-weight: 900 !important; text-align: center !important; }
-      .kot-location-val { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-addons-group { margin: 0.5px 0 !important; }
+      .kot-addon-line { font-size: 8.5pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-item-note { font-size: 7.5pt !important; font-weight: 800 !important; font-style: italic !important; }
+      .kot-footer-summary { display: flex !important; justify-content: space-between !important; font-size: 8.5pt !important; font-weight: 900 !important; margin: 2px 0 !important; }
       .no-print { display: none !important; }
     </style>
   </head>
@@ -333,14 +419,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   }, [isOpen, autoPrint]);
 
-  const formattedDate = new Date().toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
   const activeCustomerName = order?.customerName || bill?.customerName || customerName;
   const activeCustomerPhone = order?.customerPhone || bill?.customerPhone || customerPhone;
   const isPaid = bill?.status === 'PAID' || order?.status === 'BILLED';
@@ -459,7 +537,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           {/* Printable Thermal Slip Area */}
           <div className="thermal-slip printable-area" id="printable-thermal-slip">
           {mode === 'BILL' ? (
-            /* TAX INVOICE */
+            /* COMPACT CUSTOMER BILL / TAX INVOICE */
             <div className="thermal-bill">
               <div className="thermal-header">
                 <h2 className="brand-name">POP O' BOB</h2>
@@ -468,88 +546,80 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   407, Mezzanine, Road No. 81, Film Nagar, Hyderabad, Telangana
                 </div>
                 <div className="brand-tax-info">
-                  <span className="brand-gstin">GSTIN/UIN: 36AANFN9623R1Z9</span>
+                  <span className="brand-gstin">GSTIN: 36AANFN9623R1Z9</span>
                 </div>
-                <div className="slip-divider">========================================</div>
-                {isDuplicate ? (
+                {isDuplicate && (
                   <div className="duplicate-alert-banner">
                     <div className="dup-title">*** DUPLICATE TAX INVOICE ***</div>
                     <div className="dup-sub">[ REPRINT COPY #{printCount + 1} ]</div>
                     {printHistory.firstBillPrintedAt && (
                       <div className="dup-timestamp">
-                        Original Issued: {new Date(printHistory.firstBillPrintedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        Original: {new Date(printHistory.firstBillPrintedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     )}
-                    <div className="dup-warning">⚠️ NOT AN ORIGINAL TAX INVOICE</div>
                   </div>
-                ) : (
-                  <>
-                    <div className="slip-copy-badge original">● ORIGINAL FOR RECIPIENT</div>
-                    <div className="slip-title">TAX INVOICE / CASH BILL</div>
-                  </>
                 )}
                 <div className="slip-divider">========================================</div>
               </div>
 
-              {/* Customer, Date & Order Meta (Clean structured table - NO sentence gaps) */}
-              <div className="thermal-meta-box">
-                <table className="receipt-meta-table">
-                  <tbody>
-                    <tr>
-                      <td className="meta-key">Customer</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">{activeCustomerName || activeOrder?.customerName || bill?.customerName || 'Walk-in Guest'}</td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Mobile No</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">
-                        {activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone
-                          ? String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone).startsWith('+91')
-                            ? String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone)
-                            : `+91 ${String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone)}`
-                          : 'Walk-in'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Date & Time</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">{formattedDate}</td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Invoice No</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">
-                        {bill?.invoiceNumber || (activeOrder?.orderNumber ? activeOrder.orderNumber.replace('ORD', 'POB-FLG') : 'INV-2026-LIVE')}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Order No</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">
-                        #{activeOrder?.orderNumber || bill?.order?.orderNumber || (bill?.invoiceNumber ? bill.invoiceNumber.replace('POB-FLG', 'ORD') : 'ORD-2026-LIVE')}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Order Type</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">
-                        {activeOrder?.orderType ? activeOrder.orderType.replace('_', ' ') : 'DINE IN'}
-                        {activeOrder?.tableNumber ? ` (Table #${activeOrder.tableNumber})` : activeOrder?.table ? ` (Table #${activeOrder.table.tableNumber})` : ' (Counter Pickup)'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Cashier</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">POS Terminal #1 (JD)</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              {/* 2x2 Grid Customer & Order Meta */}
+              {(() => {
+                const billDateObj = new Date(activeOrder?.createdAt || bill?.createdAt || Date.now());
+                const billDateStr = billDateObj.toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                });
+                const billTimeStr = billDateObj.toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                });
+                const custName = activeCustomerName || activeOrder?.customerName || bill?.customerName || 'Walk-in Guest';
+                const rawPhone = activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone;
+                const custPhone = rawPhone
+                  ? (String(rawPhone).startsWith('+91') ? String(rawPhone) : `+91 ${rawPhone}`)
+                  : 'N/A';
+                const invoiceNo = bill?.invoiceNumber || (activeOrder?.orderNumber ? activeOrder.orderNumber.replace('ORD', 'POB-FLG') : 'INV-LIVE');
+                const orderNo = activeOrder?.orderNumber || bill?.order?.orderNumber || (bill?.invoiceNumber ? bill.invoiceNumber.replace('POB-FLG', 'ORD') : 'ORD-LIVE');
+                const rawType = activeOrder?.orderType || bill?.order?.orderType || 'DINE_IN';
+                const orderTypeStr = rawType.replace('_', ' ');
+                const tableNo = activeOrder?.tableNumber || activeOrder?.table?.tableNumber || bill?.order?.tableNumber || bill?.order?.table?.tableNumber;
+                const tableStr = tableNo ? `Table ${tableNo}` : (rawType === 'DINE_IN' ? 'Table T1' : 'Counter');
+
+                return (
+                  <div className="thermal-meta-box">
+                    <table className="bill-meta-grid">
+                      <tbody>
+                        <tr>
+                          <td className="grid-cell cell-left">
+                            <div className="grid-row"><span className="grid-lbl">Cust:</span> <span className="grid-val bold">{custName}</span></div>
+                            <div className="grid-row"><span className="grid-lbl">Mob:</span> <span className="grid-val">{custPhone}</span></div>
+                          </td>
+                          <td className="grid-cell cell-right">
+                            <div className="grid-row"><span className="grid-lbl">Date:</span> <span className="grid-val">{billDateStr}</span></div>
+                            <div className="grid-row"><span className="grid-lbl">Time:</span> <span className="grid-val">{billTimeStr}</span></div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="grid-cell cell-left">
+                            <div className="grid-row"><span className="grid-lbl">Inv:</span> <span className="grid-val bold">{invoiceNo}</span></div>
+                            <div className="grid-row"><span className="grid-lbl">Ord:</span> <span className="grid-val bold">#{orderNo}</span></div>
+                          </td>
+                          <td className="grid-cell cell-right">
+                            <div className="grid-row"><span className="grid-lbl">Type:</span> <span className="grid-val bold">{orderTypeStr}</span></div>
+                            <div className="grid-row"><span className="grid-lbl">Table:</span> <span className="grid-val">{tableStr}</span></div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
 
               <div className="slip-divider">----------------------------------------</div>
 
-              {/* Fixed HTML Table for Items to guarantee column alignment without collision */}
+              {/* Items Table with Transparent Topping Pricing */}
               <table className="thermal-items-table">
                 <thead>
                   <tr>
@@ -563,26 +633,43 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   {activeItems.length > 0 ? (
                     activeItems.map((item: any, idx: number) => {
                       const itemName = item.productNameSnapshot || item.name || item.product?.name || 'Menu Item';
-                      const variantName = item.variantNameSnapshot || item.variant;
+                      const cleanVariant = extractItemCleanVariant(item);
+                      const toppings = extractItemToppings(item);
                       const qty = item.quantity || 1;
                       const lineTotal = item.lineTotalSnapshot != null ? Number(item.lineTotalSnapshot) : (item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) * qty : (bill?.subtotal || 0));
                       const rate = item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) : (lineTotal / qty);
 
                       return (
-                        <tr key={idx} className="thermal-item-row">
-                          <td className="td-item">
-                            <div className="table-item-name">{itemName}</div>
-                            {variantName && (
-                              <div className="table-item-sub">• {variantName}</div>
-                            )}
-                            {item.itemNotes && (
-                              <div className="table-item-note">* Note: {item.itemNotes}</div>
-                            )}
-                          </td>
-                          <td className="td-qty">{qty}</td>
-                          <td className="td-rate">₹{rate.toFixed(2)}</td>
-                          <td className="td-amt">₹{lineTotal.toFixed(2)}</td>
-                        </tr>
+                        <React.Fragment key={idx}>
+                          <tr className="thermal-item-row">
+                            <td className="td-item">
+                              <div className="table-item-name">{itemName}</div>
+                              {cleanVariant && (
+                                <div className="table-item-sub">• {cleanVariant}</div>
+                              )}
+                            </td>
+                            <td className="td-qty">{qty}</td>
+                            <td className="td-rate">₹{rate.toFixed(2)}</td>
+                            <td className="td-amt">₹{lineTotal.toFixed(2)}</td>
+                          </tr>
+                          {toppings.map((top, tIdx) => (
+                            <tr key={`top-${idx}-${tIdx}`} className="table-topping-row">
+                              <td colSpan={3} className="td-item td-topping-name">
+                                + {top.name}
+                              </td>
+                              <td className="td-amt td-topping-price">
+                                {top.price > 0 ? `₹${top.price.toFixed(2)}` : '₹0'}
+                              </td>
+                            </tr>
+                          ))}
+                          {item.itemNotes && (
+                            <tr key={`note-${idx}`} className="table-note-row">
+                              <td colSpan={4} className="table-item-note">
+                                * Note: {item.itemNotes}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })
                   ) : (
@@ -650,18 +737,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </tbody>
               </table>
 
-              {/* Bill Ending: FSSAI Licence & Thank You */}
+              {/* Bill Ending: FSSAI Licence & Compact Thank You */}
               <div className="slip-footer">
                 <div className="slip-divider">----------------------------------------</div>
                 <div className="footer-fssai-box">
                   <span className="fssai-title">FSSAI Lic. No:</span>{' '}
                   <strong className="fssai-number">13622011000492</strong>
-                </div>
-                <div className="slip-divider">----------------------------------------</div>
-
-                <div className="qr-box">
-                  <div className="simulated-qr">▦ ▣ ▤ ▥ ▦</div>
-                  <span>Scan to pay or leave feedback</span>
                 </div>
                 <p className="thank-you-msg">*** THANK YOU FOR VISITING POP O' BOB! ***</p>
                 <p className="visit-again-sub">Speciality Bubble Tea • Have A Bobaful Day!</p>
@@ -669,38 +750,37 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             </div>
           ) : (
-            /* KITCHEN ORDER TICKET (KOT) - MINIMAL BIG-BRAND DESIGN */
+            /* KITCHEN ORDER TICKET (KOT) - MINIMAL PAPER-SAVING DESIGN */
             <div className="thermal-kot">
               {(() => {
-                // Format serial KOT number like top QSR brands (KOT #001, KOT #002...)
                 const rawKot = ticket?.ticketNumber || order?.kotNumber;
-                let formattedKotNumber = 'KOT #001';
+                let formattedKotNumber = 'KOT - #001';
                 if (rawKot) {
                   if (rawKot.includes('#')) {
                     const numMatch = rawKot.match(/#(\d+)/);
                     const isRound2 = rawKot.includes('Round 2') || rawKot.includes('Running') || rawKot.includes('Add-on');
                     const numStr = numMatch ? numMatch[1].padStart(3, '0') : rawKot.replace(/[^0-9]/g, '').padStart(3, '0');
-                    formattedKotNumber = `KOT #${numStr}${isRound2 ? ' (Round 2)' : ''}`;
-                  } else if (rawKot.startsWith('KOT-')) {
+                    formattedKotNumber = `KOT - #${numStr}${isRound2 ? ' (R2)' : ''}`;
+                  } else if (rawKot.startsWith('KOT-') || rawKot.startsWith('KOT -')) {
                     const numPart = rawKot.replace(/[^0-9]/g, '').padStart(3, '0');
-                    formattedKotNumber = `KOT #${numPart}`;
+                    formattedKotNumber = `KOT - #${numPart}`;
                   } else if (/^\d+$/.test(rawKot)) {
-                    formattedKotNumber = `KOT #${rawKot.padStart(3, '0')}`;
+                    formattedKotNumber = `KOT - #${rawKot.padStart(3, '0')}`;
                   } else {
-                    formattedKotNumber = rawKot;
+                    formattedKotNumber = rawKot.replace(/^KOT\s*#?/, 'KOT - #');
                   }
                 } else if (order?.orderNumber) {
                   const digits = order.orderNumber.replace(/[^0-9]/g, '');
                   const serial = digits.slice(-3).padStart(3, '0') || '001';
-                  formattedKotNumber = `KOT #${serial}`;
+                  formattedKotNumber = `KOT - #${serial}`;
                 }
 
                 const orderLocation = order?.table
-                  ? `TABLE: ${order.table.tableNumber}`
+                  ? `Table ${order.table.tableNumber}`
                   : order?.tableNumber
-                  ? `TABLE: ${order.tableNumber}`
+                  ? `Table ${order.tableNumber}`
                   : ticket?.tableNumberSnapshot
-                  ? `TABLE: ${ticket.tableNumberSnapshot}`
+                  ? `Table ${ticket.tableNumberSnapshot}`
                   : ticket?.customerNotesSnapshot?.includes('Table')
                   ? ticket.customerNotesSnapshot.split('•')[0].trim()
                   : (order?.orderType || ticket?.orderTypeSnapshot || 'DINE_IN').replace('_', ' ');
@@ -716,6 +796,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   minute: '2-digit',
                   hour12: true,
                 });
+
+                const kotOrderId = ticket?.orderNumberSnapshot || order?.orderNumber || '0001';
+                const kotOrderType = (ticket?.orderTypeSnapshot || order?.orderType || 'DINE_IN').replace('_', ' ');
+                const kotOrderTypeWithLoc = `${kotOrderType}${orderLocation ? ` (${orderLocation})` : ''}`;
 
                 const kotItems =
                   ticket?.items && ticket.items.length > 0
@@ -733,38 +817,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       })
                     : activeItems.length > 0
                     ? activeItems.map((it: any) => {
-                        let variant = it.variantNameSnapshot || it.variant;
-                        let addOns: string[] = [];
-
-                        if (it.addOns && Array.isArray(it.addOns) && it.addOns.length > 0) {
-                          addOns = it.addOns
-                            .map((a: any) => typeof a === 'string' ? a : (a.name || a.addOnNameSnapshot || ''))
-                            .filter(Boolean);
-                        }
-
-                        if (variant) {
-                          if (variant.includes('• +')) {
-                            const parts = variant.split('• +');
-                            variant = parts[0].trim();
-                            const extracted = parts[1].split(',').map((s: string) => s.trim()).filter(Boolean);
-                            if (addOns.length === 0) addOns = extracted;
-                          } else if (variant.includes('•')) {
-                            const parts = variant.split('•');
-                            variant = parts[0].trim();
-                            const extracted = parts.slice(1).map((s: string) => s.replace(/^\+/, '').trim()).filter(Boolean);
-                            if (addOns.length === 0) addOns = extracted;
-                          } else if (variant.startsWith('+')) {
-                            const extracted = variant.substring(1).split(',').map((s: string) => s.trim()).filter(Boolean);
-                            if (addOns.length === 0) addOns = extracted;
-                            variant = undefined;
-                          }
-                        }
-
+                        const cleanVariant = extractItemCleanVariant(it);
+                        const toppings = extractItemToppings(it).map((t) => t.name);
                         return {
                           name: it.productNameSnapshot || it.name || it.product?.name || 'Menu Item',
-                          variant,
+                          variant: cleanVariant,
                           quantity: it.quantity || 1,
-                          addOns,
+                          addOns: toppings,
                           notes: it.itemNotes,
                         };
                       })
@@ -782,49 +841,39 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
                 return (
                   <>
-                    <div className="thermal-header">
-                      <div className="brand-name">POP O' BOB</div>
-                      <div className="kot-brand-sub">KITCHEN ORDER TICKET</div>
-                      <div className="slip-divider">========================================</div>
-                      {isDuplicate && (
-                        <div className="duplicate-kot-banner">
-                          <div className="dup-kot-title">⚠️ *** DUPLICATE KOT (REPRINT) *** ⚠️</div>
-                          <div className="dup-kot-sub">[ REPRINT COPY #{printCount + 1} ]</div>
-                        </div>
-                      )}
-
-                      <div className="kot-number-row">
-                        <span className="kot-number-text">{formattedKotNumber}</span>
-                        <span className="kot-type-badge">[{orderLocation}]</span>
-                      </div>
-                      <div className="slip-divider">----------------------------------------</div>
+                    {/* Minimal KOT Header */}
+                    <div className="kot-header-minimal">
+                      <div className="kot-brand-title">POP O' BOB</div>
+                      <div className="kot-number-title">{formattedKotNumber}</div>
                     </div>
 
-                    <div className="thermal-meta-box">
-                      <div className="kot-meta-row">
-                        <span><strong>Date:</strong> {kotDateStr}</span>
-                        <span><strong>Time:</strong> {kotTimeStr}</span>
+                    {isDuplicate && (
+                      <div className="duplicate-kot-banner-compact">
+                        ⚠️ DUPLICATE KOT (REPRINT #{printCount + 1})
                       </div>
-                      <div className="kot-meta-row">
-                        <span><strong>Order:</strong> #{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-0001'}</span>
-                        <span><strong>Type:</strong> {(ticket?.orderTypeSnapshot || order?.orderType || 'DINE_IN').replace('_', ' ')}</span>
+                    )}
+
+                    {/* Metadata: 2 Single Lines */}
+                    <div className="kot-compact-meta">
+                      <div className="kot-compact-row">
+                        <span><strong>DATE:</strong> {kotDateStr}</span>
+                        <span><strong>TIME:</strong> {kotTimeStr}</span>
                       </div>
-                      {(activeCustomerName || activeCustomerPhone) && (
-                        <div className="kot-meta-row">
-                          <span><strong>Guest:</strong> {activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(${activeCustomerPhone})` : ''}</span>
-                        </div>
-                      )}
+                      <div className="kot-compact-row">
+                        <span><strong>ORDER:</strong> #{kotOrderId}</span>
+                        <span><strong>TYPE:</strong> {kotOrderTypeWithLoc}</span>
+                      </div>
                       {(ticket?.customerNotesSnapshot || order?.customerNotes) && (
-                        <div className="kot-special-notes">
-                          <strong>* Kitchen Note:</strong> {ticket?.customerNotesSnapshot || order?.customerNotes}
+                        <div className="kot-compact-note">
+                          * Note: {ticket?.customerNotesSnapshot || order?.customerNotes}
                         </div>
                       )}
                     </div>
 
-                    <div className="slip-divider">========================================</div>
+                    <div className="slip-divider">----------------------------------------</div>
                     <div className="kot-items-table-header">
                       <span className="col-kot-qty">QTY</span>
-                      <span className="col-kot-item">ITEM & ADD-ONS</span>
+                      <span className="col-kot-item">ITEM & TOPPINGS</span>
                     </div>
                     <div className="slip-divider">----------------------------------------</div>
 
@@ -860,7 +909,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
                     <div className="slip-divider">----------------------------------------</div>
                     <div className="kot-footer-summary">
-                      <span>Total Items: {kotItems.length}</span>
+                      <span>Items: {kotItems.length}</span>
                       <span>Total Qty: {totalKotQty}</span>
                     </div>
                     <div className="slip-divider">========================================</div>

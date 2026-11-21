@@ -180,9 +180,58 @@
   margin: 4px 0;
 }
 
-/* Metadata Structured Table (NO Gaps) */
+/* Metadata Structured 2x2 Grid */
 .thermal-meta-box {
-  margin: 6px 0;
+  margin: 4px 0;
+}
+
+.bill-meta-grid {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 3px 0;
+  font-family: inherit;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.bill-meta-grid td {
+  vertical-align: top;
+  padding: 2px 3px;
+}
+
+.grid-cell.cell-left {
+  width: 52%;
+  text-align: left;
+}
+
+.grid-cell.cell-right {
+  width: 48%;
+  text-align: left;
+  padding-left: 6px;
+}
+
+.grid-row {
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.grid-lbl {
+  font-weight: 800;
+  color: #000000;
+  min-width: 38px;
+}
+
+.grid-val {
+  font-weight: 700;
+  color: #000000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.grid-val.bold {
+  font-weight: 900;
 }
 
 .receipt-meta-table {
@@ -332,6 +381,33 @@
   color: #854d0e;
   padding-left: 4px;
   margin-top: 1px;
+}
+
+/* Transparent Topping Rows in Bill */
+.table-topping-row td {
+  padding: 1px 0;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.td-topping-name {
+  padding-left: 8px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.td-topping-price {
+  font-weight: 800;
+  color: #0f172a;
+  text-align: right;
+}
+
+.table-note-row td {
+  padding: 1px 0;
+  font-size: 0.80rem;
+  font-style: italic;
+  padding-left: 8px;
+  color: #854d0e;
 }
 
 /* Legacy items support */
@@ -528,6 +604,61 @@
 }
 
 /* KOT Specific Styles - Minimal Production Level Thermal Layout */
+.kot-header-minimal {
+  text-align: center;
+  margin-bottom: 3px;
+}
+
+.kot-brand-title {
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  margin: 0;
+  text-transform: uppercase;
+  color: #0f172a;
+}
+
+.kot-number-title {
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 2px 0;
+  color: #0f172a;
+}
+
+.duplicate-kot-banner-compact {
+  border: 1.5px solid #000;
+  font-weight: 900;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 3px;
+  margin: 3px 0;
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+.kot-compact-meta {
+  margin: 3px 0;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.kot-compact-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.kot-compact-note {
+  font-size: 0.82rem;
+  font-weight: 800;
+  border: 1px dashed #64748b;
+  padding: 2px 4px;
+  margin: 3px 0;
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
 .kot-brand-sub {
   font-size: 0.85rem;
   font-weight: 800;
