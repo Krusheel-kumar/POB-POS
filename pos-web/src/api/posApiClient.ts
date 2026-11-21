@@ -154,7 +154,13 @@ export class PosApiClient {
         throw new Error(`Failed to load products: ${res.status} ${res.statusText}`);
       }
 
-      return res.json();
+      const prods: Product[] = await res.json();
+      try {
+        mockStore.syncProducts(prods);
+      } catch {
+        // non-blocking
+      }
+      return prods;
     } catch (err) {
       return mockStore.getProducts(categoryId);
     }
@@ -887,14 +893,83 @@ export class PosApiClient {
    * Update product sequence ranking
    */
   public async updateProductRank(productId: string, displayOrder: number): Promise<Product> {
-    return mockStore.updateProductRank(productId, displayOrder);
+    const localUpdated = mockStore.updateProductRank(productId, displayOrder);
+
+    if (this.demoMode) {
+      return localUpdated;
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/products/${productId}/rank`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ displayOrder }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        mockStore.updateProductRank(productId, displayOrder);
+        return data;
+      }
+
+      // Fallback: try PATCH /api/v1/products/:id
+      const patchRes = await fetch(`${this.config.baseUrl}/api/v1/products/${productId}`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ displayOrder }),
+      });
+
+      if (patchRes.ok) {
+        const data = await patchRes.json();
+        mockStore.updateProductRank(productId, displayOrder);
+        return data;
+      }
+
+      return localUpdated;
+    } catch {
+      return localUpdated;
+    }
   }
 
   /**
    * Update add-on item sequence ranking
    */
   public async updateAddOnRank(addonId: string, displayOrder: number): Promise<AddOn> {
-    return mockStore.updateAddOnRank(addonId, displayOrder);
+    const localUpdated = mockStore.updateAddOnRank(addonId, displayOrder);
+
+    if (this.demoMode) {
+      return localUpdated;
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/addons/${addonId}/rank`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ displayOrder }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        mockStore.updateAddOnRank(addonId, displayOrder);
+        return data;
+      }
+
+      const patchRes = await fetch(`${this.config.baseUrl}/api/v1/addons/${addonId}`, {
+        method: 'PATCH',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ displayOrder }),
+      });
+
+      if (patchRes.ok) {
+        const data = await patchRes.json();
+        mockStore.updateAddOnRank(addonId, displayOrder);
+        return data;
+      }
+
+      return localUpdated;
+    } catch {
+      return localUpdated;
+    }
   }
 
   /**

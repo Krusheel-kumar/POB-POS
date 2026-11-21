@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type {
   ProductCategory,
   Product,
@@ -40,6 +40,98 @@ interface AdminMenuManagementProps {
   onUpdateAddOnCategory?: (id: string, req: Partial<AddOnCategoryRequest>) => Promise<void>;
   onDeleteAddOnCategory?: (id: string) => Promise<void>;
 }
+
+interface RankControlProps {
+  value: number;
+  onCommit: (newVal: number) => void;
+  title?: string;
+  style?: React.CSSProperties;
+  inputStyle?: React.CSSProperties;
+  compact?: boolean;
+}
+
+const RankControl: React.FC<RankControlProps> = ({
+  value,
+  onCommit,
+  title,
+  style,
+  inputStyle,
+  compact = false,
+}) => {
+  const [draft, setDraft] = useState<string>(String(value));
+
+  useEffect(() => {
+    setDraft(String(value));
+  }, [value]);
+
+  const commit = (valStr: string) => {
+    const trimmed = valStr.trim();
+    if (trimmed === '') {
+      setDraft(String(value));
+      return;
+    }
+    const parsed = parseInt(trimmed, 10);
+    if (!isNaN(parsed) && parsed >= 1) {
+      if (parsed !== value) {
+        onCommit(parsed);
+      }
+    } else {
+      setDraft(String(value));
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      commit(draft);
+      (e.target as HTMLInputElement).blur();
+    } else if (e.key === 'Escape') {
+      setDraft(String(value));
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  const handleStep = (delta: number) => {
+    const current = parseInt(draft, 10);
+    const base = isNaN(current) ? value : current;
+    const nextVal = Math.max(1, base + delta);
+    setDraft(String(nextVal));
+    onCommit(nextVal);
+  };
+
+  return (
+    <div className="rank-input-container" style={{ ...style, gap: compact ? '2px' : undefined }}>
+      <input
+        type="number"
+        min="1"
+        className="rank-number-input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => commit(draft)}
+        onKeyDown={handleKeyDown}
+        title={title || 'Sequence Ranking (Rank 1 displays first)'}
+        style={inputStyle}
+      />
+      <div className="rank-arrow-buttons">
+        <button
+          type="button"
+          className="btn-rank-step"
+          onClick={() => handleStep(-1)}
+          title="Move up (Lower number = higher priority)"
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          className="btn-rank-step"
+          onClick={() => handleStep(1)}
+          title="Move down (Higher number = lower priority)"
+        >
+          ▼
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   categories,
@@ -363,6 +455,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   // Product Ranking Handler
   const handleProductRankChange = async (productId: string, newRank: number) => {
     if (isNaN(newRank) || newRank < 1) return;
+    setErrorMsg(null);
     try {
       if (onUpdateProductRank) {
         await onUpdateProductRank(productId, newRank);
@@ -385,6 +478,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   // AddOn Choice Ranking Handler
   const handleAddOnRankChange = async (addonId: string, newRank: number) => {
     if (isNaN(newRank) || newRank < 1) return;
+    setErrorMsg(null);
     try {
       if (onUpdateAddOnRank) {
         await onUpdateAddOnRank(addonId, newRank);
@@ -1021,45 +1115,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                         return (
                           <tr key={p.id}>
                             <td style={{ textAlign: 'center' }}>
-                              <div className="rank-input-container">
-                                <input
-                                  type="number"
-                                  min="1"
-                                  className="rank-number-input"
-                                  value={currentRank}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    if (!isNaN(val) && val >= 1) {
-                                      handleProductRankChange(p.id, val);
-                                    }
-                                  }}
-                                  title="Sequence Ranking (Rank 1 displays first in POS catalog)"
-                                />
-                                <div className="rank-arrow-buttons">
-                                  <button
-                                    type="button"
-                                    className="btn-rank-step"
-                                    title="Move up (rank higher)"
-                                    onClick={() => {
-                                      if (currentRank > 1) {
-                                        handleProductRankChange(p.id, currentRank - 1);
-                                      }
-                                    }}
-                                  >
-                                    ▲
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-rank-step"
-                                    title="Move down (rank lower)"
-                                    onClick={() => {
-                                      handleProductRankChange(p.id, currentRank + 1);
-                                    }}
-                                  >
-                                    ▼
-                                  </button>
-                                </div>
-                              </div>
+                              <RankControl
+                                value={currentRank}
+                                onCommit={(val) => handleProductRankChange(p.id, val)}
+                                title="Sequence Ranking (Rank 1 displays first in POS catalog)"
+                              />
                             </td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -1437,45 +1497,19 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     </div>
 
                     <div className="addon-cat-card-actions" onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Rank:</span>
-                        <input
-                          type="number"
-                          min="1"
-                          className="rank-number-input"
-                          style={{ width: '42px', height: '24px', fontSize: '0.75rem' }}
+                        <RankControl
                           value={rankNum}
-                          onChange={async (e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!isNaN(val) && val >= 1 && onUpdateAddOnCategory) {
+                          onCommit={async (val) => {
+                            if (onUpdateAddOnCategory) {
                               await onUpdateAddOnCategory(cat.id, { displayOrder: val });
                             }
                           }}
+                          compact
+                          inputStyle={{ width: '42px', height: '24px', fontSize: '0.75rem' }}
+                          title="Category vertical sequence rank in item customizer"
                         />
-                        <button
-                          type="button"
-                          className="btn-rank-step"
-                          title="Move up (higher rank)"
-                          onClick={async () => {
-                            if (rankNum > 1 && onUpdateAddOnCategory) {
-                              await onUpdateAddOnCategory(cat.id, { displayOrder: rankNum - 1 });
-                            }
-                          }}
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-rank-step"
-                          title="Move down (lower rank)"
-                          onClick={async () => {
-                            if (onUpdateAddOnCategory) {
-                              await onUpdateAddOnCategory(cat.id, { displayOrder: rankNum + 1 });
-                            }
-                          }}
-                        >
-                          ▼
-                        </button>
                       </div>
 
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
@@ -1561,45 +1595,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     return (
                       <tr key={a.id}>
                         <td style={{ textAlign: 'center' }}>
-                          <div className="rank-input-container">
-                            <input
-                              type="number"
-                              min="1"
-                              className="rank-number-input"
-                              value={choiceRank}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val) && val >= 1) {
-                                  handleAddOnRankChange(a.id, val);
-                                }
-                              }}
-                              title="Choice ranking in POS customizer"
-                            />
-                            <div className="rank-arrow-buttons">
-                              <button
-                                type="button"
-                                className="btn-rank-step"
-                                title="Move up"
-                                onClick={() => {
-                                  if (choiceRank > 1) {
-                                    handleAddOnRankChange(a.id, choiceRank - 1);
-                                  }
-                                }}
-                              >
-                                ▲
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-rank-step"
-                                title="Move down"
-                                onClick={() => {
-                                  handleAddOnRankChange(a.id, choiceRank + 1);
-                                }}
-                              >
-                                ▼
-                              </button>
-                            </div>
-                          </div>
+                          <RankControl
+                            value={choiceRank}
+                            onCommit={(val) => handleAddOnRankChange(a.id, val)}
+                            title="Choice ranking in POS customizer"
+                          />
                         </td>
                         <td>
                           <strong>{a.name}</strong>

@@ -855,20 +855,51 @@ class MockStore {
     this.setStorage('addons', addons);
   }
 
+  public syncProducts(serverProducts: Product[]): void {
+    if (!serverProducts || serverProducts.length === 0) return;
+    const localList = this.getProducts();
+    const map = new Map<string, Product>();
+    localList.forEach((p) => map.set(p.id, p));
+    serverProducts.forEach((p) => {
+      const existing = map.get(p.id);
+      map.set(p.id, { ...existing, ...p });
+    });
+    this.setStorage('products', Array.from(map.values()));
+  }
+
   public updateProductRank(productId: string, displayOrder: number): Product {
     const list = this.getProducts();
-    const prod = list.find((p) => p.id === productId);
-    if (!prod) throw new Error('Product not found');
-    prod.displayOrder = displayOrder;
+    let prod = list.find((p) => p.id === productId || p.sku === productId);
+    if (!prod) {
+      prod = {
+        id: productId,
+        name: `Product (${productId})`,
+        basePrice: 0,
+        displayOrder,
+      } as Product;
+      list.push(prod);
+    } else {
+      prod.displayOrder = displayOrder;
+    }
     this.setStorage('products', list);
     return prod;
   }
 
   public updateAddOnRank(addonId: string, displayOrder: number): AddOn {
     const list = this.getAddOns();
-    const item = list.find((a) => a.id === addonId);
-    if (!item) throw new Error('Add-on not found');
-    item.displayOrder = displayOrder;
+    let item = list.find((a) => a.id === addonId || a.name.toLowerCase() === addonId.toLowerCase());
+    if (!item) {
+      item = {
+        id: addonId,
+        name: addonId,
+        category: 'Choice Of Extra Toppings',
+        price: 0,
+        displayOrder,
+      } as AddOn;
+      list.push(item);
+    } else {
+      item.displayOrder = displayOrder;
+    }
     this.setStorage('addons', list);
     return item;
   }

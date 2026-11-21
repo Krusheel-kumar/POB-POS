@@ -262,12 +262,26 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
   };
 
   const handleUpdateProductRank = async (productId: string, rank: number) => {
-    await posApiClient.updateProductRank(productId, rank);
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, displayOrder: rank } : p))
+    );
+    try {
+      await posApiClient.updateProductRank(productId, rank);
+    } catch (err) {
+      console.warn('Rank sync notice:', err);
+    }
     await loadAdminData();
   };
 
   const handleUpdateAddOnRank = async (addonId: string, rank: number) => {
-    await posApiClient.updateAddOnRank(addonId, rank);
+    setAddOns((prev) =>
+      prev.map((a) => (a.id === addonId ? { ...a, displayOrder: rank } : a))
+    );
+    try {
+      await posApiClient.updateAddOnRank(addonId, rank);
+    } catch (err) {
+      console.warn('AddOn rank sync notice:', err);
+    }
     await loadAdminData();
   };
 
