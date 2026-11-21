@@ -643,10 +643,12 @@ export class PosApiClient {
     }
 
     try {
+      // 1. Separate addOnIds from core product request to prevent PostgreSQL 42601 syntax errors
+      const { addOnIds, ...coreReq } = req;
       const res = await fetch(`${this.config.baseUrl}/api/v1/products`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(req),
+        body: JSON.stringify(coreReq),
       });
 
       if (!res.ok) {
@@ -658,7 +660,18 @@ export class PosApiClient {
         throw new Error(detailedMsg);
       }
 
-      return res.json();
+      const created: Product = await res.json();
+
+      // 2. Attach modifiers & toppings via the dedicated verified endpoint
+      if (addOnIds && addOnIds.length > 0 && created.id) {
+        try {
+          await this.updateProductAddOns(created.id, addOnIds);
+        } catch (addonErr) {
+          console.warn('[Addon Mapping Notice]:', addonErr);
+        }
+      }
+
+      return created;
     } catch (err) {
       if (this.demoMode) {
         return mockStore.createProduct({
@@ -709,10 +722,11 @@ export class PosApiClient {
     }
 
     try {
+      const { addOnIds, ...coreReq } = req;
       const res = await fetch(`${this.config.baseUrl}/api/v1/products/${id}`, {
         method: 'PUT',
         headers: this.getHeaders(),
-        body: JSON.stringify(req),
+        body: JSON.stringify(coreReq),
       });
 
       if (!res.ok) {
@@ -720,7 +734,16 @@ export class PosApiClient {
         throw new Error(errData?.error || errData?.message || `Failed to update product: ${res.status}`);
       }
 
-      return res.json();
+      const updated = await res.json();
+      if (addOnIds && addOnIds.length > 0) {
+        try {
+          await this.updateProductAddOns(id, addOnIds);
+        } catch (addonErr) {
+          console.warn('[Addon Mapping Notice]:', addonErr);
+        }
+      }
+
+      return updated;
     } catch (err) {
       if (this.demoMode) {
         return mockStore.updateProduct(id, req);
