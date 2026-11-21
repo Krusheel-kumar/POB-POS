@@ -304,6 +304,7 @@ export interface Order {
   table?: RestaurantTable;
   tableNumber?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Payment {
@@ -345,4 +346,5 @@ export interface Bill {
   };
   payments?: Payment[];
   createdAt: string;
+  settledAt?: string;
 }

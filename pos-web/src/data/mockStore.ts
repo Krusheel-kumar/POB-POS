@@ -1381,6 +1381,16 @@ class MockStore {
     return order;
   }
 
+  public updateOrderStatus(orderId: string, status: any): Order {
+    const orders = this.getOrders();
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) throw new Error('Order not found');
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    this.setStorage('orders', orders);
+    return order;
+  }
+
   // Kitchen Tickets
   public getKitchenTickets(): KitchenTicket[] {
     return this.getStorage('tickets', INITIAL_TICKETS);

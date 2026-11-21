@@ -471,4 +471,46 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
     const updatedRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
     return reply.send(updatedRes.rows[0]);
   });
+
+  // --- UPDATE ORDER STATUS / CANCEL ORDER ---
+  fastify.patch('/api/v1/orders/:id/status', async (req: FastifyRequest<{
+    Params: { id: string };
+    Body: { status: 'CONFIRMED' | 'PREPARING' | 'READY' | 'BILLED' | 'COMPLETED' | 'CANCELLED'; cancellationReason?: string };
+  }>, reply: FastifyReply) => {
+    const { id } = req.params;
+    const { status, cancellationReason } = req.body;
+
+    const orderRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [id] });
+    if (orderRes.rows.length === 0) return reply.status(404).send({ error: 'Order not found' });
+    const order = orderRes.rows[0];
+
+    await db.execute({
+      sql: "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?",
+      args: [status, id],
+    });
+
+    // If cancelled, free associated table and cancel kitchen tickets
+    if (status === 'CANCELLED') {
+      if (order.table_id) {
+        await db.execute({
+          sql: "UPDATE restaurant_tables SET status = 'AVAILABLE', active_order_id = NULL, updated_at = datetime('now') WHERE id = ?",
+          args: [order.table_id],
+        });
+      }
+      await db.execute({
+        sql: "UPDATE kitchen_tickets SET status = 'CANCELLED', cancellation_reason = ?, updated_at = datetime('now') WHERE order_id = ?",
+        args: [cancellationReason || 'Order Cancelled', id],
+      });
+      // Also record in void_audit_logs
+      const voidId = `void-${Date.now()}`;
+      await db.execute({
+        sql: `INSERT INTO void_audit_logs (id, outlet_id, order_number, table_number, item_name, quantity, amount, original_waiter, manager_pin, reason)
+              VALUES (?, ?, ?, ?, 'Entire Order Cancelled', 1, ?, 'Manager', '****1234', ?)`,
+        args: [voidId, order.outlet_id, order.order_number, order.table_number || null, Number(order.total_amount), cancellationReason || 'Order Cancelled'],
+      });
+    }
+
+    const updated = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [id] });
+    return reply.send(updated.rows[0]);
+  });
 }

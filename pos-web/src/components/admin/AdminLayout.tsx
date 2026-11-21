@@ -68,6 +68,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [voidLogs, setVoidLogs] = useState<any[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,12 +120,14 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
       setAddOns(adds);
 
       if (selectedOutletId) {
-        const [ordList, billList] = await Promise.all([
+        const [ordList, billList, voidList] = await Promise.all([
           posApiClient.getOutletOrders(selectedOutletId).catch(() => [] as Order[]),
           posApiClient.getOutletBills(selectedOutletId).catch(() => [] as Bill[]),
+          posApiClient.getVoidLogs(selectedOutletId).catch(() => [] as any[]),
         ]);
         setOrders(ordList);
         setBills(billList);
+        setVoidLogs(voidList);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch admin data');
@@ -132,6 +135,25 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
       setLoading(false);
     }
   }, [selectedOutletId]);
+
+  // Periodic background live sync for real-time dashboard accuracy
+  useEffect(() => {
+    if (activeTab !== 'dashboard') return;
+    const interval = setInterval(() => {
+      if (selectedOutletId) {
+        Promise.all([
+          posApiClient.getOutletOrders(selectedOutletId).catch(() => [] as Order[]),
+          posApiClient.getOutletBills(selectedOutletId).catch(() => [] as Bill[]),
+          posApiClient.getVoidLogs(selectedOutletId).catch(() => [] as any[]),
+        ]).then(([ordList, billList, voidList]) => {
+          setOrders(ordList);
+          setBills(billList);
+          setVoidLogs(voidList);
+        });
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [activeTab, selectedOutletId]);
 
   useEffect(() => {
     loadAdminData();
@@ -372,6 +394,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
             <AdminDashboard
               orders={orders}
               bills={bills}
+              voidLogs={voidLogs}
+              outletId={selectedOutletId}
               isLoading={loading}
               onRefresh={loadAdminData}
             />

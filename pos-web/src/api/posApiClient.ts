@@ -249,6 +249,35 @@ export class PosApiClient {
   }
 
   /**
+   * Update Order Status / Cancel Order
+   */
+  public async updateOrderStatus(
+    orderId: string,
+    status: 'CONFIRMED' | 'PREPARING' | 'READY' | 'BILLED' | 'COMPLETED' | 'CANCELLED',
+    cancellationReason?: string
+  ): Promise<Order> {
+    if (this.demoMode) {
+      return mockStore.updateOrderStatus(orderId, status);
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ status, cancellationReason }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update order status: ${res.status}`);
+      }
+
+      return res.json();
+    } catch {
+      return mockStore.updateOrderStatus(orderId, status);
+    }
+  }
+
+  /**
    * Fetch kitchen tickets
    */
   public async getKitchenTickets(
