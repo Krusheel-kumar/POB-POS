@@ -12,6 +12,8 @@ import type {
   Outlet,
   CreateOutletRequest,
   AddOn,
+  AddOnCategory,
+  AddOnCategoryRequest,
   CalculationResponse,
   CreateOrderRequest,
   TableStatus,
@@ -114,6 +116,18 @@ export const INITIAL_CATEGORIES: ProductCategory[] = [
     isActive: true,
     subcategories: ['Belgian Waffles', 'Cheesecakes & Tarts', 'Thick Gelato Shakes', 'Sundae Bowls'],
   },
+];
+
+export const INITIAL_ADDON_CATEGORIES: AddOnCategory[] = [
+  { id: 'aocat-milk', name: 'Choice of Milk', displayOrder: 1, selectionType: 'SINGLE', minSelections: 1, maxSelections: 1, isActive: true },
+  { id: 'aocat-size', name: 'Choice Of Size', displayOrder: 2, selectionType: 'SINGLE', minSelections: 1, maxSelections: 1, isActive: true },
+  { id: 'aocat-free-toppings', name: 'Choice of Free Toppings', displayOrder: 3, selectionType: 'MULTI', minSelections: 0, maxSelections: 3, isActive: true },
+  { id: 'aocat-extra-toppings', name: 'Choice of Extra Toppings', displayOrder: 4, selectionType: 'MULTI', minSelections: 0, maxSelections: 3, isActive: true },
+  { id: 'aocat-sweetness', name: 'Choice Of Sweetness', displayOrder: 5, selectionType: 'SINGLE', minSelections: 1, maxSelections: 1, isActive: true },
+  { id: 'aocat-ice', name: 'Choice Of Ice Level', displayOrder: 6, selectionType: 'SINGLE', minSelections: 1, maxSelections: 1, isActive: true },
+  { id: 'aocat-boba', name: 'Choice Of Boba & Toppings', displayOrder: 7, selectionType: 'MULTI', minSelections: 0, maxSelections: 3, isActive: true },
+  { id: 'aocat-milk-base', name: 'Choice Of Milk Base', displayOrder: 8, selectionType: 'SINGLE', minSelections: 1, maxSelections: 1, isActive: true },
+  { id: 'aocat-dips', name: 'Choice Of Dips & Cheeses', displayOrder: 9, selectionType: 'MULTI', minSelections: 0, maxSelections: 3, isActive: true },
 ];
 
 export const INITIAL_ADDONS: AddOn[] = [
@@ -756,6 +770,109 @@ class MockStore {
     return purgedCount;
   }
 
+  // AddOn Categories
+  public getAddOnCategories(): AddOnCategory[] {
+    const isCleared = this.getStorage('catalog_cleared', false);
+    const stored = this.getStorage<AddOnCategory[]>('addon_categories', isCleared ? [] : INITIAL_ADDON_CATEGORIES);
+
+    // Auto-discover any categories from existing add-ons not in the list
+    const addons = this.getAddOns();
+    let updated = false;
+    addons.forEach((a) => {
+      const catName = a.category?.trim();
+      if (catName && !stored.some((c) => c.name.toLowerCase() === catName.toLowerCase())) {
+        stored.push({
+          id: `aocat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          name: catName,
+          displayOrder: stored.length + 1,
+          selectionType: a.selectionType || 'SINGLE',
+          minSelections: a.minSelections ?? 0,
+          maxSelections: a.maxSelections ?? 3,
+          isActive: true,
+        });
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      this.setStorage('addon_categories', stored);
+    }
+    return [...stored].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+  }
+
+  public createAddOnCategory(req: AddOnCategoryRequest): AddOnCategory {
+    const list = this.getAddOnCategories();
+    const newCat: AddOnCategory = {
+      id: `aocat-${Date.now()}`,
+      name: req.name.trim(),
+      displayOrder: req.displayOrder ?? (list.length + 1),
+      selectionType: req.selectionType || 'SINGLE',
+      minSelections: req.minSelections ?? (req.selectionType === 'MULTI' ? 0 : 1),
+      maxSelections: req.maxSelections ?? (req.selectionType === 'MULTI' ? 3 : 1),
+      isActive: true,
+    };
+    list.push(newCat);
+    this.setStorage('addon_categories', list);
+    return newCat;
+  }
+
+  public updateAddOnCategory(id: string, req: Partial<AddOnCategoryRequest>): AddOnCategory {
+    const list = this.getAddOnCategories();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) throw new Error('Add-on category not found');
+    const oldName = list[idx].name;
+    const updated: AddOnCategory = {
+      ...list[idx],
+      name: req.name !== undefined ? req.name.trim() : list[idx].name,
+      displayOrder: req.displayOrder !== undefined ? req.displayOrder : list[idx].displayOrder,
+      selectionType: req.selectionType !== undefined ? req.selectionType : list[idx].selectionType,
+      minSelections: req.minSelections !== undefined ? req.minSelections : list[idx].minSelections,
+      maxSelections: req.maxSelections !== undefined ? req.maxSelections : list[idx].maxSelections,
+    };
+    list[idx] = updated;
+    this.setStorage('addon_categories', list);
+
+    if (req.name && req.name.trim() !== oldName) {
+      const addons = this.getAddOns();
+      addons.forEach((a) => {
+        if (a.category?.toLowerCase() === oldName.toLowerCase()) {
+          a.category = req.name!.trim();
+        }
+      });
+      this.setStorage('addons', addons);
+    }
+    return updated;
+  }
+
+  public deleteAddOnCategory(id: string): void {
+    const list = this.getAddOnCategories();
+    const cat = list.find((c) => c.id === id);
+    if (!cat) return;
+    const updatedList = list.filter((c) => c.id !== id);
+    this.setStorage('addon_categories', updatedList);
+
+    const addons = this.getAddOns().filter((a) => a.category?.toLowerCase() !== cat.name.toLowerCase());
+    this.setStorage('addons', addons);
+  }
+
+  public updateProductRank(productId: string, displayOrder: number): Product {
+    const list = this.getProducts();
+    const prod = list.find((p) => p.id === productId);
+    if (!prod) throw new Error('Product not found');
+    prod.displayOrder = displayOrder;
+    this.setStorage('products', list);
+    return prod;
+  }
+
+  public updateAddOnRank(addonId: string, displayOrder: number): AddOn {
+    const list = this.getAddOns();
+    const item = list.find((a) => a.id === addonId);
+    if (!item) throw new Error('Add-on not found');
+    item.displayOrder = displayOrder;
+    this.setStorage('addons', list);
+    return item;
+  }
+
   // Addons
   public getAddOns(): AddOn[] {
     const isCleared = this.getStorage('catalog_cleared', false);
@@ -802,7 +919,8 @@ class MockStore {
     category?: string,
     selectionType?: 'SINGLE' | 'MULTI',
     minSelections?: number,
-    maxSelections?: number
+    maxSelections?: number,
+    displayOrder?: number
   ): AddOn {
     const list = this.getAddOns();
     const resolvedCat = category?.trim() || 'Choice Of Size';
@@ -825,6 +943,7 @@ class MockStore {
       selectionType: isSingle ? 'SINGLE' : 'MULTI',
       minSelections: resolvedMin,
       maxSelections: resolvedMax,
+      displayOrder: displayOrder ?? (list.filter((a) => a.category === resolvedCat).length + 1),
     };
     list.push(newAddOn);
     this.setStorage('addons', list);
@@ -918,6 +1037,7 @@ class MockStore {
     badge?: string;
     dietaryType?: DietaryType;
     prepTimeMinutes?: number;
+    displayOrder?: number;
     variants?: { name: string; sizeLabel?: string; price: number }[];
     addOnIds?: string[];
   }): Product {
@@ -942,6 +1062,7 @@ class MockStore {
       badge: req.badge,
       dietaryType: req.dietaryType || 'VEG',
       prepTimeMinutes: req.prepTimeMinutes || 5,
+      displayOrder: req.displayOrder ?? (list.length + 1),
       variants: (req.variants || []).map((v, i) => ({
         id: `var-${Date.now()}-${i}`,
         name: v.name,
@@ -997,6 +1118,7 @@ class MockStore {
       badge: req.badge !== undefined ? req.badge : current.badge,
       dietaryType: req.dietaryType ?? current.dietaryType,
       prepTimeMinutes: req.prepTimeMinutes ?? current.prepTimeMinutes,
+      displayOrder: req.displayOrder !== undefined ? req.displayOrder : current.displayOrder,
       variants: req.variants
         ? req.variants.map((v: { name: string; sizeLabel?: string; price: number; isActive?: boolean }, i: number) => ({
             id: `var-${id}-${i}`,

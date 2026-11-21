@@ -629,3 +629,306 @@
   align-items: center;
   gap: 4px;
 }
+
+/* =========================================================================
+   Hierarchical Subcategories Tree & Sequence Ranking UI
+   ========================================================================= */
+
+.category-tree-block {
+  border-bottom: 1px solid #f8fafc;
+}
+
+.category-parent-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-category-toggle-expand {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-category-toggle-expand:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.category-chevron-icon {
+  display: inline-block;
+  font-size: 0.75rem;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.category-chevron-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.category-subcat-indent-list {
+  background: #f8fafc;
+  border-left: 2.5px solid #cbd5e1;
+  margin-left: 1.25rem;
+  padding: 0.25rem 0 0.4rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subcategory-tree-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.8rem;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.subcategory-tree-row:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.subcategory-tree-row.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #bfdbfe;
+}
+
+.subcategory-tree-branch {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-right: 6px;
+  font-family: monospace;
+}
+
+.subcategory-tree-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subcategory-tree-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subcategory-tree-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.subcategory-tree-row.active .subcategory-tree-badge {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.btn-subcat-row-delete {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 1px 3px;
+  cursor: pointer;
+  border-radius: 3px;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.subcategory-tree-row:hover .btn-subcat-row-delete {
+  opacity: 1;
+}
+
+.btn-subcat-row-delete:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.btn-add-subcat-inline {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  margin: 4px 6px 2px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.btn-add-subcat-inline:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+/* Rank input and stepper controls */
+.rank-input-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.rank-number-input {
+  width: 48px;
+  height: 28px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #0f172a;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rank-number-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.rank-arrow-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.btn-rank-step {
+  width: 18px;
+  height: 13px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #475569;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-rank-step:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+/* Add-on Categories Executive Management Grid */
+.addon-categories-management-panel {
+  margin-bottom: 1.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.addon-categories-panel-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addon-categories-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.addon-cat-config-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.addon-cat-config-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.addon-cat-config-card.active {
+  border-color: #3b82f6;
+  background: #f0f7ff;
+}
+
+.addon-cat-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.addon-cat-rank-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: #3b82f6;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 12px;
+  letter-spacing: 0.02em;
+}
+
+.addon-cat-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1;
+}
+
+.addon-cat-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.addon-cat-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}

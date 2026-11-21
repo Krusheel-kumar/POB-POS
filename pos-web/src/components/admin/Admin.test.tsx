@@ -24,6 +24,10 @@ vi.mock('../../api/posApiClient', () => ({
     updateProductAddOns: vi.fn(),
     toggleAddOn: vi.fn(),
     deleteAddOn: vi.fn(),
+    getAddOnCategories: vi.fn().mockResolvedValue([]),
+    createAddOnCategory: vi.fn(),
+    updateAddOnCategory: vi.fn(),
+    deleteAddOnCategory: vi.fn(),
     getVoidLogs: vi.fn().mockResolvedValue([]),
   },
 }));
@@ -118,6 +122,7 @@ describe('Admin Dashboard and Owner Portal', () => {
     vi.mocked(posApiClient.getCategories).mockResolvedValue(mockCategories);
     vi.mocked(posApiClient.getProducts).mockResolvedValue(mockProducts);
     vi.mocked(posApiClient.getAddOns).mockResolvedValue(mockAddOns);
+    vi.mocked(posApiClient.getAddOnCategories).mockResolvedValue([]);
     vi.mocked(posApiClient.getOutletOrders).mockResolvedValue(mockOrders);
     vi.mocked(posApiClient.getOutletBills).mockResolvedValue(mockBills);
   });
@@ -158,7 +163,7 @@ describe('Admin Dashboard and Owner Portal', () => {
     const menuTabBtn = await screen.findByRole('button', { name: /Menu Catalog/i });
     fireEvent.click(menuTabBtn);
 
-    const categoriesTab = screen.getByRole('button', { name: /Categories/i });
+    const categoriesTab = screen.getByRole('button', { name: /^Categories \(/i });
     fireEvent.click(categoriesTab);
 
     const addCatBtn = screen.getByRole('button', { name: /\+ Add Category/i });

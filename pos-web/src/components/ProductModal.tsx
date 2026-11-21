@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Product, ProductVariant, AddOn, CartItem } from '../types/pos';
+import type { Product, ProductVariant, AddOn, AddOnCategory, CartItem } from '../types/pos';
+import { mockStore } from '../data/mockStore';
 import './ProductModal.css';
 
 interface ProductModalProps {
   product: Product;
   availableAddOns?: AddOn[];
+  addOnCategories?: AddOnCategory[];
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (item: Omit<CartItem, 'id' | 'lineTotal'>) => void;
@@ -40,6 +42,7 @@ export const formatDisplayName = (name: string): string => {
 export const ProductModal: React.FC<ProductModalProps> = ({
   product,
   availableAddOns,
+  addOnCategories,
   isOpen,
   onClose,
   onAddToCart,
@@ -109,8 +112,45 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       if (!map[cat]) map[cat] = [];
       map[cat].push(a);
     });
-    return map;
-  }, [effectiveAddOns]);
+
+    // Sort items within each category group by displayOrder ascending
+    Object.keys(map).forEach((cat) => {
+      map[cat].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+    });
+
+    // Retrieve active Add-on Category rankings
+    const categoriesList = addOnCategories || mockStore.getAddOnCategories();
+    const rankMap = new Map<string, number>();
+    categoriesList.forEach((c) => {
+      rankMap.set(c.name.toLowerCase().trim(), c.displayOrder);
+    });
+
+    // Smart default ranking fallback if not explicitly found in categories list:
+    // Choice of Milk (1) -> Choice Of Size (2) -> Free Toppings (3) -> Extra Toppings (4) -> etc.
+    const getCatRank = (catName: string): number => {
+      const lower = catName.toLowerCase().trim();
+      if (rankMap.has(lower)) return rankMap.get(lower)!;
+      if (lower.includes('milk')) return 1;
+      if (lower.includes('size')) return 2;
+      if (lower.includes('free topping')) return 3;
+      if (lower.includes('extra topping')) return 4;
+      if (lower.includes('sweet') || lower.includes('sugar')) return 5;
+      if (/\bice\b/.test(lower)) return 6;
+      if (lower.includes('boba') || lower.includes('topping')) return 7;
+      return 99;
+    };
+
+    const sortedEntries = Object.entries(map).sort(
+      ([catA], [catB]) => getCatRank(catA) - getCatRank(catB)
+    );
+
+    const sortedMap: Record<string, AddOn[]> = {};
+    sortedEntries.forEach(([cat, items]) => {
+      sortedMap[cat] = items;
+    });
+
+    return sortedMap;
+  }, [effectiveAddOns, addOnCategories]);
 
   // Pre-select choices:
   // If editing an existing cart item: pre-populate its exact toppings, variant, notes, and quantity

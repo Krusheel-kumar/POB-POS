@@ -1,5 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import type { ProductCategory, Product, AddOn, CategoryRequest, ProductRequest, AddOnRequest } from '../../types/pos';
+import type {
+  ProductCategory,
+  Product,
+  AddOn,
+  AddOnCategory,
+  AddOnCategoryRequest,
+  CategoryRequest,
+  ProductRequest,
+  AddOnRequest,
+} from '../../types/pos';
+import { mockStore } from '../../data/mockStore';
 import { AddProductModal } from '../AddProductModal';
 import './AdminMenuManagement.css';
 
@@ -7,6 +17,7 @@ interface AdminMenuManagementProps {
   categories: ProductCategory[];
   products: Product[];
   addOns: AddOn[];
+  addOnCategories?: AddOnCategory[];
   isLoading: boolean;
   onRefresh: () => void;
   onCreateCategory: (req: CategoryRequest) => Promise<void>;
@@ -23,12 +34,18 @@ interface AdminMenuManagementProps {
   onUpdateProductAddOns?: (productId: string, addOnIds: string[]) => Promise<void>;
   onToggleAddOn?: (id: string) => Promise<void>;
   onDeleteAddOn?: (id: string) => Promise<void>;
+  onUpdateProductRank?: (productId: string, rank: number) => Promise<void>;
+  onUpdateAddOnRank?: (addonId: string, rank: number) => Promise<void>;
+  onCreateAddOnCategory?: (req: AddOnCategoryRequest) => Promise<void>;
+  onUpdateAddOnCategory?: (id: string, req: Partial<AddOnCategoryRequest>) => Promise<void>;
+  onDeleteAddOnCategory?: (id: string) => Promise<void>;
 }
 
 export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   categories,
   products,
   addOns,
+  addOnCategories,
   isLoading,
   onRefresh,
   onCreateCategory,
@@ -45,6 +62,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   onUpdateProductAddOns,
   onToggleAddOn,
   onDeleteAddOn,
+  onUpdateProductRank,
+  onUpdateAddOnRank,
+  onCreateAddOnCategory,
+  onUpdateAddOnCategory,
+  onDeleteAddOnCategory,
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'addons'>('products');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -55,6 +77,21 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('ALL');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [hideEmptyCategories, setHideEmptyCategories] = useState(false);
+
+  // Expanded categories in hierarchical sidebar (true = expanded by default)
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Record<string, boolean>>({});
+
+  const isCategoryExpanded = (catId: string) => {
+    return expandedCategoryIds[catId] !== false; // default open
+  };
+
+  const toggleCategoryExpanded = (catId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedCategoryIds((prev) => ({
+      ...prev,
+      [catId]: prev[catId] === false ? true : false,
+    }));
+  };
 
   // Selected item for Edit modal
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -91,6 +128,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [addOnPrice, setAddOnPrice] = useState('0');
   const [addOnCategory, setAddOnCategory] = useState('Choice Of Size');
   const [addOnSelectionType, setAddOnSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE');
+  const [addOnRank, setAddOnRank] = useState<number>(1);
   const [isCustomCategory, setIsCustomCategory] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
 
@@ -98,6 +136,17 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [showNewCategoryGroupModal, setShowNewCategoryGroupModal] = useState(false);
   const [newGroupCatName, setNewGroupCatName] = useState('');
   const [newGroupSelectionType, setNewGroupSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE');
+  const [newGroupCatRank, setNewGroupCatRank] = useState<number>(1);
+  const [newGroupMin, setNewGroupMin] = useState<number>(1);
+  const [newGroupMax, setNewGroupMax] = useState<number>(1);
+
+  // Edit Add-On Category Modal State
+  const [editingAddOnCategory, setEditingAddOnCategory] = useState<AddOnCategory | null>(null);
+  const [editAddOnCatName, setEditAddOnCatName] = useState('');
+  const [editAddOnCatSelectionType, setEditAddOnCatSelectionType] = useState<'SINGLE' | 'MULTI'>('SINGLE');
+  const [editAddOnCatRank, setEditAddOnCatRank] = useState<number>(1);
+  const [editAddOnCatMin, setEditAddOnCatMin] = useState<number>(0);
+  const [editAddOnCatMax, setEditAddOnCatMax] = useState<number>(3);
 
   // Add-on Category Filter
   const [filterAddOnCat, setFilterAddOnCat] = useState<string>('ALL');
@@ -106,19 +155,20 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [bulkAssignAddOn, setBulkAssignAddOn] = useState<AddOn | null>(null);
   const [bulkSelectedProductIds, setBulkSelectedProductIds] = useState<string[]>([]);
 
+  // Effective Add-on Categories list (ordered by displayOrder / sequence rank)
+  const effectiveAddOnCategories: AddOnCategory[] = useMemo(() => {
+    const list = addOnCategories && addOnCategories.length > 0
+      ? addOnCategories
+      : mockStore.getAddOnCategories();
+    return [...list].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+  }, [addOnCategories]);
+
   // Unique categories of Add-ons
   const uniqueAddOnCategories = useMemo(() => {
-    const defaultCats = [
-      'Choice Of Size',
-      'Choice Of Sweetness',
-      'Choice Of Ice Level',
-      'Choice Of Boba & Toppings',
-      'Choice Of Milk Base',
-      'Choice Of Dips & Cheeses',
-    ];
+    const defaultCats = effectiveAddOnCategories.map((c) => c.name);
     const fromList = addOns.map((a) => a.category || 'Choice Of Size');
     return Array.from(new Set([...defaultCats, ...fromList]));
-  }, [addOns]);
+  }, [effectiveAddOnCategories, addOns]);
 
   // Group add-ons by category
   const groupedAddOns = useMemo(() => {
@@ -134,10 +184,13 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     return groups;
   }, [addOns, uniqueAddOnCategories]);
 
-  // Filtered add-ons list
+  // Filtered add-ons list (sorted by displayOrder / sequence rank)
   const filteredAddOns = useMemo(() => {
-    if (filterAddOnCat === 'ALL') return addOns;
-    return addOns.filter((a) => (a.category || 'Choice Of Size') === filterAddOnCat);
+    let list = addOns;
+    if (filterAddOnCat !== 'ALL') {
+      list = addOns.filter((a) => (a.category || 'Choice Of Size') === filterAddOnCat);
+    }
+    return [...list].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
   }, [addOns, filterAddOnCat]);
 
   // Petpooja: Count items per category
@@ -186,27 +239,29 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     return Array.from(new Set([...fromCat, ...fromProds]));
   }, [activeCategoryObj, products]);
 
-  // Petpooja: Filtered products list for table
+  // Petpooja: Filtered products list for table (sorted by displayOrder / sequence rank)
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      if (selectedCategoryId !== 'ALL' && p.category?.id !== selectedCategoryId) {
-        return false;
-      }
-      if (selectedSubcategory !== 'ALL' && p.subcategory !== selectedSubcategory) {
-        return false;
-      }
-      if (menuSearchQuery.trim()) {
-        const q = menuSearchQuery.toLowerCase();
-        const matchName = p.name.toLowerCase().includes(q);
-        const matchSku = p.sku?.toLowerCase().includes(q);
-        const matchDesc = p.description?.toLowerCase().includes(q);
-        const matchSubcat = p.subcategory?.toLowerCase().includes(q);
-        if (!matchName && !matchSku && !matchDesc && !matchSubcat) {
+    return products
+      .filter((p) => {
+        if (selectedCategoryId !== 'ALL' && p.category?.id !== selectedCategoryId) {
           return false;
         }
-      }
-      return true;
-    });
+        if (selectedSubcategory !== 'ALL' && p.subcategory !== selectedSubcategory) {
+          return false;
+        }
+        if (menuSearchQuery.trim()) {
+          const q = menuSearchQuery.toLowerCase();
+          const matchName = p.name.toLowerCase().includes(q);
+          const matchSku = p.sku?.toLowerCase().includes(q);
+          const matchDesc = p.description?.toLowerCase().includes(q);
+          const matchSubcat = p.subcategory?.toLowerCase().includes(q);
+          if (!matchName && !matchSku && !matchDesc && !matchSubcat) {
+            return false;
+          }
+        }
+        return true;
+      })
+      .sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999));
   }, [products, selectedCategoryId, selectedSubcategory, menuSearchQuery]);
 
   // Handlers
@@ -305,6 +360,88 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     }
   };
 
+  // Product Ranking Handler
+  const handleProductRankChange = async (productId: string, newRank: number) => {
+    if (isNaN(newRank) || newRank < 1) return;
+    try {
+      if (onUpdateProductRank) {
+        await onUpdateProductRank(productId, newRank);
+      } else if (onUpdateProduct) {
+        const prod = products.find((p) => p.id === productId);
+        if (prod) {
+          await onUpdateProduct(productId, {
+            name: prod.name,
+            basePrice: prod.basePrice,
+            categoryId: prod.category?.id || '',
+            displayOrder: newRank,
+          });
+        }
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to update rank');
+    }
+  };
+
+  // AddOn Choice Ranking Handler
+  const handleAddOnRankChange = async (addonId: string, newRank: number) => {
+    if (isNaN(newRank) || newRank < 1) return;
+    try {
+      if (onUpdateAddOnRank) {
+        await onUpdateAddOnRank(addonId, newRank);
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to update add-on rank');
+    }
+  };
+
+  // Add-on Category Group Handlers
+  const handleOpenEditAddOnCategory = (cat: AddOnCategory) => {
+    setEditingAddOnCategory(cat);
+    setEditAddOnCatName(cat.name);
+    setEditAddOnCatSelectionType(cat.selectionType || 'SINGLE');
+    setEditAddOnCatRank(cat.displayOrder || 1);
+    setEditAddOnCatMin(cat.minSelections ?? (cat.selectionType === 'MULTI' ? 0 : 1));
+    setEditAddOnCatMax(cat.maxSelections ?? (cat.selectionType === 'MULTI' ? 3 : 1));
+  };
+
+  const handleSaveEditAddOnCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAddOnCategory || !editAddOnCatName.trim()) return;
+    try {
+      if (onUpdateAddOnCategory) {
+        await onUpdateAddOnCategory(editingAddOnCategory.id, {
+          name: editAddOnCatName.trim(),
+          selectionType: editAddOnCatSelectionType,
+          displayOrder: editAddOnCatRank,
+          minSelections: editAddOnCatMin,
+          maxSelections: editAddOnCatMax,
+        });
+      }
+      setSuccessMsg(`✓ Add-on Category "${editAddOnCatName.trim()}" updated successfully!`);
+      setEditingAddOnCategory(null);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to update add-on category');
+    }
+  };
+
+  const handleDeleteAddOnCategoryGroup = async (catId: string, catName: string) => {
+    if (window.confirm(`⚠️ Permanently delete Add-on Category "${catName}" and all modifier choices under it?`)) {
+      try {
+        if (onDeleteAddOnCategory) {
+          await onDeleteAddOnCategory(catId);
+        }
+        if (filterAddOnCat === catName) {
+          setFilterAddOnCat('ALL');
+        }
+        setSuccessMsg(`✓ Add-on Category "${catName}" deleted.`);
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to delete add-on category');
+      }
+    }
+  };
+
   const handleCreateAddOn = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -315,34 +452,50 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
         price: parseFloat(addOnPrice) || 0,
         category: finalCat,
         selectionType: addOnSelectionType,
+        displayOrder: addOnRank,
         isActive: true,
       });
       setAddOnName('');
       setAddOnPrice('0');
+      setAddOnRank(1);
       setCustomCategoryInput('');
       setIsCustomCategory(false);
       setShowAddOnModal(false);
-      setSuccessMsg(`Item "${addOnName}" added to [${finalCat}]!`);
+      setSuccessMsg(`Item "${addOnName}" added to [${finalCat}] with Rank #${addOnRank}!`);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create add-on');
     }
   };
 
-  const handleCreateNewAddOnCategoryGroup = (e: React.FormEvent) => {
+  const handleCreateNewAddOnCategoryGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGroupCatName.trim()) return;
-    setAddOnCategory(newGroupCatName.trim());
-    setAddOnSelectionType(newGroupSelectionType);
-    setShowNewCategoryGroupModal(false);
-    // Directly open Add-on item modal with this category selected
-    setAddOnName('');
-    setAddOnPrice('0');
-    setIsCustomCategory(false);
-    setShowAddOnModal(true);
-    setSuccessMsg(`Add-on Category "${newGroupCatName.trim()}" created! Now add items like Regular(300ml) under it.`);
-    setNewGroupCatName('');
-    setTimeout(() => setSuccessMsg(null), 5000);
+    const catNameTrimmed = newGroupCatName.trim();
+    try {
+      if (onCreateAddOnCategory) {
+        await onCreateAddOnCategory({
+          name: catNameTrimmed,
+          selectionType: newGroupSelectionType,
+          displayOrder: newGroupCatRank,
+          minSelections: newGroupMin,
+          maxSelections: newGroupMax,
+        });
+      }
+      setAddOnCategory(catNameTrimmed);
+      setAddOnSelectionType(newGroupSelectionType);
+      setShowNewCategoryGroupModal(false);
+      setAddOnName('');
+      setAddOnPrice('0');
+      setAddOnRank(1);
+      setIsCustomCategory(false);
+      setShowAddOnModal(true);
+      setSuccessMsg(`✓ Add-on Category "${catNameTrimmed}" created with Rank #${newGroupCatRank}! Now add items under it.`);
+      setNewGroupCatName('');
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to create add-on category');
+    }
   };
 
   // Open manage add-ons modal for a product
@@ -509,58 +662,153 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
 
                 {visibleCategories.map((c) => {
                   const count = categoryCounts[c.id] || 0;
-                  const isSelected = selectedCategoryId === c.id;
+                  const isCatSelected = selectedCategoryId === c.id;
+                  const isCatOnlyActive = isCatSelected && selectedSubcategory === 'ALL';
+                  const isExpanded = isCategoryExpanded(c.id);
+
+                  // Subcategories under this category
+                  const catSubcats = Array.from(
+                    new Set([
+                      ...(c.subcategories || []),
+                      ...products
+                        .filter((p) => p.category?.id === c.id && p.subcategory)
+                        .map((p) => p.subcategory!),
+                    ])
+                  );
+
                   return (
-                    <div
-                      key={c.id}
-                      className={`category-item-row ${isSelected ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedCategoryId(c.id);
-                        setSelectedSubcategory('ALL');
-                      }}
-                      title={c.name}
-                    >
-                      <span className="category-item-name">{c.name}</span>
-                      <div className="category-item-actions">
-                        <span className="category-item-badge">{count}</span>
-                        {onUpdateCategory && (
-                          <button
-                            type="button"
-                            className="btn-cat-row-edit"
-                            title={`Edit category "${c.name}"`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditCategory(c);
-                            }}
-                          >
-                            ✏️
-                          </button>
-                        )}
-                        {onDeleteCategory && (
-                          <button
-                            type="button"
-                            className="btn-cat-row-delete"
-                            title={`Delete category "${c.name}"`}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will cascade delete all its subcategories and all products in this category.`)) {
-                                try {
-                                  await onDeleteCategory(c.id);
-                                  if (selectedCategoryId === c.id) {
-                                    setSelectedCategoryId('ALL');
+                    <div key={c.id} className="category-tree-block">
+                      <div
+                        className={`category-item-row category-parent-row ${isCatOnlyActive ? 'active' : ''}`}
+                        onClick={() => {
+                          setSelectedCategoryId(c.id);
+                          setSelectedSubcategory('ALL');
+                        }}
+                        title={c.name}
+                      >
+                        <button
+                          type="button"
+                          className="btn-category-toggle-expand"
+                          onClick={(e) => toggleCategoryExpanded(c.id, e)}
+                          title={isExpanded ? 'Collapse group' : 'Expand group'}
+                          aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
+                        >
+                          <span className={`category-chevron-icon ${isExpanded ? 'expanded' : ''}`}>
+                            ▸
+                          </span>
+                        </button>
+                        <span className="category-item-name">{c.name}</span>
+                        <div className="category-item-actions">
+                          <span className="category-item-badge">{count}</span>
+                          {onUpdateCategory && (
+                            <button
+                              type="button"
+                              className="btn-cat-row-edit"
+                              title={`Edit category "${c.name}"`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditCategory(c);
+                              }}
+                            >
+                              ✏️
+                            </button>
+                          )}
+                          {onDeleteCategory && (
+                            <button
+                              type="button"
+                              className="btn-cat-row-delete"
+                              title={`Delete category "${c.name}"`}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will cascade delete all its subcategories and all products in this category.`)) {
+                                  try {
+                                    await onDeleteCategory(c.id);
+                                    if (selectedCategoryId === c.id) {
+                                      setSelectedCategoryId('ALL');
+                                    }
+                                    setSuccessMsg(`✓ Category "${c.name}" deleted.`);
+                                    setTimeout(() => setSuccessMsg(null), 4000);
+                                  } catch (err: any) {
+                                    setErrorMsg(err.message || 'Failed to delete category');
                                   }
-                                  setSuccessMsg(`✓ Category "${c.name}" deleted.`);
-                                  setTimeout(() => setSuccessMsg(null), 4000);
-                                } catch (err: any) {
-                                  setErrorMsg(err.message || 'Failed to delete category');
                                 }
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
-                        )}
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Indented Subcategories */}
+                      {isExpanded && (
+                        <div className="category-subcat-indent-list">
+                          {catSubcats.map((subcat) => {
+                            const subCount = products.filter(
+                              (p) => p.category?.id === c.id && p.subcategory === subcat
+                            ).length;
+                            const isSubSelected = selectedCategoryId === c.id && selectedSubcategory === subcat;
+
+                            return (
+                              <div
+                                key={subcat}
+                                className={`subcategory-tree-row ${isSubSelected ? 'active' : ''}`}
+                                onClick={() => {
+                                  setSelectedCategoryId(c.id);
+                                  setSelectedSubcategory(subcat);
+                                }}
+                                title={`${c.name} › ${subcat}`}
+                              >
+                                <span className="subcategory-tree-branch">└</span>
+                                <span className="subcategory-tree-name">{subcat}</span>
+                                <div className="subcategory-tree-actions">
+                                  <span className="subcategory-tree-badge">{subCount}</span>
+                                  {onDeleteSubcategory && (
+                                    <button
+                                      type="button"
+                                      className="btn-subcat-row-delete"
+                                      title={`Delete subcategory "${subcat}" and its items`}
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm(`⚠️ Delete subcategory "${subcat}"?\n\nAll items under "${subcat}" will also be permanently deleted.`)) {
+                                          try {
+                                            await onDeleteSubcategory(c.id, subcat);
+                                            if (selectedSubcategory === subcat) {
+                                              setSelectedSubcategory('ALL');
+                                            }
+                                            setSuccessMsg(`✓ Subcategory "${subcat}" and its items deleted.`);
+                                            setTimeout(() => setSuccessMsg(null), 4000);
+                                          } catch (err: any) {
+                                            setErrorMsg(err.message || 'Failed to delete subcategory');
+                                          }
+                                        }
+                                      }}
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Quick inline button to add subcategory directly under this category */}
+                          {onUpdateCategory && (
+                            <button
+                              type="button"
+                              className="btn-add-subcat-inline"
+                              onClick={() => {
+                                setEditingCategory(c);
+                                setNewSubcatInput('');
+                                setShowAddSubcatModal(true);
+                              }}
+                              title={`Add subcategory under ${c.name}`}
+                            >
+                              + Subcategory
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -718,7 +966,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
 
                 <div className="petpooja-toolbar-right">
                   <span className="petpooja-active-filter-badge">
-                    {activeCategoryObj ? activeCategoryObj.name : 'All Categories'} • {filteredProducts.length} Items
+                    {activeCategoryObj ? activeCategoryObj.name : 'All Categories'}
+                    {selectedSubcategory !== 'ALL' ? ` › ${selectedSubcategory}` : ''} • {filteredProducts.length} Items
                   </span>
                 </div>
               </div>
@@ -750,6 +999,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                   <table className="petpooja-table">
                     <thead>
                       <tr>
+                        <th style={{ width: '80px', textAlign: 'center' }}># Rank</th>
                         <th>Name *</th>
                         <th>Short Code *</th>
                         <th>Price *</th>
@@ -761,14 +1011,56 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProducts.map((p) => {
+                      {filteredProducts.map((p, index) => {
                         const isVeg = p.dietaryType === 'VEG' || p.dietaryType === 'VEGAN';
                         const isNonVeg = p.dietaryType === 'NON_VEG';
                         const hasVariants = (p.variants?.length || 0) > 0;
                         const hasAddons = (p.addOns?.length || 0) > 0;
+                        const currentRank = p.displayOrder ?? (index + 1);
 
                         return (
                           <tr key={p.id}>
+                            <td style={{ textAlign: 'center' }}>
+                              <div className="rank-input-container">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  className="rank-number-input"
+                                  value={currentRank}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    if (!isNaN(val) && val >= 1) {
+                                      handleProductRankChange(p.id, val);
+                                    }
+                                  }}
+                                  title="Sequence Ranking (Rank 1 displays first in POS catalog)"
+                                />
+                                <div className="rank-arrow-buttons">
+                                  <button
+                                    type="button"
+                                    className="btn-rank-step"
+                                    title="Move up (rank higher)"
+                                    onClick={() => {
+                                      if (currentRank > 1) {
+                                        handleProductRankChange(p.id, currentRank - 1);
+                                      }
+                                    }}
+                                  >
+                                    ▲
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-rank-step"
+                                    title="Move down (rank lower)"
+                                    onClick={() => {
+                                      handleProductRankChange(p.id, currentRank + 1);
+                                    }}
+                                  >
+                                    ▼
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
                             <td>
                               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                 <span
@@ -1107,6 +1399,114 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
             </div>
           </div>
 
+          {/* Add-on Categories Management Section (Ranking & CRUD) */}
+          <div className="addon-categories-management-panel">
+            <div className="addon-categories-panel-title">
+              <span>Add-on Categories (Vertical Priority in POS Customization Modal)</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'none' }}>
+                Rank #1 appears at the very top of the customization popup
+              </span>
+            </div>
+
+            <div className="addon-categories-cards-grid">
+              {effectiveAddOnCategories.map((cat, idx) => {
+                const count = addOns.filter((a) => (a.category || '').toLowerCase() === cat.name.toLowerCase()).length;
+                const isSingle = cat.selectionType === 'SINGLE';
+                const isSelected = filterAddOnCat.toLowerCase() === cat.name.toLowerCase();
+                const rankNum = cat.displayOrder ?? (idx + 1);
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={`addon-cat-config-card ${isSelected ? 'active' : ''}`}
+                    onClick={() => setFilterAddOnCat(isSelected ? 'ALL' : cat.name)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="addon-cat-card-top">
+                      <span className="addon-cat-rank-badge" title="Customizer display ranking">
+                        Rank #{rankNum}
+                      </span>
+                      <span className="addon-cat-title">{cat.name}</span>
+                      <span className="category-item-badge">{count} choices</span>
+                    </div>
+
+                    <div className="addon-cat-card-meta">
+                      <span style={{ color: isSingle ? '#1d4ed8' : '#15803d', fontWeight: 600 }}>
+                        {isSingle ? '● Single Choice (Pick 1)' : `☑️ Multi Choice (${cat.minSelections ?? 0}-${cat.maxSelections ?? 3})`}
+                      </span>
+                    </div>
+
+                    <div className="addon-cat-card-actions" onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Rank:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          className="rank-number-input"
+                          style={{ width: '42px', height: '24px', fontSize: '0.75rem' }}
+                          value={rankNum}
+                          onChange={async (e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val) && val >= 1 && onUpdateAddOnCategory) {
+                              await onUpdateAddOnCategory(cat.id, { displayOrder: val });
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn-rank-step"
+                          title="Move up (higher rank)"
+                          onClick={async () => {
+                            if (rankNum > 1 && onUpdateAddOnCategory) {
+                              await onUpdateAddOnCategory(cat.id, { displayOrder: rankNum - 1 });
+                            }
+                          }}
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-rank-step"
+                          title="Move down (lower rank)"
+                          onClick={async () => {
+                            if (onUpdateAddOnCategory) {
+                              await onUpdateAddOnCategory(cat.id, { displayOrder: rankNum + 1 });
+                            }
+                          }}
+                        >
+                          ▼
+                        </button>
+                      </div>
+
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '2px 8px', fontSize: '0.75rem' }}
+                          onClick={() => handleOpenEditAddOnCategory(cat)}
+                          title="Edit category name and selection rules"
+                        >
+                          ✏️ Edit
+                        </button>
+                        {onDeleteAddOnCategory && (
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm"
+                            style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                            onClick={() => handleDeleteAddOnCategoryGroup(cat.id, cat.name)}
+                            title="Delete this add-on category"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Add-on Category Filter Bar */}
           <div className="addon-category-filter">
             <button
@@ -1142,6 +1542,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '80px', textAlign: 'center' }}># Rank</th>
                     <th>Item / Choice Name</th>
                     <th>Add-on Category Name</th>
                     <th>Selection Type</th>
@@ -1152,11 +1553,54 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAddOns.map((a) => {
+                  {filteredAddOns.map((a, idx) => {
                     const linkedProducts = products.filter((p) => p.addOns?.some((item) => item.id === a.id));
                     const isSingle = a.selectionType === 'SINGLE' || a.category?.toLowerCase().includes('size') || a.category?.toLowerCase().includes('sweetness');
+                    const choiceRank = a.displayOrder ?? (idx + 1);
+
                     return (
                       <tr key={a.id}>
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="rank-input-container">
+                            <input
+                              type="number"
+                              min="1"
+                              className="rank-number-input"
+                              value={choiceRank}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 1) {
+                                  handleAddOnRankChange(a.id, val);
+                                }
+                              }}
+                              title="Choice ranking in POS customizer"
+                            />
+                            <div className="rank-arrow-buttons">
+                              <button
+                                type="button"
+                                className="btn-rank-step"
+                                title="Move up"
+                                onClick={() => {
+                                  if (choiceRank > 1) {
+                                    handleAddOnRankChange(a.id, choiceRank - 1);
+                                  }
+                                }}
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                className="btn-rank-step"
+                                title="Move down"
+                                onClick={() => {
+                                  handleAddOnRankChange(a.id, choiceRank + 1);
+                                }}
+                              >
+                                ▼
+                              </button>
+                            </div>
+                          </div>
+                        </td>
                         <td>
                           <strong>{a.name}</strong>
                         </td>
@@ -1231,26 +1675,135 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       )}
 
       {/* ========================================================
-          CREATE NEW ADD-ON CATEGORY GROUP MODAL
+          EDIT ADD-ON CATEGORY GROUP MODAL
          ======================================================== */}
-      {showNewCategoryGroupModal && (
+      {editingAddOnCategory && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '420px', maxWidth: '90%' }}>
-            <h3 style={{ marginTop: 0 }}>📁 Create Add-on Category Name</h3>
-            <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '-0.5rem' }}>
-              e.g. <strong>Choice Of Size</strong>, <strong>Choice Of Crust</strong>, <strong>Choice Of Sweetness</strong>
-            </p>
-            <form onSubmit={handleCreateNewAddOnCategoryGroup}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '440px', maxWidth: '90%' }}>
+            <h3 style={{ marginTop: 0 }}>✏️ Edit Add-on Category</h3>
+            <form onSubmit={handleSaveEditAddOnCategory}>
               <div className="form-group">
                 <label className="form-label">Add-on Category Name</label>
                 <input
                   type="text"
                   className="form-input"
                   required
+                  value={editAddOnCatName}
+                  onChange={(e) => setEditAddOnCatName(e.target.value)}
+                  placeholder="e.g. Choice of Milk"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Sequence Ranking (Display Order)</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={editAddOnCatRank}
+                  onChange={(e) => setEditAddOnCatRank(parseInt(e.target.value, 10) || 1)}
+                  title="Rank 1 will be displayed first at the top of the POS topping modal"
+                />
+                <small style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  Rank 1 displays first at the very top of the customization modal.
+                </small>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Selection Mode for Customers</label>
+                <select
+                  className="form-select"
+                  value={editAddOnCatSelectionType}
+                  onChange={(e) => {
+                    const mode = e.target.value as 'SINGLE' | 'MULTI';
+                    setEditAddOnCatSelectionType(mode);
+                    if (mode === 'SINGLE') {
+                      setEditAddOnCatMin(1);
+                      setEditAddOnCatMax(1);
+                    } else {
+                      setEditAddOnCatMin(0);
+                      setEditAddOnCatMax(3);
+                    }
+                  }}
+                >
+                  <option value="SINGLE">Single Choice (Customer must pick 1, e.g. Milk, Size, Sweetness)</option>
+                  <option value="MULTI">Multiple Choice (Customer can pick multiple extras, e.g. Boba, Toppings)</option>
+                </select>
+              </div>
+
+              {editAddOnCatSelectionType === 'MULTI' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Min Selections</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="form-input"
+                      value={editAddOnCatMin}
+                      onChange={(e) => setEditAddOnCatMin(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Max Selections</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input"
+                      value={editAddOnCatMax}
+                      onChange={(e) => setEditAddOnCatMax(parseInt(e.target.value, 10) || 1)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingAddOnCategory(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          CREATE NEW ADD-ON CATEGORY GROUP MODAL
+         ======================================================== */}
+      {showNewCategoryGroupModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120 }}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '440px', maxWidth: '90%' }}>
+            <h3 style={{ marginTop: 0 }}>📁 Create Add-on Category</h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '-0.5rem' }}>
+              e.g. <strong>Choice of Milk</strong>, <strong>Choice Of Size</strong>, <strong>Choice of Free Toppings</strong>
+            </p>
+            <form onSubmit={handleCreateNewAddOnCategoryGroup}>
+              <div className="form-group">
+                <label className="form-label">Add-on Category Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
                   value={newGroupCatName}
                   onChange={(e) => setNewGroupCatName(e.target.value)}
-                  placeholder="e.g. Choice Of Size"
+                  placeholder="e.g. Choice of Milk"
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Sequence Ranking (Priority in Customizer)</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={newGroupCatRank}
+                  onChange={(e) => setNewGroupCatRank(parseInt(e.target.value, 10) || 1)}
+                />
+                <small style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                  Rank 1 displays first at the very top of the POS topping modal.
+                </small>
               </div>
 
               <div className="form-group">
@@ -1258,12 +1811,47 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                 <select
                   className="form-select"
                   value={newGroupSelectionType}
-                  onChange={(e) => setNewGroupSelectionType(e.target.value as 'SINGLE' | 'MULTI')}
+                  onChange={(e) => {
+                    const mode = e.target.value as 'SINGLE' | 'MULTI';
+                    setNewGroupSelectionType(mode);
+                    if (mode === 'SINGLE') {
+                      setNewGroupMin(1);
+                      setNewGroupMax(1);
+                    } else {
+                      setNewGroupMin(0);
+                      setNewGroupMax(3);
+                    }
+                  }}
                 >
-                  <option value="SINGLE">Single Choice (Customer must pick 1, e.g. Size, Sugar Level)</option>
+                  <option value="SINGLE">Single Choice (Customer must pick 1, e.g. Milk, Size, Sweetness)</option>
                   <option value="MULTI">Multiple Choice (Customer can pick multiple extras, e.g. Boba, Toppings)</option>
                 </select>
               </div>
+
+              {newGroupSelectionType === 'MULTI' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Min Selections</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="form-input"
+                      value={newGroupMin}
+                      onChange={(e) => setNewGroupMin(parseInt(e.target.value, 10) || 0)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Max Selections</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input"
+                      value={newGroupMax}
+                      onChange={(e) => setNewGroupMax(parseInt(e.target.value, 10) || 1)}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowNewCategoryGroupModal(false)}>
@@ -1296,7 +1884,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                       onChange={(e) => {
                         const val = e.target.value;
                         setAddOnCategory(val);
-                        if (val.toLowerCase().includes('size') || val.toLowerCase().includes('sweetness') || val.toLowerCase().includes('ice')) {
+                        if (val.toLowerCase().includes('size') || val.toLowerCase().includes('sweetness') || val.toLowerCase().includes('ice') || val.toLowerCase().includes('milk')) {
                           setAddOnSelectionType('SINGLE');
                         } else {
                           setAddOnSelectionType('MULTI');
@@ -1323,7 +1911,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="e.g. Choice Of Size"
+                      placeholder="e.g. Choice of Milk"
                       value={customCategoryInput}
                       onChange={(e) => setCustomCategoryInput(e.target.value)}
                       required
@@ -1340,18 +1928,18 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Item / Choice Name</label>
+                <label className="form-label">Item / Choice Name *</label>
                 <input
                   type="text"
                   className="form-input"
                   required
                   value={addOnName}
                   onChange={(e) => setAddOnName(e.target.value)}
-                  placeholder="e.g. Regular(300ml), Large(700ml), Tapioca Boba"
+                  placeholder="e.g. Fresh Milk, Regular(300ml), Tapioca Pearls"
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">Extra Price (₹)</label>
                   <input
@@ -1362,9 +1950,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     required
                     value={addOnPrice}
                     onChange={(e) => setAddOnPrice(e.target.value)}
-                    placeholder="0 for base size, 40 for large"
+                    placeholder="0 for free"
                   />
-                  <small style={{ color: '#64748b' }}>Enter 0 for base size/option</small>
                 </div>
 
                 <div className="form-group">
@@ -1374,9 +1961,21 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     value={addOnSelectionType}
                     onChange={(e) => setAddOnSelectionType(e.target.value as 'SINGLE' | 'MULTI')}
                   >
-                    <option value="SINGLE">Single Choice (Radio)</option>
-                    <option value="MULTI">Multiple Choice (Checkboxes)</option>
+                    <option value="SINGLE">Single (Radio)</option>
+                    <option value="MULTI">Multi (Checkbox)</option>
                   </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label"># Rank</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="form-input"
+                    value={addOnRank}
+                    onChange={(e) => setAddOnRank(parseInt(e.target.value, 10) || 1)}
+                    title="1 = displayed first"
+                  />
                 </div>
               </div>
 

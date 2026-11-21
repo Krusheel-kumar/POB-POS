@@ -81,6 +81,25 @@ export interface AddOn {
   selectionType?: 'SINGLE' | 'MULTI';
   minSelections?: number;
   maxSelections?: number;
+  displayOrder?: number;
+}
+
+export interface AddOnCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
+  selectionType?: 'SINGLE' | 'MULTI';
+  minSelections?: number;
+  maxSelections?: number;
+  isActive?: boolean;
+}
+
+export interface AddOnCategoryRequest {
+  name: string;
+  displayOrder?: number;
+  selectionType?: 'SINGLE' | 'MULTI';
+  minSelections?: number;
+  maxSelections?: number;
 }
 
 export interface ProductVariant {
@@ -121,6 +140,7 @@ export interface Product {
   prepTimeMinutes?: number;
   badge?: string;
   isFavorite?: boolean;
+  displayOrder?: number;
 }
 
 export interface ProductRequest {
@@ -135,6 +155,7 @@ export interface ProductRequest {
   dietaryType?: DietaryType;
   prepTimeMinutes?: number;
   badge?: string;
+  displayOrder?: number;
   variants?: {
     name: string;
     sizeLabel?: string;
@@ -162,6 +183,7 @@ export interface AddOnRequest {
   selectionType?: 'SINGLE' | 'MULTI';
   minSelections?: number;
   maxSelections?: number;
+  displayOrder?: number;
 }
 
 export interface CartItem {

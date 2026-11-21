@@ -198,22 +198,24 @@ export function App() {
       });
   }, [cartItems]);
 
-  // Filter products by category, subcategory, and search query
+  // Filter products by category, subcategory, and search query; sorted by sequence ranking (1 first)
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory =
-        selectedCategoryId === 'cat-all' ||
-        product.category?.id === selectedCategoryId;
-      const matchesSubcategory =
-        selectedSubcategory === 'all' ||
-        product.subcategory === selectedSubcategory;
-      const matchesSearch =
-        searchQuery.trim() === '' ||
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSubcategory && matchesSearch;
-    });
+    return products
+      .filter((product) => {
+        const matchesCategory =
+          selectedCategoryId === 'cat-all' ||
+          product.category?.id === selectedCategoryId;
+        const matchesSubcategory =
+          selectedSubcategory === 'all' ||
+          product.subcategory === selectedSubcategory;
+        const matchesSearch =
+          searchQuery.trim() === '' ||
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSubcategory && matchesSearch;
+      })
+      .sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999));
   }, [products, selectedCategoryId, selectedSubcategory, searchQuery]);
 
   // Current category subcategories for filter pills

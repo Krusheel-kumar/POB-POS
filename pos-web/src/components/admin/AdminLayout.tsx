@@ -4,6 +4,8 @@ import type {
   ProductCategory,
   Product,
   AddOn,
+  AddOnCategory,
+  AddOnCategoryRequest,
   Order,
   Bill,
   CategoryRequest,
@@ -66,6 +68,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
+  const [addOnCategories, setAddOnCategories] = useState<AddOnCategory[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [voidLogs, setVoidLogs] = useState<any[]>([]);
@@ -110,14 +113,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     setLoading(true);
     setError(null);
     try {
-      const [cats, prods, adds] = await Promise.all([
+      const [cats, prods, adds, addOnCats] = await Promise.all([
         posApiClient.getCategories(),
         posApiClient.getProducts(),
         posApiClient.getAddOns().catch(() => [] as AddOn[]),
+        posApiClient.getAddOnCategories().catch(() => [] as AddOnCategory[]),
       ]);
       setCategories(cats);
       setProducts(prods);
       setAddOns(adds);
+      setAddOnCategories(addOnCats);
 
       if (selectedOutletId) {
         const [ordList, billList, voidList] = await Promise.all([
@@ -254,6 +259,31 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     } catch {
       // optimistic state retained
     }
+  };
+
+  const handleUpdateProductRank = async (productId: string, rank: number) => {
+    await posApiClient.updateProductRank(productId, rank);
+    await loadAdminData();
+  };
+
+  const handleUpdateAddOnRank = async (addonId: string, rank: number) => {
+    await posApiClient.updateAddOnRank(addonId, rank);
+    await loadAdminData();
+  };
+
+  const handleCreateAddOnCategory = async (req: AddOnCategoryRequest) => {
+    await posApiClient.createAddOnCategory(req);
+    await loadAdminData();
+  };
+
+  const handleUpdateAddOnCategory = async (id: string, req: Partial<AddOnCategoryRequest>) => {
+    await posApiClient.updateAddOnCategory(id, req);
+    await loadAdminData();
+  };
+
+  const handleDeleteAddOnCategory = async (id: string) => {
+    await posApiClient.deleteAddOnCategory(id);
+    await loadAdminData();
   };
 
   const [showAddOutletModal, setShowAddOutletModal] = useState<boolean>(false);
@@ -463,6 +493,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
               categories={categories}
               products={products}
               addOns={addOns}
+              addOnCategories={addOnCategories}
               isLoading={loading}
               onRefresh={loadAdminData}
               onCreateCategory={handleCreateCategory}
@@ -479,6 +510,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
               onUpdateProductAddOns={handleUpdateProductAddOns}
               onToggleAddOn={handleToggleAddOn}
               onDeleteAddOn={handleDeleteAddOn}
+              onUpdateProductRank={handleUpdateProductRank}
+              onUpdateAddOnRank={handleUpdateAddOnRank}
+              onCreateAddOnCategory={handleCreateAddOnCategory}
+              onUpdateAddOnCategory={handleUpdateAddOnCategory}
+              onDeleteAddOnCategory={handleDeleteAddOnCategory}
             />
           )}
 

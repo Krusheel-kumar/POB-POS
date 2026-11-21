@@ -370,6 +370,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         dietaryType,
         imageUrl: prodImageUrl.trim() || undefined,
         badge: prodBadge.trim() || undefined,
+        displayOrder: currentEditingProduct?.displayOrder,
         addOnIds: mappedAddOnIds,
         prepTimeMinutes: 5,
       };
