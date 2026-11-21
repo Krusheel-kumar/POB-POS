@@ -20,6 +20,7 @@ interface TableManagementViewProps {
   onRefresh: () => void;
   isInlineMode?: boolean;
   onCancelSelectTable?: () => void;
+  onSwitchOrderType?: (type: 'TAKEAWAY' | 'COUNTER') => void;
 }
 
 export const TableManagementView: React.FC<TableManagementViewProps> = ({
@@ -39,6 +40,7 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
   onRefresh,
   isInlineMode = false,
   onCancelSelectTable,
+  onSwitchOrderType,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newTableNum, setNewTableNum] = useState('');
@@ -93,6 +95,28 @@ export const TableManagementView: React.FC<TableManagementViewProps> = ({
         </div>
 
         <div className="table-header-actions">
+          {onSwitchOrderType && (
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                className="table-btn-refresh"
+                style={{ background: '#f1f5f9', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => onSwitchOrderType('TAKEAWAY')}
+                title="Switch to Takeaway order mode"
+              >
+                <span>🛍️</span> Takeaway
+              </button>
+              <button
+                type="button"
+                className="table-btn-refresh"
+                style={{ background: '#f1f5f9', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => onSwitchOrderType('COUNTER')}
+                title="Switch to Counter Fast-Pay mode"
+              >
+                <span>⚡</span> Counter
+              </button>
+            </div>
+          )}
           {onCancelSelectTable && (
             <button
               type="button"

@@ -1267,8 +1267,8 @@ export function App() {
         </div>
       )}
 
-      {/* Main Container: Either Table View OR Menu POS View */}
-      {activeTab === 'TABLES' ? (
+      {/* Main Container: Either Full Table Floor Plan OR Menu POS View */}
+      {activeTab === 'TABLES' || (orderType === 'DINE_IN' && (!selectedTable || isChoosingTable)) ? (
         <div style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
           <TableManagementView
             tables={tables}
@@ -1286,37 +1286,21 @@ export function App() {
             onDeleteTable={handleDeleteTable}
             onUpdateTableStatus={handleUpdateTableStatus}
             onRefresh={loadTables}
+            isInlineMode={orderType === 'DINE_IN'}
+            onCancelSelectTable={selectedTable ? () => setIsChoosingTable(false) : undefined}
+            onSwitchOrderType={(type) => {
+              setOrderType(type);
+              setSelectedTable(null);
+              setRunningOrder(null);
+              setIsChoosingTable(false);
+              setActiveTab('MENU');
+            }}
           />
         </div>
       ) : (
         <div className="pos-main-container">
-          {orderType === 'DINE_IN' && (!selectedTable || isChoosingTable) ? (
-            /* DINE-IN TABLE SELECTION FIRST */
-            <div className="pos-table-selection-panel" style={{ flex: 1, overflowY: 'auto', background: '#f8fafc' }}>
-              <TableManagementView
-                tables={tables}
-                selectedTableId={selectedTable?.id ?? null}
-                activeCartTableId={orderType === 'DINE_IN' && selectedTable ? selectedTable.id : null}
-                activeCartItems={orderType === 'DINE_IN' && selectedTable ? cartItems : []}
-                activeCartTotal={orderType === 'DINE_IN' && selectedTable ? (backendCalculation?.totalAmount ?? cartItems.reduce((s, i) => s + i.lineTotal, 0)) : 0}
-                onSelectTable={handleSelectTable}
-                onOpenRunningOrder={handleOpenRunningOrder}
-                onCollectPayment={handleOpenPayment}
-                onGenerateBill={handleGenerateBill}
-                onPrintBill={handlePrintBill}
-                onPrintKot={handlePrintKot}
-                onCreateTable={handleCreateTable}
-                onDeleteTable={handleDeleteTable}
-                onUpdateTableStatus={handleUpdateTableStatus}
-                onRefresh={loadTables}
-                isInlineMode={true}
-                onCancelSelectTable={selectedTable ? () => setIsChoosingTable(false) : undefined}
-              />
-            </div>
-          ) : (
-            <>
-              {/* Category Navigation Sidebar */}
-              <nav className="pos-category-nav" aria-label="Menu categories">
+          {/* Category Navigation Sidebar */}
+          <nav className="pos-category-nav" aria-label="Menu categories">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
@@ -1422,8 +1406,6 @@ export function App() {
                   </div>
                 )}
               </section>
-            </>
-          )}
 
           {/* Right Cart Sidebar */}
           <CartPanel
@@ -1477,15 +1459,6 @@ export function App() {
           isOpen={Boolean(activeModalProduct)}
           onClose={() => setActiveModalProduct(null)}
           onAddToCart={handleAddToCart}
-          onEditProduct={(p) => {
-            setActiveModalProduct(null);
-            setEditingProduct(p);
-            setIsAddProductOpen(true);
-          }}
-          onDeleteProduct={async (productId) => {
-            await handleDeleteProduct(productId);
-            setActiveModalProduct(null);
-          }}
         />
       )}
 

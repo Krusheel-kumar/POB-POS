@@ -270,9 +270,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               <div className="empty-bag-circle" style={{ background: '#eff6ff', color: '#2563eb' }}>
                 <span>🪑</span>
               </div>
-              <h4 className="empty-state-title">No Table Selected</h4>
+              <h4 className="empty-state-title">Select Table</h4>
               <p className="empty-state-sub">
-                Please select an available table from the floor layout on the left to start this Dine-In order.
+                Choose an available dining table to start this order.
               </p>
               {onChangeTable && (
                 <button
@@ -281,7 +281,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   onClick={onChangeTable}
                   style={{ marginTop: '10px', padding: '7px 16px', fontSize: '0.85rem' }}
                 >
-                  🪑 View Tables Floor Plan
+                  🪑 Choose Table
                 </button>
               )}
             </div>
@@ -292,7 +292,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               </div>
               <h4 className="empty-state-title">Your cart is empty.</h4>
               <p className="empty-state-sub">
-                Tap menu items on the catalog to add to this order
+                {orderType === 'DINE_IN' && selectedTableNumber
+                  ? `Tap menu items to add to Table ${selectedTableNumber}`
+                  : 'Tap menu items on the catalog to add to this order'}
               </p>
             </div>
           )
@@ -457,86 +459,181 @@ export const CartPanel: React.FC<CartPanelProps> = ({
 
         {orderType === 'DINE_IN' ? (
           /* ====================================================
-             DINE-IN ORDER ACTIONS: Primary KOT Fire + Settle Check
+             DINE-IN ORDER ACTIONS: Context-Aware KOT & Billing
              ==================================================== */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-            {/* 1. Primary Action: Fire KOT directly to Kitchen */}
-            <button
-              type="button"
-              className="retail-checkout-btn"
-              style={{
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                color: '#ffffff',
-                boxShadow: '0 4px 14px rgba(2, 132, 199, 0.35)',
-                fontWeight: 700,
-                fontSize: '0.98rem',
-                height: '46px',
-              }}
-              onClick={onPrintKot || onReviewOrder}
-              disabled={isSubmitting || items.length === 0}
-              title="Dispatch Kitchen Order Ticket (KOT) to Kitchen Printer / KDS"
-            >
-              {isSubmitting ? (
-                <span>👨‍🍳 Sending to Kitchen...</span>
-              ) : items.length === 0 ? (
-                <span>👨‍🍳 Send KOT (Add Items)</span>
-              ) : Boolean(runningOrderId) ? (
-                items.some((i) => !i.isDispatched) ? (
-                  <span>
-                    👨‍🍳 Send Add-on KOT to Kitchen • {items.filter((i) => !i.isDispatched).reduce((s, i) => s + i.quantity, 0)} Items
-                  </span>
+          (() => {
+            const totalItemCount = items.reduce((s, i) => s + i.quantity, 0);
+            const totalItemText = totalItemCount === 1 ? '1 Item' : `${totalItemCount} Items`;
+            const pendingItems = items.filter((i) => !i.isDispatched);
+            const pendingCount = pendingItems.reduce((s, i) => s + i.quantity, 0);
+            const pendingItemText = pendingCount === 1 ? '1 Item' : `${pendingCount} Items`;
+            const hasPendingItems = pendingCount > 0;
+            const isAllDispatchedRunning = Boolean(runningOrderId) && items.length > 0 && !hasPendingItems;
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                {isAllDispatchedRunning ? (
+                  /* State A: All Table Items Already Sent to Kitchen -> Primary Action is Print Bill / Settle */
+                  <>
+                    <div
+                      style={{
+                        padding: '6px 10px',
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        color: '#15803d',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span>✓ Kitchen is preparing all dishes</span>
+                      <span style={{ color: '#16a34a' }}>• KOT Sent</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="retail-checkout-btn"
+                      style={{
+                        background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                        color: '#ffffff',
+                        boxShadow: '0 4px 14px rgba(217, 119, 6, 0.35)',
+                        fontWeight: 700,
+                        fontSize: '0.96rem',
+                        height: '46px',
+                      }}
+                      onClick={onPrintBill || onReviewOrder}
+                      disabled={isSubmitting}
+                      title="Print Customer Tax Invoice / Bill"
+                    >
+                      <span>🖨️ Print Bill • ₹{total.toFixed(2)}</span>
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary-tool"
+                        style={{
+                          flex: 1.2,
+                          padding: '9px 10px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          background: '#ffffff',
+                          color: '#334155',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                        }}
+                        onClick={onReviewOrder}
+                        disabled={isSubmitting}
+                      >
+                        💳 Settle Check & Pay
+                      </button>
+
+                      {onPrintKot && (
+                        <button
+                          type="button"
+                          className="btn-secondary-tool"
+                          style={{
+                            flex: 0.8,
+                            padding: '9px 10px',
+                            fontWeight: 600,
+                            fontSize: '0.78rem',
+                            background: '#f8fafc',
+                            color: '#64748b',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                          }}
+                          onClick={onPrintKot}
+                          disabled={isSubmitting}
+                          title="Reprint duplicate KOT copy"
+                        >
+                          👨‍🍳 Reprint KOT
+                        </button>
+                      )}
+                    </div>
+                  </>
                 ) : (
-                  <span>✓ All Table Items Dispatched (KOT Active)</span>
-                )
-              ) : (
-                <span>
-                  👨‍🍳 Send KOT to Kitchen • {items.reduce((s, i) => s + i.quantity, 0)} Items
-                </span>
-              )}
-            </button>
+                  /* State B: New Items Ready to Send to Kitchen OR Empty Cart */
+                  <>
+                    <button
+                      type="button"
+                      className="retail-checkout-btn"
+                      style={{
+                        background:
+                          items.length === 0
+                            ? '#e2e8f0'
+                            : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                        color: items.length === 0 ? '#94a3b8' : '#ffffff',
+                        boxShadow:
+                          items.length === 0 ? 'none' : '0 4px 14px rgba(2, 132, 199, 0.35)',
+                        fontWeight: 700,
+                        fontSize: '0.96rem',
+                        height: '46px',
+                        cursor: items.length === 0 ? 'not-allowed' : 'pointer',
+                      }}
+                      onClick={onPrintKot || onReviewOrder}
+                      disabled={isSubmitting || items.length === 0}
+                      title="Dispatch Kitchen Order Ticket (KOT) to Kitchen"
+                    >
+                      {isSubmitting ? (
+                        <span>👨‍🍳 Sending to Kitchen...</span>
+                      ) : items.length === 0 ? (
+                        <span>🍽️ Add items to send KOT</span>
+                      ) : Boolean(runningOrderId) ? (
+                        <span>👨‍🍳 Send Add-on KOT to Kitchen • {pendingItemText}</span>
+                      ) : (
+                        <span>👨‍🍳 Send KOT to Kitchen • {totalItemText}</span>
+                      )}
+                    </button>
 
-            {/* 2. Secondary Settle / Bill Option (When customer is ready for check) */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn-secondary-tool"
-                style={{
-                  flex: 1,
-                  padding: '9px 10px',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  background: '#fef3c7',
-                  color: '#b45309',
-                  border: '1px solid #fde68a',
-                  borderRadius: '8px',
-                }}
-                onClick={onPrintBill || onReviewOrder}
-                disabled={isSubmitting || items.length === 0}
-                title="Print Tax Invoice / Bill for Customer"
-              >
-                🖨️ Print Bill
-              </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary-tool"
+                        style={{
+                          flex: 1,
+                          padding: '9px 10px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          background: '#fef3c7',
+                          color: '#b45309',
+                          border: '1px solid #fde68a',
+                          borderRadius: '8px',
+                        }}
+                        onClick={onPrintBill || onReviewOrder}
+                        disabled={isSubmitting || items.length === 0}
+                        title="Print Tax Invoice / Bill for Customer"
+                      >
+                        🖨️ Print Bill
+                      </button>
 
-              <button
-                type="button"
-                className="btn-secondary-tool"
-                style={{
-                  flex: 1.2,
-                  padding: '9px 10px',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  background: '#ffffff',
-                  color: '#334155',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                }}
-                onClick={onReviewOrder}
-                disabled={isSubmitting || items.length === 0}
-              >
-                📋 Review & Place Order
-              </button>
-            </div>
-          </div>
+                      <button
+                        type="button"
+                        className="btn-secondary-tool"
+                        style={{
+                          flex: 1.2,
+                          padding: '9px 10px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          background: '#ffffff',
+                          color: '#334155',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                        }}
+                        onClick={onReviewOrder}
+                        disabled={isSubmitting || items.length === 0}
+                      >
+                        📋 Review & Place Order
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()
         ) : (
           /* ====================================================
              COUNTER & TAKEAWAY: Fast Pay First Flow
