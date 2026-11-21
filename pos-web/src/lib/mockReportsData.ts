@@ -1,4 +1,5 @@
 import { mockStore } from '../data/mockStore';
+import { posApiClient } from '../api/posApiClient';
 import type { Bill, BillStatus } from '../types/pos';
 
 export interface PaymentSplit {
@@ -247,6 +248,20 @@ export function recordVoidAuditLog(entry: {
   } catch (e) {
     console.warn('Failed to save void log to storage:', e);
   }
+
+  // Persist directly to DB via API
+  posApiClient
+    .recordVoidLog({
+      orderNumber: entry.orderNumber,
+      tableNumber: entry.tableNumber,
+      item: entry.item,
+      qty: entry.qty,
+      amount: entry.amount,
+      originalWaiter: entry.originalWaiter,
+      managerPin: entry.managerPin,
+      reason: entry.reason,
+    })
+    .catch((err) => console.warn('Could not sync void log to database:', err));
 
   return newRecord;
 }

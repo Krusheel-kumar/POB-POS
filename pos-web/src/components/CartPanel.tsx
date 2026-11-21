@@ -22,6 +22,7 @@ interface CartPanelProps {
   onChangeTable?: () => void;
   onPrintBill?: () => void;
   onPrintKot?: () => void;
+  onSettleOrder?: () => void;
   isKotSent?: boolean;
   isSubmitting?: boolean;
   onQuickSettle?: (method: PaymentMethod, autoPrint: boolean) => Promise<void>;
@@ -55,6 +56,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   onChangeTable,
   onPrintBill,
   onPrintKot,
+  onSettleOrder,
   isKotSent = false,
   isSubmitting = false,
   onRequireManagerVoid,

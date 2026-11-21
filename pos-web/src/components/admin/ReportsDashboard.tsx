@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import {
   getVoidAuditLogs,
+  type VoidAuditRecord,
   getSettledSalesInvoices,
   type SettledInvoiceRecord,
   formatINR,
@@ -79,6 +80,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
   // Internal state when not passed via props
   const [internalBills, setInternalBills] = useState<Bill[]>([]);
   const [internalOrders, setInternalOrders] = useState<Order[]>([]);
+  const [dbVoidLogs, setDbVoidLogs] = useState<VoidAuditRecord[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Load live data from API if external bills not passed
@@ -86,12 +88,16 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
     setIsLoading(true);
     try {
       const targetOutlet = outletId || posApiClient.getConfig().outletId || 'outlet-demo-flagship';
-      const [bList, oList] = await Promise.all([
+      const [bList, oList, vList] = await Promise.all([
         posApiClient.getOutletBills(targetOutlet).catch(() => [] as Bill[]),
         posApiClient.getOutletOrders(targetOutlet).catch(() => [] as Order[]),
+        posApiClient.getVoidLogs(targetOutlet).catch(() => [] as VoidAuditRecord[]),
       ]);
       setInternalBills(bList);
       setInternalOrders(oList);
+      if (vList && vList.length > 0) {
+        setDbVoidLogs(vList);
+      }
       if (onRefresh) onRefresh();
     } catch (err) {
       console.warn('Failed to load live bills/orders for reports:', err);
@@ -1478,7 +1484,7 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
 
           {/* Quick Void Metrics */}
           {(() => {
-            const voidLogs = getVoidAuditLogs();
+            const voidLogs = dbVoidLogs && dbVoidLogs.length > 0 ? dbVoidLogs : getVoidAuditLogs();
             const totalVoidValue = voidLogs.reduce((sum, item) => sum + item.amount, 0);
             const highestVoid = voidLogs.length > 0 ? Math.max(...voidLogs.map((i) => i.amount)) : 0;
 

@@ -275,6 +275,22 @@ async function initDatabase() {
       FOREIGN KEY (ticket_item_id) REFERENCES kitchen_ticket_items(id) ON DELETE CASCADE
     );
   `);
+    // 16. VOID & CANCELLATION AUDIT LOGS (Anti-Theft Manager PIN Ledger)
+    await exports.db.execute(`
+    CREATE TABLE IF NOT EXISTS void_audit_logs (
+      id TEXT PRIMARY KEY,
+      outlet_id TEXT,
+      order_number TEXT,
+      table_number TEXT,
+      item_name TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      original_waiter TEXT,
+      manager_pin TEXT,
+      reason TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
     // Seed default flagship outlet if empty
     const outletCheck = await exports.db.execute('SELECT COUNT(*) as count FROM outlets');
     if (Number(outletCheck.rows[0].count) === 0) {

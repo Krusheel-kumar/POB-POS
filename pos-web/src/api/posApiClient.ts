@@ -1072,6 +1072,49 @@ export class PosApiClient {
     return res.json();
   }
 
+  /**
+   * Save Void / Cancellation Audit Log directly to Database
+   */
+  public async recordVoidLog(entry: {
+    outletId?: string;
+    orderNumber?: string;
+    tableNumber?: string;
+    item: string;
+    qty: number;
+    amount: number;
+    originalWaiter?: string;
+    managerPin?: string;
+    reason: string;
+  }): Promise<any> {
+    const res = await fetch(`${this.config.baseUrl}/api/v1/reports/void-logs`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(entry),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to record void log: ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /**
+   * Fetch Real Void Audit Logs from Database
+   */
+  public async getVoidLogs(outletId?: string): Promise<any[]> {
+    const targetOutletId = outletId || this.config.outletId;
+    const url = new URL(`${this.config.baseUrl}/api/v1/reports/void-logs`);
+    if (targetOutletId) url.searchParams.set('outletId', targetOutletId);
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: this.getHeaders(false),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to load void logs: ${res.status}`);
+    }
+    return res.json();
+  }
+
   public async clearCatalog(): Promise<void> {
     await this.clearAllDemoData();
   }

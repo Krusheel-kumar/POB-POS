@@ -382,25 +382,48 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
     const order = orderRes.rows[0];
     let addedSubtotal = 0;
 
+    const addedKotItems = [];
+
     for (const item of items) {
       const prodRes = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [item.productId] });
       if (prodRes.rows.length === 0) continue;
       const prod = prodRes.rows[0];
       let addonTotal = 0;
+      const resolvedAddons: { id: string; name: string; price: number }[] = [];
       if (item.addOnIds && item.addOnIds.length > 0) {
         for (const aid of item.addOnIds) {
-          const addRes = await db.execute({ sql: 'SELECT price FROM add_ons WHERE id = ?', args: [aid] });
-          if (addRes.rows.length > 0) addonTotal += Number(addRes.rows[0].price);
+          const addRes = await db.execute({ sql: 'SELECT price, name FROM add_ons WHERE id = ?', args: [aid] });
+          if (addRes.rows.length > 0) {
+            const addPrice = Number(addRes.rows[0].price);
+            addonTotal += addPrice;
+            resolvedAddons.push({ id: aid, name: String(addRes.rows[0].name), price: addPrice });
+          }
         }
       }
       const unitPrice = Number(prod.base_price) + addonTotal;
       const lineTotal = unitPrice * item.quantity;
       addedSubtotal += lineTotal;
+      const newOrderItemId = `oi-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       await db.execute({
         sql: `INSERT INTO order_items (id, order_id, product_id, product_name_snapshot, unit_price_snapshot, quantity, line_total_snapshot, item_notes)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [`oi-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, orderId, item.productId, String(prod.name), unitPrice, item.quantity, lineTotal, item.itemNotes || null],
+        args: [newOrderItemId, orderId, item.productId, String(prod.name), unitPrice, item.quantity, lineTotal, item.itemNotes || null],
+      });
+
+      for (const rad of resolvedAddons) {
+        await db.execute({
+          sql: `INSERT INTO order_item_addons (id, order_item_id, addon_id, addon_name_snapshot, addon_price_snapshot)
+                VALUES (?, ?, ?, ?, ?)`,
+          args: [`oia-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, newOrderItemId, rad.id, rad.name, rad.price],
+        });
+      }
+
+      addedKotItems.push({
+        orderItemId: newOrderItemId,
+        productName: String(prod.name),
+        quantity: item.quantity,
+        addons: resolvedAddons,
       });
     }
 
@@ -413,6 +436,37 @@ export async function orderRoutes(fastify: FastifyInstance): Promise<void> {
       sql: 'UPDATE orders SET subtotal = ?, taxable_amount = ?, tax_amount = ?, total_amount = ? WHERE id = ?',
       args: [newSubtotal, newTaxable, newTax, newTotal, orderId],
     });
+
+    // Generate supplementary KOT ticket for the kitchen
+    if (addedKotItems.length > 0) {
+      const outletId = String(order.outlet_id);
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const kotSeq = await getNextSequence(`kot-${outletId}-${todayStr}`);
+      const suppTicketId = `kot-${Date.now()}`;
+
+      await db.execute({
+        sql: `INSERT INTO kitchen_tickets (id, ticket_number, outlet_id, order_id, order_number_snapshot, order_type_snapshot, table_number_snapshot, customer_notes_snapshot)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [suppTicketId, `#${kotSeq} (Running)`, outletId, orderId, String(order.order_number), String(order.order_type), order.table_number ? String(order.table_number) : null, 'Table Running Order Top-up'],
+      });
+
+      for (const ki of addedKotItems) {
+        const kotItemId = `kti-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        await db.execute({
+          sql: `INSERT INTO kitchen_ticket_items (id, ticket_id, order_item_id, product_name_snapshot, quantity)
+                VALUES (?, ?, ?, ?, ?)`,
+          args: [kotItemId, suppTicketId, ki.orderItemId, ki.productName, ki.quantity],
+        });
+
+        for (const ad of ki.addons) {
+          await db.execute({
+            sql: `INSERT INTO kitchen_ticket_item_addons (id, ticket_item_id, addon_name_snapshot)
+                  VALUES (?, ?, ?)`,
+            args: [`ktia-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, kotItemId, ad.name],
+          });
+        }
+      }
+    }
 
     const updatedRes = await db.execute({ sql: 'SELECT * FROM orders WHERE id = ?', args: [orderId] });
     return reply.send(updatedRes.rows[0]);

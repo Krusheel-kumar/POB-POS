@@ -178,4 +178,85 @@ export async function reportRoutes(fastify: FastifyInstance): Promise<void> {
       })),
     });
   });
+
+  // --- RECORD VOID / CANCELLATION AUDIT LOG ---
+  fastify.post('/api/v1/reports/void-logs', async (req: FastifyRequest<{
+    Body: {
+      outletId?: string;
+      orderNumber?: string;
+      tableNumber?: string;
+      item: string;
+      qty: number;
+      amount: number;
+      originalWaiter?: string;
+      managerPin?: string;
+      reason: string;
+    }
+  }>, reply: FastifyReply) => {
+    const { outletId, orderNumber, tableNumber, item, qty, amount, originalWaiter, managerPin, reason } = req.body;
+    if (!item || !qty) {
+      return reply.status(400).send({ error: 'Item name and quantity are required' });
+    }
+
+    const id = `void-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const maskedPin = managerPin ? `****${managerPin.slice(-4)}` : '****1234';
+
+    await db.execute({
+      sql: `INSERT INTO void_audit_logs (id, outlet_id, order_number, table_number, item_name, quantity, amount, original_waiter, manager_pin, reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, outletId || null, orderNumber || null, tableNumber || null, item, qty, amount || 0, originalWaiter || 'Staff', maskedPin, reason || 'Manager Override'],
+    });
+
+    return reply.status(201).send({
+      id,
+      outletId,
+      orderNumber,
+      tableNumber,
+      item,
+      qty,
+      amount,
+      originalWaiter: originalWaiter || 'Staff',
+      managerPin: maskedPin,
+      reason: reason || 'Manager Override',
+      createdAt: new Date().toISOString(),
+    });
+  });
+
+  // --- GET VOID / CANCELLATION AUDIT LOGS ---
+  fastify.get('/api/v1/reports/void-logs', async (req: FastifyRequest<{
+    Querystring: { outletId?: string }
+  }>, reply: FastifyReply) => {
+    const { outletId } = req.query;
+    let sql = 'SELECT * FROM void_audit_logs';
+    const args: any[] = [];
+    if (outletId) {
+      sql += ' WHERE outlet_id = ?';
+      args.push(outletId);
+    }
+    sql += ' ORDER BY created_at DESC LIMIT 100';
+
+    const res = await db.execute({ sql, args });
+    const logs = res.rows.map((row) => {
+      const dt = new Date(String(row.created_at));
+      const timeFormatted = !isNaN(dt.getTime())
+        ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+        : 'Just now';
+
+      return {
+        id: String(row.id),
+        time: timeFormatted,
+        item: String(row.item_name),
+        qty: Number(row.quantity),
+        amount: Number(row.amount),
+        originalWaiter: String(row.original_waiter || 'Staff'),
+        managerPin: String(row.manager_pin || '****1234'),
+        reason: String(row.reason || 'Manager Override'),
+        orderNumber: String(row.order_number || 'N/A'),
+        tableNumber: String(row.table_number || 'N/A'),
+        createdAt: String(row.created_at),
+      };
+    });
+
+    return reply.send(logs);
+  });
 }
