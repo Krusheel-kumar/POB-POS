@@ -93,10 +93,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const [prodBadge, setProdBadge] = useState('');
   const [currentEditingProduct, setCurrentEditingProduct] = useState<Product | null>(editingProduct || null);
   const [deletedProductIds, setDeletedProductIds] = useState<string[]>([]);
-  const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([
-    'Choice Of Size',
-    'Choice Of Boba & Toppings',
-  ]);
+  const [selectedGroupNames, setSelectedGroupNames] = useState<string[]>([]);
 
   const processImageFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -185,13 +182,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setProdBadge(editingProduct.badge || '');
 
       const mappedGroups: string[] = Array.from(
-        new Set<string>(editingProduct.addOns?.map((a: AddOn) => a.category || 'Choice Of Size') || [])
+        new Set<string>(
+          (editingProduct.addOns || [])
+            .map((a: AddOn) => a.category)
+            .filter((c): c is string => Boolean(c))
+        )
       );
-      setSelectedGroupNames(
-        mappedGroups.length > 0
-          ? mappedGroups
-          : ['Choice Of Size', 'Choice Of Boba & Toppings', 'Choice Of Sweetness', 'Choice Of Ice Level']
-      );
+      setSelectedGroupNames(mappedGroups);
       setActiveTab('product');
     } else {
       setProdName('');
@@ -207,10 +204,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setUploadedFileName(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setProdBadge('');
-      if (addOns.length > 0) {
-        const allGroups = Array.from(new Set(addOns.map((a) => a.category || 'Choice Of Boba & Toppings')));
-        setSelectedGroupNames(allGroups);
-      }
+      setSelectedGroupNames([]);
     }
   }, [editingProduct, isOpen, initialCategoryId]);
 

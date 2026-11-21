@@ -808,7 +808,7 @@ export class PosApiClient {
       }
 
       const updated = await res.json();
-      if (addOnIds && addOnIds.length > 0) {
+      if (addOnIds !== undefined) {
         try {
           await this.updateProductAddOns(id, addOnIds);
         } catch (addonErr) {

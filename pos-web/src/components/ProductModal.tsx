@@ -93,8 +93,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     if (product.addOns && product.addOns.length > 0) {
       addList(product.addOns);
-    } else if (availableAddOns && availableAddOns.length > 0) {
-      addList(availableAddOns);
     }
 
     // Ensure any previously chosen add-ons in the cart item remain present and selectable

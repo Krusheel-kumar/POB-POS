@@ -115,7 +115,7 @@ describe('AddProductModal Component (Minimal Production UI)', () => {
     });
   });
 
-  it('submits a product with selected category, subcategory and mapped modifiers', async () => {
+  it('submits a product with no modifiers mapped when user does not select any groups', async () => {
     const handleProductCreated = vi.fn().mockResolvedValue(undefined);
 
     render(
@@ -129,6 +129,77 @@ describe('AddProductModal Component (Minimal Production UI)', () => {
         initialTab="product"
       />
     );
+
+    expect(screen.getByText(/Linked Customization Choices & Toppings \(0 groups selected\)/i)).toBeInTheDocument();
+
+    const prodNameInput = screen.getByPlaceholderText(/e\.g\. Authentic Brown Sugar Boba Tea/i);
+    fireEvent.change(prodNameInput, { target: { value: 'Cheese Shots' } });
+
+    const priceInput = screen.getByPlaceholderText('240');
+    fireEvent.change(priceInput, { target: { value: '200' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Save & Add to POS/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(handleProductCreated).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Cheese Shots',
+          basePrice: 200,
+          addOnIds: [],
+        })
+      );
+    });
+  });
+
+  it('does not auto-select modifier groups when editing a product with 0 add-ons', () => {
+    const productWithoutAddOns = {
+      id: 'prod-cheese-shots',
+      name: 'CHEESE SHOTS',
+      basePrice: 200,
+      isActive: true,
+      category: mockCategories[0],
+      addOns: [],
+      variants: [],
+    };
+
+    render(
+      <AddProductModal
+        isOpen={true}
+        onClose={vi.fn()}
+        categories={mockCategories}
+        addOns={mockAddOns}
+        editingProduct={productWithoutAddOns}
+        onProductCreated={vi.fn()}
+        onCategoryCreated={vi.fn()}
+        onProductUpdated={vi.fn()}
+        initialTab="product"
+      />
+    );
+
+    expect(screen.getByText(/Linked Customization Choices & Toppings \(0 groups selected\)/i)).toBeInTheDocument();
+  });
+
+  it('maps modifier groups when explicitly selected by the user', async () => {
+    const handleProductCreated = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <AddProductModal
+        isOpen={true}
+        onClose={vi.fn()}
+        categories={mockCategories}
+        addOns={mockAddOns}
+        onProductCreated={handleProductCreated}
+        onCategoryCreated={vi.fn()}
+        initialTab="product"
+      />
+    );
+
+    // Explicitly check "Choice Of Size"
+    const sizeCheckbox = screen.getByRole('checkbox', { name: /Choice Of Size/i });
+    fireEvent.click(sizeCheckbox);
+
+    expect(screen.getByText(/Linked Customization Choices & Toppings \(1 groups selected\)/i)).toBeInTheDocument();
 
     const prodNameInput = screen.getByPlaceholderText(/e\.g\. Authentic Brown Sugar Boba Tea/i);
     fireEvent.change(prodNameInput, { target: { value: 'Signature Taro Milk Tea' } });
@@ -145,8 +216,7 @@ describe('AddProductModal Component (Minimal Production UI)', () => {
           name: 'Signature Taro Milk Tea',
           basePrice: 250,
           categoryId: 'cat-1',
-          subcategory: 'Milk Teas',
-          dietaryType: 'BEVERAGE',
+          addOnIds: expect.arrayContaining(['add-1', 'add-2']),
         })
       );
     });

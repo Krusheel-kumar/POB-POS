@@ -1019,37 +1019,6 @@ class MockStore {
       }
       return list.filter((p) => p.category?.id === categoryId);
     }
-    const allAddons = this.getAddOns();
-    let updated = false;
-
-    // Auto-heal: Ensure beverages have Choice Of Size and Boba customization
-    list.forEach((p) => {
-      const isBoba =
-        p.name.toLowerCase().includes('tea') ||
-        p.name.toLowerCase().includes('boba') ||
-        p.name.toLowerCase().includes('latte') ||
-        p.name.toLowerCase().includes('matcha') ||
-        p.name.toLowerCase().includes('brew') ||
-        p.category?.id?.includes('boba') ||
-        p.category?.name?.toLowerCase().includes('boba') ||
-        p.category?.name?.toLowerCase().includes('tea');
-
-      const hasSize = p.addOns?.some((a) => a.category === 'Choice Of Size');
-      if (isBoba && (!p.addOns || p.addOns.length === 0 || !hasSize)) {
-        p.addOns = allAddons.filter((a) =>
-          a.category === 'Choice Of Size' ||
-          a.category === 'Choice Of Sweetness' ||
-          a.category === 'Choice Of Boba & Toppings' ||
-          a.category === 'Choice Of Ice Level' ||
-          a.category === 'Choice Of Milk Base'
-        );
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      this.setStorage('products', list);
-    }
 
     if (!categoryId || categoryId === 'cat-all') {
       return list;
@@ -1077,8 +1046,7 @@ class MockStore {
     const allAddons = this.getAddOns();
 
     const cat = categories.find((c) => c.id === req.categoryId);
-    const selectedAddons = allAddons.filter((a) => req.addOnIds?.includes(a.id));
-    const finalAddons = selectedAddons.length > 0 ? selectedAddons : allAddons;
+    const finalAddons = req.addOnIds ? allAddons.filter((a) => req.addOnIds!.includes(a.id)) : [];
 
     const newProd: Product = {
       id: `prod-${Date.now()}`,
@@ -1133,7 +1101,7 @@ class MockStore {
     const current = list[prodIndex];
     const cat = req.categoryId ? categories.find((c) => c.id === req.categoryId) : current.category;
     let finalAddons = current.addOns;
-    if (req.addOnIds) {
+    if (req.addOnIds !== undefined) {
       finalAddons = allAddons.filter((a) => req.addOnIds!.includes(a.id));
     }
 
