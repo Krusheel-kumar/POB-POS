@@ -249,11 +249,50 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
 
   // Effective Add-on Categories list (ordered by displayOrder / sequence rank)
   const effectiveAddOnCategories: AddOnCategory[] = useMemo(() => {
-    const list = addOnCategories && addOnCategories.length > 0
+    const baseList = addOnCategories && addOnCategories.length > 0
       ? addOnCategories
       : mockStore.getAddOnCategories();
-    return [...list].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
-  }, [addOnCategories]);
+
+    const catMap = new Map<string, AddOnCategory>();
+    baseList.forEach((c) => {
+      catMap.set(c.name.trim().toLowerCase(), { ...c });
+    });
+
+    const storedCatRanks = (typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('pob_addon_cat_ranks') || '{}')
+      : {}) as Record<string, number>;
+
+    // Also scan all categories present in addOns
+    let nextRank = baseList.length + 1;
+    addOns.forEach((a) => {
+      const catName = (a.category || 'Choice Of Size').trim();
+      const key = catName.toLowerCase();
+      if (!catMap.has(key)) {
+        const isSingle = key.includes('size') || key.includes('milk') || key.includes('sweetness') || key.includes('ice');
+        const assignedRank = storedCatRanks[key] ?? nextRank++;
+        catMap.set(key, {
+          id: `cat-${key.replace(/[^a-z0-9]/g, '-')}`,
+          name: catName,
+          selectionType: isSingle ? 'SINGLE' : 'MULTI',
+          displayOrder: assignedRank,
+          minSelections: isSingle ? 1 : 0,
+          maxSelections: isSingle ? 1 : 3,
+        });
+      }
+    });
+
+    const merged = Array.from(catMap.values()).map((c) => {
+      const key = c.name.trim().toLowerCase();
+      const idKey = c.id.trim().toLowerCase();
+      const stored = storedCatRanks[key] ?? storedCatRanks[idKey];
+      return {
+        ...c,
+        displayOrder: stored !== undefined ? stored : (c.displayOrder ?? 999),
+      };
+    });
+
+    return merged.sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+  }, [addOnCategories, addOns]);
 
   // Unique categories of Add-ons
   const uniqueAddOnCategories = useMemo(() => {
@@ -275,15 +314,6 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     });
     return groups;
   }, [addOns, uniqueAddOnCategories]);
-
-  // Filtered add-ons list (sorted by displayOrder / sequence rank)
-  const filteredAddOns = useMemo(() => {
-    let list = addOns;
-    if (filterAddOnCat !== 'ALL') {
-      list = addOns.filter((a) => (a.category || 'Choice Of Size') === filterAddOnCat);
-    }
-    return [...list].sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
-  }, [addOns, filterAddOnCat]);
 
   // Petpooja: Count items per category
   const categoryCounts = useMemo(() => {
@@ -353,7 +383,12 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
         }
         return true;
       })
-      .sort((a, b) => (a.displayOrder ?? 9999) - (b.displayOrder ?? 9999));
+      .sort((a, b) => {
+        const rankA = a.displayOrder ?? 9999;
+        const rankB = b.displayOrder ?? 9999;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.name.localeCompare(b.name);
+      });
   }, [products, selectedCategoryId, selectedSubcategory, menuSearchQuery]);
 
   // Handlers
@@ -532,6 +567,33 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
         setTimeout(() => setSuccessMsg(null), 4000);
       } catch (err: unknown) {
         setErrorMsg(err instanceof Error ? err.message : 'Failed to delete add-on category');
+      }
+    }
+  };
+
+  const handleCategoryRankChange = async (catId: string, catName: string, newRank: number) => {
+    if (isNaN(newRank) || newRank < 1) return;
+    setErrorMsg(null);
+    try {
+      if (onUpdateAddOnCategory) {
+        await onUpdateAddOnCategory(catId, { name: catName, displayOrder: newRank });
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to update category rank');
+    }
+  };
+
+  const handleDeleteAddOnItem = async (addonId: string, addonName: string) => {
+    if (window.confirm(`⚠️ Permanently delete choice "${addonName}"?`)) {
+      setErrorMsg(null);
+      try {
+        if (onDeleteAddOn) {
+          await onDeleteAddOn(addonId);
+        }
+        setSuccessMsg(`✓ Choice "${addonName}" deleted.`);
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to delete choice');
       }
     }
   };
@@ -1424,18 +1486,18 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       )}
 
       {/* ========================================================
-          ADD-ONS TAB (CATEGORY GROUPS & ITEMS AS REQUESTED)
+          ADD-ONS TAB (CATEGORY-WISE GROUPS AS REQUESTED)
          ======================================================== */}
       {activeTab === 'addons' && (
         <div className="admin-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h3 style={{ margin: 0 }}>Add-on Categories & Modifier Choices</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                Create Add-on Categories like <strong>Choice Of Size</strong>, <strong>Choice Of Sweetness</strong>, <strong>Choice Of Boba</strong>, and add items like <em>Regular(300ml)</em>, <em>Large(700ml)</em> under each category.
+              <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#0f172a' }}>Add-on Categories & Modifier Choices</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                Organized Category-Wise. Change Category Rank to set which category displays first in the POS modal, and Item Rank to order items within each category.
               </p>
             </div>
-            <div className="admin-header-actions">
+            <div className="admin-header-actions" style={{ display: 'flex', gap: '8px' }}>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -1459,107 +1521,25 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
             </div>
           </div>
 
-          {/* Add-on Categories Management Section (Ranking & CRUD) */}
-          <div className="addon-categories-management-panel">
-            <div className="addon-categories-panel-title">
-              <span>Add-on Categories (Vertical Priority in POS Customization Modal)</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', textTransform: 'none' }}>
-                Rank #1 appears at the very top of the customization popup
-              </span>
-            </div>
-
-            <div className="addon-categories-cards-grid">
-              {effectiveAddOnCategories.map((cat, idx) => {
-                const count = addOns.filter((a) => (a.category || '').toLowerCase() === cat.name.toLowerCase()).length;
-                const isSingle = cat.selectionType === 'SINGLE';
-                const isSelected = filterAddOnCat.toLowerCase() === cat.name.toLowerCase();
-                const rankNum = cat.displayOrder ?? (idx + 1);
-
-                return (
-                  <div
-                    key={cat.id}
-                    className={`addon-cat-config-card ${isSelected ? 'active' : ''}`}
-                    onClick={() => setFilterAddOnCat(isSelected ? 'ALL' : cat.name)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <div className="addon-cat-card-top">
-                      <span className="addon-cat-rank-badge" title="Customizer display ranking">
-                        Rank #{rankNum}
-                      </span>
-                      <span className="addon-cat-title">{cat.name}</span>
-                      <span className="category-item-badge">{count} choices</span>
-                    </div>
-
-                    <div className="addon-cat-card-meta">
-                      <span style={{ color: isSingle ? '#1d4ed8' : '#15803d', fontWeight: 600 }}>
-                        {isSingle ? '● Single Choice (Pick 1)' : `☑️ Multi Choice (${cat.minSelections ?? 0}-${cat.maxSelections ?? 3})`}
-                      </span>
-                    </div>
-
-                    <div className="addon-cat-card-actions" onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Rank:</span>
-                        <RankControl
-                          value={rankNum}
-                          onCommit={async (val) => {
-                            if (onUpdateAddOnCategory) {
-                              await onUpdateAddOnCategory(cat.id, { displayOrder: val });
-                            }
-                          }}
-                          compact
-                          inputStyle={{ width: '42px', height: '24px', fontSize: '0.75rem' }}
-                          title="Category vertical sequence rank in item customizer"
-                        />
-                      </div>
-
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          style={{ padding: '2px 8px', fontSize: '0.75rem' }}
-                          onClick={() => handleOpenEditAddOnCategory(cat)}
-                          title="Edit category name and selection rules"
-                        >
-                          ✏️ Edit
-                        </button>
-                        {onDeleteAddOnCategory && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                            onClick={() => handleDeleteAddOnCategoryGroup(cat.id, cat.name)}
-                            title="Delete this add-on category"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Add-on Category Filter Bar */}
-          <div className="addon-category-filter">
+          {/* Quick Category Filter Bar */}
+          <div className="addon-category-filter" style={{ marginBottom: '1.25rem' }}>
             <button
               type="button"
               className={`category-filter-pill ${filterAddOnCat === 'ALL' ? 'active' : ''}`}
               onClick={() => setFilterAddOnCat('ALL')}
             >
-              All Categories & Items ({addOns.length})
+              All Categories ({effectiveAddOnCategories.length})
             </button>
-            {uniqueAddOnCategories.map((cat) => {
-              const count = addOns.filter((a) => (a.category || 'Choice Of Size') === cat).length;
+            {effectiveAddOnCategories.map((cat) => {
+              const count = addOns.filter((a) => (a.category || '').toLowerCase().trim() === cat.name.toLowerCase().trim()).length;
               return (
                 <button
-                  key={cat}
+                  key={cat.id}
                   type="button"
-                  className={`category-filter-pill ${filterAddOnCat === cat ? 'active' : ''}`}
-                  onClick={() => setFilterAddOnCat(cat)}
+                  className={`category-filter-pill ${filterAddOnCat.toLowerCase().trim() === cat.name.toLowerCase().trim() ? 'active' : ''}`}
+                  onClick={() => setFilterAddOnCat(filterAddOnCat.toLowerCase().trim() === cat.name.toLowerCase().trim() ? 'ALL' : cat.name)}
                 >
-                  {cat} ({count})
+                  {cat.name} ({count})
                 </button>
               );
             })}
@@ -1567,108 +1547,186 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
 
           {isLoading ? (
             <div className="loading-spinner">Loading add-ons...</div>
-          ) : filteredAddOns.length === 0 ? (
+          ) : effectiveAddOnCategories.length === 0 ? (
             <div className="empty-state">
-              No items in this category yet. Click "+ Add Item / Size" to add options like Regular(300ml).
+              No add-on categories found. Click "+ New Add-on Category" or "+ Add Item / Size" to get started.
             </div>
           ) : (
-            <div className="admin-table-container">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: '80px', textAlign: 'center' }}># Rank</th>
-                    <th>Item / Choice Name</th>
-                    <th>Add-on Category Name</th>
-                    <th>Selection Type</th>
-                    <th>Extra Price</th>
-                    <th>Assigned in Products</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAddOns.map((a, idx) => {
-                    const linkedProducts = products.filter((p) => p.addOns?.some((item) => item.id === a.id));
-                    const isSingle = a.selectionType === 'SINGLE' || a.category?.toLowerCase().includes('size') || a.category?.toLowerCase().includes('sweetness');
-                    const choiceRank = a.displayOrder ?? (idx + 1);
+            <div className="addon-categories-wise-container">
+              {effectiveAddOnCategories
+                .filter((cat) => filterAddOnCat === 'ALL' || filterAddOnCat.toLowerCase().trim() === cat.name.toLowerCase().trim())
+                .map((cat, catIdx) => {
+                  const itemsInCat = addOns
+                    .filter((a) => (a.category || '').toLowerCase().trim() === cat.name.toLowerCase().trim())
+                    .sort((a, b) => {
+                      const rankA = a.displayOrder ?? 999;
+                      const rankB = b.displayOrder ?? 999;
+                      if (rankA !== rankB) return rankA - rankB;
+                      return a.name.localeCompare(b.name);
+                    });
+                  const catRank = cat.displayOrder ?? (catIdx + 1);
+                  const isSingle = cat.selectionType === 'SINGLE';
 
-                    return (
-                      <tr key={a.id}>
-                        <td style={{ textAlign: 'center' }}>
-                          <RankControl
-                            value={choiceRank}
-                            onCommit={(val) => handleAddOnRankChange(a.id, val)}
-                            title="Choice ranking in POS customizer"
-                          />
-                        </td>
-                        <td>
-                          <strong>{a.name}</strong>
-                        </td>
-                        <td>
-                          <span className="addon-badge-cat">
-                            {a.category || 'Choice Of Size'}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isSingle ? '#1d4ed8' : '#15803d' }}>
-                            {isSingle ? '● Single Choice (Select 1)' : '☑️ Multi Choice (Optional)'}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ color: a.price > 0 ? '#059669' : '#64748b' }}>
-                            {a.price > 0 ? `+₹${a.price.toFixed(2)}` : '₹0.00 (Included)'}
-                          </strong>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: '0.8rem', color: linkedProducts.length > 0 ? '#1e293b' : '#94a3b8' }}>
-                            {linkedProducts.length > 0
-                              ? `Linked to ${linkedProducts.length} item(s)`
-                              : 'Not attached yet'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${a.isActive ? 'badge-success' : 'badge-neutral'}`}>
-                            {a.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {onToggleAddOn && (
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => onToggleAddOn(a.id)}
-                              >
-                                {a.isActive ? 'Deactivate' : 'Activate'}
-                              </button>
-                            )}
-                            {onUpdateProductAddOns && (
-                              <button
-                                type="button"
-                                className="btn btn-primary btn-sm"
-                                onClick={() => handleOpenBulkAssign(a)}
-                                title="Attach this item across menu products"
-                              >
-                                🔗 Assign
-                              </button>
-                            )}
-                            {onDeleteAddOn && (
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-sm"
-                                onClick={() => onDeleteAddOn(a.id)}
-                                title="Delete this add-on choice"
-                              >
-                                ✕
-                              </button>
-                            )}
+                  return (
+                    <div key={cat.id} className="addon-category-group-card">
+                      {/* Category Header */}
+                      <div className="addon-category-group-header">
+                        <div className="addon-category-group-title-row">
+                          <div className="addon-cat-rank-wrapper">
+                            <span className="addon-cat-rank-label">Category Rank:</span>
+                            <RankControl
+                              value={catRank}
+                              onCommit={(newRank) => handleCategoryRankChange(cat.id, cat.name, newRank)}
+                              compact
+                              inputStyle={{ width: '42px', height: '26px', fontSize: '0.8rem', fontWeight: 700 }}
+                              title="Category vertical display priority in POS item customizer"
+                            />
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          <div className="addon-cat-name-badge-group">
+                            <h4 className="addon-cat-group-name">{cat.name}</h4>
+                            <span className={`addon-cat-rule-pill ${isSingle ? 'rule-single' : 'rule-multi'}`}>
+                              {isSingle ? '● Single Choice (Pick 1)' : `☑️ Multi Choice (Min ${cat.minSelections ?? 0}, Max ${cat.maxSelections ?? 3})`}
+                            </span>
+                            <span className="addon-cat-count-pill">{itemsInCat.length} options</span>
+                          </div>
+                        </div>
+
+                        <div className="addon-category-group-actions">
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-xs"
+                            onClick={() => {
+                              setAddOnCategory(cat.name);
+                              setAddOnSelectionType(cat.selectionType || 'SINGLE');
+                              setIsCustomCategory(false);
+                              setShowAddOnModal(true);
+                            }}
+                            title={`Add a new choice option to ${cat.name}`}
+                          >
+                            + Add Option to {cat.name}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-xs"
+                            onClick={() => handleOpenEditAddOnCategory(cat)}
+                            title="Edit category name and selection rules"
+                          >
+                            ✏️ Edit
+                          </button>
+                          {onDeleteAddOnCategory && (
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-xs"
+                              onClick={() => handleDeleteAddOnCategoryGroup(cat.id, cat.name)}
+                              title="Delete category"
+                            >
+                              🗑️
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Options table inside this category */}
+                      {itemsInCat.length === 0 ? (
+                        <div className="addon-group-empty">
+                          No choices in <strong>{cat.name}</strong> yet. Click <em>"+ Add Option to {cat.name}"</em> to add options like Regular(300ml).
+                        </div>
+                      ) : (
+                        <div className="admin-table-container addon-group-table-wrap">
+                          <table className="admin-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '85px', textAlign: 'center' }}># Item Rank</th>
+                                <th>Choice Name</th>
+                                <th>Extra Price</th>
+                                <th>Selection Type</th>
+                                <th>Assigned in Products</th>
+                                <th>Status</th>
+                                <th style={{ textAlign: 'right' }}>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {itemsInCat.map((item, itemIdx) => {
+                                const itemRank = item.displayOrder ?? (itemIdx + 1);
+                                const linkedProducts = products.filter((p) => p.addOns?.some((ao) => ao.id === item.id));
+                                return (
+                                  <tr key={item.id}>
+                                    <td style={{ textAlign: 'center' }}>
+                                      <RankControl
+                                        value={itemRank}
+                                        onCommit={(newRank) => handleAddOnRankChange(item.id, newRank)}
+                                        title="Display rank of this choice inside category"
+                                      />
+                                    </td>
+                                    <td>
+                                      <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{item.name}</strong>
+                                    </td>
+                                    <td>
+                                      <span className={`addon-price-badge ${item.price > 0 ? 'price-extra' : 'price-free'}`}>
+                                        {item.price > 0 ? `+₹${item.price.toFixed(2)}` : '₹0.00 (Included)'}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <span style={{ fontSize: '0.78rem', color: isSingle ? '#2563eb' : '#059669', fontWeight: 600 }}>
+                                        {isSingle ? '● Radio (Single)' : '☑️ Checkbox (Multi)'}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="btn-link-action"
+                                        onClick={() => handleOpenBulkAssign(item)}
+                                        title="Click to link or unlink this choice across catalog products"
+                                      >
+                                        🔗 Linked to {linkedProducts.length} item(s)
+                                      </button>
+                                    </td>
+                                    <td>
+                                      <span className={`badge ${item.isActive !== false ? 'badge-success' : 'badge-neutral'}`}>
+                                        {item.isActive !== false ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </td>
+                                    <td style={{ textAlign: 'right' }}>
+                                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                        <button
+                                          type="button"
+                                          className="btn btn-secondary btn-xs"
+                                          onClick={() => handleOpenBulkAssign(item)}
+                                          title="Assign to products"
+                                        >
+                                          🔗 Assign
+                                        </button>
+                                        {onToggleAddOn && (
+                                          <button
+                                            type="button"
+                                            className="btn btn-secondary btn-xs"
+                                            onClick={() => onToggleAddOn(item.id)}
+                                          >
+                                            {item.isActive !== false ? 'Deactivate' : 'Activate'}
+                                          </button>
+                                        )}
+                                        {onDeleteAddOn && (
+                                          <button
+                                            type="button"
+                                            className="btn btn-danger btn-xs"
+                                            onClick={() => handleDeleteAddOnItem(item.id, item.name)}
+                                            title="Delete choice"
+                                          >
+                                            🗑️
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>

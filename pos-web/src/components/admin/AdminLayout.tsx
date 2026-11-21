@@ -270,7 +270,6 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     } catch (err) {
       console.warn('Rank sync notice:', err);
     }
-    await loadAdminData();
   };
 
   const handleUpdateAddOnRank = async (addonId: string, rank: number) => {
@@ -282,17 +281,35 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     } catch (err) {
       console.warn('AddOn rank sync notice:', err);
     }
-    await loadAdminData();
   };
 
   const handleCreateAddOnCategory = async (req: AddOnCategoryRequest) => {
-    await posApiClient.createAddOnCategory(req);
+    const created = await posApiClient.createAddOnCategory(req);
+    setAddOnCategories((prev) => [...prev, created]);
     await loadAdminData();
   };
 
   const handleUpdateAddOnCategory = async (id: string, req: Partial<AddOnCategoryRequest>) => {
-    await posApiClient.updateAddOnCategory(id, req);
-    await loadAdminData();
+    setAddOnCategories((prev) => {
+      const exists = prev.some((c) => c.id === id || c.name.toLowerCase() === (req.name || '').toLowerCase());
+      if (exists) {
+        return prev.map((c) =>
+          c.id === id || c.name.toLowerCase() === (req.name || '').toLowerCase()
+            ? { ...c, ...req }
+            : c
+        );
+      }
+      return [...prev, { id, name: req.name || id, ...req } as AddOnCategory];
+    });
+    try {
+      await posApiClient.updateAddOnCategory(id, req);
+    } catch (err) {
+      console.warn('AddOn category sync notice:', err);
+    }
+    // Only reload all data if renaming or changing rules, not on simple rank change
+    if (req.displayOrder === undefined) {
+      await loadAdminData();
+    }
   };
 
   const handleDeleteAddOnCategory = async (id: string) => {

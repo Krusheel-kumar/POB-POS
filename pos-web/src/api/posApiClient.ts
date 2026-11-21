@@ -131,39 +131,112 @@ export class PosApiClient {
     }
   }
 
+  public getProductRanks(): Record<string, number> {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('pob_product_ranks') || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  public saveProductRank(id: string, rank: number): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const ranks = this.getProductRanks();
+      ranks[id] = rank;
+      localStorage.setItem('pob_product_ranks', JSON.stringify(ranks));
+    } catch {
+      // non-blocking
+    }
+  }
+
+  public getAddOnRanks(): Record<string, number> {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('pob_addon_ranks') || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  public saveAddOnRank(id: string, rank: number): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const ranks = this.getAddOnRanks();
+      ranks[id] = rank;
+      localStorage.setItem('pob_addon_ranks', JSON.stringify(ranks));
+    } catch {
+      // non-blocking
+    }
+  }
+
+  public getAddOnCategoryRanks(): Record<string, number> {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('pob_addon_cat_ranks') || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  public saveAddOnCategoryRank(catIdOrName: string, rank: number): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const ranks = this.getAddOnCategoryRanks();
+      ranks[catIdOrName.toLowerCase().trim()] = rank;
+      localStorage.setItem('pob_addon_cat_ranks', JSON.stringify(ranks));
+    } catch {
+      // non-blocking
+    }
+  }
+
   /**
    * Fetch products
    */
   public async getProducts(categoryId?: string): Promise<Product[]> {
+    let prods: Product[];
     if (this.demoMode) {
-      return mockStore.getProducts(categoryId);
+      prods = mockStore.getProducts(categoryId);
+    } else {
+      try {
+        const url = new URL(`${this.config.baseUrl}/api/v1/products`);
+        if (categoryId && categoryId !== 'cat-all') {
+          url.searchParams.set('categoryId', categoryId);
+        }
+
+        const res = await fetch(url.toString(), {
+          method: 'GET',
+          headers: this.getHeaders(false),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Failed to load products: ${res.status} ${res.statusText}`);
+        }
+
+        prods = await res.json();
+      } catch (err) {
+        prods = mockStore.getProducts(categoryId);
+      }
     }
+
+    // Hydrate persistent ranks
+    const ranks = this.getProductRanks();
+    prods.forEach((p) => {
+      if (ranks[p.id] !== undefined) {
+        p.displayOrder = ranks[p.id];
+      } else if (p.displayOrder !== undefined && p.displayOrder !== null) {
+        ranks[p.id] = p.displayOrder;
+      }
+    });
 
     try {
-      const url = new URL(`${this.config.baseUrl}/api/v1/products`);
-      if (categoryId && categoryId !== 'cat-all') {
-        url.searchParams.set('categoryId', categoryId);
-      }
-
-      const res = await fetch(url.toString(), {
-        method: 'GET',
-        headers: this.getHeaders(false),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to load products: ${res.status} ${res.statusText}`);
-      }
-
-      const prods: Product[] = await res.json();
-      try {
-        mockStore.syncProducts(prods);
-      } catch {
-        // non-blocking
-      }
-      return prods;
-    } catch (err) {
-      return mockStore.getProducts(categoryId);
+      mockStore.syncProducts(prods);
+    } catch {
+      // non-blocking
     }
+
+    return prods;
   }
 
   /**
@@ -776,24 +849,35 @@ export class PosApiClient {
    * Fetch add-ons
    */
   public async getAddOns(): Promise<AddOn[]> {
+    let list: AddOn[];
     if (this.demoMode) {
-      return mockStore.getAddOns();
-    }
+      list = mockStore.getAddOns();
+    } else {
+      try {
+        const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons`, {
+          method: 'GET',
+          headers: this.getHeaders(false),
+        }, 2500);
 
-    try {
-      const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons`, {
-        method: 'GET',
-        headers: this.getHeaders(false),
-      }, 2500);
-
-      if (!res.ok) {
-        throw new Error(`Failed to load add-ons: ${res.status}`);
+        if (!res.ok) {
+          list = mockStore.getAddOns();
+        } else {
+          list = await res.json();
+        }
+      } catch {
+        list = mockStore.getAddOns();
       }
-
-      return res.json();
-    } catch {
-      return mockStore.getAddOns();
     }
+
+    // Hydrate persistent item ranks
+    const addonRanks = this.getAddOnRanks();
+    list.forEach((a) => {
+      if (addonRanks[a.id] !== undefined) {
+        a.displayOrder = addonRanks[a.id];
+      }
+    });
+
+    return list;
   }
 
   /**
@@ -888,20 +972,39 @@ export class PosApiClient {
    * Fetch add-on categories
    */
   public async getAddOnCategories(): Promise<AddOnCategory[]> {
-    return mockStore.getAddOnCategories();
+    const list = mockStore.getAddOnCategories();
+    const catRanks = this.getAddOnCategoryRanks();
+    return list.map((c) => {
+      const stored = catRanks[c.id.toLowerCase().trim()] ?? catRanks[c.name.toLowerCase().trim()];
+      if (stored !== undefined) {
+        return { ...c, displayOrder: stored };
+      }
+      return c;
+    });
   }
 
   /**
    * Create add-on category
    */
   public async createAddOnCategory(req: AddOnCategoryRequest): Promise<AddOnCategory> {
-    return mockStore.createAddOnCategory(req);
+    const created = mockStore.createAddOnCategory(req);
+    if (req.displayOrder !== undefined) {
+      this.saveAddOnCategoryRank(created.id, req.displayOrder);
+      this.saveAddOnCategoryRank(created.name, req.displayOrder);
+    }
+    return created;
   }
 
   /**
    * Update add-on category
    */
   public async updateAddOnCategory(id: string, req: Partial<AddOnCategoryRequest>): Promise<AddOnCategory> {
+    if (req.displayOrder !== undefined) {
+      this.saveAddOnCategoryRank(id, req.displayOrder);
+      if (req.name) {
+        this.saveAddOnCategoryRank(req.name, req.displayOrder);
+      }
+    }
     return mockStore.updateAddOnCategory(id, req);
   }
 
@@ -916,7 +1019,9 @@ export class PosApiClient {
    * Update product sequence ranking
    */
   public async updateProductRank(productId: string, displayOrder: number): Promise<Product> {
+    this.saveProductRank(productId, displayOrder);
     const localUpdated = mockStore.updateProductRank(productId, displayOrder);
+    localUpdated.displayOrder = displayOrder;
 
     if (this.demoMode) {
       return localUpdated;
@@ -958,7 +1063,9 @@ export class PosApiClient {
    * Update add-on item sequence ranking
    */
   public async updateAddOnRank(addonId: string, displayOrder: number): Promise<AddOn> {
+    this.saveAddOnRank(addonId, displayOrder);
     const localUpdated = mockStore.updateAddOnRank(addonId, displayOrder);
+    localUpdated.displayOrder = displayOrder;
 
     if (this.demoMode) {
       return localUpdated;
