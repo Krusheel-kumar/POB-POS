@@ -121,6 +121,28 @@ export const buildThermalPrintHtml = (slipHtml: string, title: string): string =
       .thank-you-msg { font-weight: 900 !important; font-size: 9.5pt !important; margin: 4px 0 2px !important; color: #000 !important; }
       .visit-again-sub { font-weight: 700 !important; font-size: 8.5pt !important; color: #000 !important; margin: 0 0 4px !important; }
       .footer-software { font-size: 7.5pt !important; font-weight: 600 !important; color: #222 !important; }
+      .thermal-kot { width: 100% !important; margin: 0 auto !important; }
+      .kot-brand-sub { font-size: 10pt !important; font-weight: 800 !important; letter-spacing: 1px !important; margin: 2px 0 !important; text-align: center !important; }
+      .kot-number-row { display: flex !important; justify-content: space-between !important; align-items: center !important; margin: 4px 0 !important; }
+      .kot-number-text { font-size: 18pt !important; font-weight: 900 !important; letter-spacing: 1px !important; color: #000 !important; }
+      .kot-type-badge { font-size: 11pt !important; font-weight: 900 !important; border: 1.5px solid #000 !important; padding: 2px 6px !important; text-transform: uppercase !important; }
+      .kot-meta-row { display: flex !important; justify-content: space-between !important; font-size: 9pt !important; font-weight: 700 !important; margin: 2px 0 !important; }
+      .kot-special-notes { border: 1.5px dashed #000 !important; padding: 4px !important; margin: 4px 0 !important; font-size: 9pt !important; font-weight: 800 !important; }
+      .kot-items-table-header { display: flex !important; justify-content: space-between !important; font-size: 9pt !important; font-weight: 900 !important; padding: 2px 0 !important; }
+      .col-kot-qty { width: 36px !important; text-align: left !important; font-weight: 900 !important; }
+      .col-kot-item { flex: 1 !important; text-align: left !important; font-weight: 900 !important; }
+      .kot-items-list { margin: 4px 0 !important; }
+      .kot-item-entry { padding: 4px 0 !important; border-bottom: 1px dashed #444 !important; }
+      .kot-item-entry:last-child { border-bottom: none !important; }
+      .kot-item-main { display: flex !important; align-items: baseline !important; gap: 8px !important; }
+      .kot-qty { font-size: 14pt !important; font-weight: 900 !important; width: 32px !important; text-align: left !important; }
+      .kot-name { font-size: 11pt !important; font-weight: 900 !important; flex: 1 !important; line-height: 1.25 !important; }
+      .kot-detail-line { font-size: 9pt !important; font-weight: 800 !important; padding-left: 36px !important; margin-top: 2px !important; }
+      .kot-variant-line { color: #000 !important; }
+      .kot-addons-group { margin: 1px 0 !important; }
+      .kot-addon-line { font-size: 9.5pt !important; font-weight: 900 !important; color: #000 !important; }
+      .kot-item-note { font-size: 8.5pt !important; font-weight: 800 !important; font-style: italic !important; }
+      .kot-footer-summary { display: flex !important; justify-content: space-between !important; font-size: 9.5pt !important; font-weight: 900 !important; margin: 4px 0 !important; }
       .kot-badge { font-size: 13pt !important; font-weight: 900 !important; color: #000 !important; }
       .kot-number-banner { border: 2px solid #000 !important; padding: 3px 6px !important; display: flex !important; justify-content: center !important; gap: 8px !important; align-items: center !important; }
       .kot-num-title { font-size: 11pt !important; font-weight: 900 !important; color: #000 !important; }
@@ -647,206 +669,204 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </div>
             </div>
           ) : (
-            /* KITCHEN ORDER TICKET (KOT) - PRODUCTION LEVEL */
+            /* KITCHEN ORDER TICKET (KOT) - MINIMAL BIG-BRAND DESIGN */
             <div className="thermal-kot">
-              <div className="thermal-header">
-                <div className="brand-name">POP O' BOB</div>
-                <div className="brand-sub">Speciality Bubble Tea • Barista & Kitchen Line</div>
-                <div className="slip-divider">========================================</div>
-                {isDuplicate ? (
-                  <div className="duplicate-kot-banner">
-                    <div className="dup-kot-title">⚠️ *** DUPLICATE KOT *** ⚠️</div>
-                    <div className="dup-kot-sub">[ REPRINT COPY #{printCount + 1} ]</div>
-                    <div className="dup-kot-alert">🛑 CHECK IF ALREADY PREPARED! 🛑</div>
-                    {printHistory.firstKotPrintedAt && (
-                      <div className="dup-kot-alert-sub">
-                        Original KOT printed: {new Date(printHistory.firstKotPrintedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                ) : (
+              {(() => {
+                // Format serial KOT number like top QSR brands (KOT #001, KOT #002...)
+                const rawKot = ticket?.ticketNumber || order?.kotNumber;
+                let formattedKotNumber = 'KOT #001';
+                if (rawKot) {
+                  if (rawKot.includes('#')) {
+                    const numMatch = rawKot.match(/#(\d+)/);
+                    const isRound2 = rawKot.includes('Round 2') || rawKot.includes('Running') || rawKot.includes('Add-on');
+                    const numStr = numMatch ? numMatch[1].padStart(3, '0') : rawKot.replace(/[^0-9]/g, '').padStart(3, '0');
+                    formattedKotNumber = `KOT #${numStr}${isRound2 ? ' (Round 2)' : ''}`;
+                  } else if (rawKot.startsWith('KOT-')) {
+                    const numPart = rawKot.replace(/[^0-9]/g, '').padStart(3, '0');
+                    formattedKotNumber = `KOT #${numPart}`;
+                  } else if (/^\d+$/.test(rawKot)) {
+                    formattedKotNumber = `KOT #${rawKot.padStart(3, '0')}`;
+                  } else {
+                    formattedKotNumber = rawKot;
+                  }
+                } else if (order?.orderNumber) {
+                  const digits = order.orderNumber.replace(/[^0-9]/g, '');
+                  const serial = digits.slice(-3).padStart(3, '0') || '001';
+                  formattedKotNumber = `KOT #${serial}`;
+                }
+
+                const orderLocation = order?.table
+                  ? `TABLE: ${order.table.tableNumber}`
+                  : order?.tableNumber
+                  ? `TABLE: ${order.tableNumber}`
+                  : ticket?.tableNumberSnapshot
+                  ? `TABLE: ${ticket.tableNumberSnapshot}`
+                  : ticket?.customerNotesSnapshot?.includes('Table')
+                  ? ticket.customerNotesSnapshot.split('•')[0].trim()
+                  : (order?.orderType || ticket?.orderTypeSnapshot || 'DINE_IN').replace('_', ' ');
+
+                const orderDateObj = new Date(order?.createdAt || Date.now());
+                const kotDateStr = orderDateObj.toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                });
+                const kotTimeStr = orderDateObj.toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                });
+
+                const kotItems =
+                  ticket?.items && ticket.items.length > 0
+                    ? ticket.items.map((it) => {
+                        const addOns = (it.addOns && it.addOns.length > 0)
+                          ? it.addOns.map((a) => a.addOnNameSnapshot)
+                          : [];
+                        return {
+                          name: it.productNameSnapshot,
+                          variant: it.variantNameSnapshot,
+                          quantity: it.quantity,
+                          addOns,
+                          notes: it.itemNotesSnapshot,
+                        };
+                      })
+                    : activeItems.length > 0
+                    ? activeItems.map((it: any) => {
+                        let variant = it.variantNameSnapshot || it.variant;
+                        let addOns: string[] = [];
+
+                        if (it.addOns && Array.isArray(it.addOns) && it.addOns.length > 0) {
+                          addOns = it.addOns
+                            .map((a: any) => typeof a === 'string' ? a : (a.name || a.addOnNameSnapshot || ''))
+                            .filter(Boolean);
+                        }
+
+                        if (variant) {
+                          if (variant.includes('• +')) {
+                            const parts = variant.split('• +');
+                            variant = parts[0].trim();
+                            const extracted = parts[1].split(',').map((s: string) => s.trim()).filter(Boolean);
+                            if (addOns.length === 0) addOns = extracted;
+                          } else if (variant.includes('•')) {
+                            const parts = variant.split('•');
+                            variant = parts[0].trim();
+                            const extracted = parts.slice(1).map((s: string) => s.replace(/^\+/, '').trim()).filter(Boolean);
+                            if (addOns.length === 0) addOns = extracted;
+                          } else if (variant.startsWith('+')) {
+                            const extracted = variant.substring(1).split(',').map((s: string) => s.trim()).filter(Boolean);
+                            if (addOns.length === 0) addOns = extracted;
+                            variant = undefined;
+                          }
+                        }
+
+                        return {
+                          name: it.productNameSnapshot || it.name || it.product?.name || 'Menu Item',
+                          variant,
+                          quantity: it.quantity || 1,
+                          addOns,
+                          notes: it.itemNotes,
+                        };
+                      })
+                    : [
+                        {
+                          name: bill?.notes || activeOrder?.orderNumber || '1x Order Ticket',
+                          variant: undefined,
+                          quantity: 1,
+                          addOns: [],
+                          notes: undefined,
+                        },
+                      ];
+
+                const totalKotQty = kotItems.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 1), 0);
+
+                return (
                   <>
-                    <div className="slip-copy-badge original">● ORIGINAL KOT (KITCHEN COPY)</div>
-                    <div className="kot-badge">KITCHEN ORDER TICKET</div>
-                  </>
-                )}
+                    <div className="thermal-header">
+                      <div className="brand-name">POP O' BOB</div>
+                      <div className="kot-brand-sub">KITCHEN ORDER TICKET</div>
+                      <div className="slip-divider">========================================</div>
+                      {isDuplicate && (
+                        <div className="duplicate-kot-banner">
+                          <div className="dup-kot-title">⚠️ *** DUPLICATE KOT (REPRINT) *** ⚠️</div>
+                          <div className="dup-kot-sub">[ REPRINT COPY #{printCount + 1} ]</div>
+                        </div>
+                      )}
 
-                <div className="kot-number-banner">
-                  <span className="kot-num-title">KOT NO:</span>
-                  <span className="kot-number">
-                    {ticket?.ticketNumber || (order?.orderNumber ? order.orderNumber.replace('ORD-', 'KOT-') : 'KOT-104')}
-                  </span>
-                </div>
-                <div className="slip-divider">========================================</div>
-              </div>
+                      <div className="kot-number-row">
+                        <span className="kot-number-text">{formattedKotNumber}</span>
+                        <span className="kot-type-badge">[{orderLocation}]</span>
+                      </div>
+                      <div className="slip-divider">----------------------------------------</div>
+                    </div>
 
-              <div className="thermal-meta-box">
-                <div className="kot-location-banner">
-                  <span className="kot-location-val">
-                    {order?.table
-                      ? `🪑 TABLE: ${order.table.tableNumber}`
-                      : ticket?.customerNotesSnapshot?.includes('Table')
-                      ? `🪑 ${ticket.customerNotesSnapshot.split('•')[0]}`
-                      : '⚡ COUNTER / TAKEAWAY'}
-                  </span>
-                </div>
+                    <div className="thermal-meta-box">
+                      <div className="kot-meta-row">
+                        <span><strong>Date:</strong> {kotDateStr}</span>
+                        <span><strong>Time:</strong> {kotTimeStr}</span>
+                      </div>
+                      <div className="kot-meta-row">
+                        <span><strong>Order:</strong> #{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-0001'}</span>
+                        <span><strong>Type:</strong> {(ticket?.orderTypeSnapshot || order?.orderType || 'DINE_IN').replace('_', ' ')}</span>
+                      </div>
+                      {(activeCustomerName || activeCustomerPhone) && (
+                        <div className="kot-meta-row">
+                          <span><strong>Guest:</strong> {activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(${activeCustomerPhone})` : ''}</span>
+                        </div>
+                      )}
+                      {(ticket?.customerNotesSnapshot || order?.customerNotes) && (
+                        <div className="kot-special-notes">
+                          <strong>* Kitchen Note:</strong> {ticket?.customerNotesSnapshot || order?.customerNotes}
+                        </div>
+                      )}
+                    </div>
 
-                <table className="receipt-meta-table kot-meta-table">
-                  <tbody>
-                    <tr>
-                      <td className="meta-key">Order No</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">#{ticket?.orderNumberSnapshot || order?.orderNumber || 'ORD-2026-4095'}</td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Date & Time</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">{formattedDate}</td>
-                    </tr>
-                    <tr>
-                      <td className="meta-key">Order Type</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">
-                        {ticket?.orderTypeSnapshot || order?.orderType
-                          ? (ticket?.orderTypeSnapshot || order?.orderType || '').replace('_', ' ')
-                          : 'DINE IN'}
-                      </td>
-                    </tr>
-                    {(activeCustomerName || activeCustomerPhone) && (
-                      <tr>
-                        <td className="meta-key">Guest</td>
-                        <td className="meta-colon">:</td>
-                        <td className="meta-val">
-                          {activeCustomerName || 'Walk-in'} {activeCustomerPhone ? `(+91 ${activeCustomerPhone})` : ''}
-                        </td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="meta-key">Staff / Biller</td>
-                      <td className="meta-colon">:</td>
-                      <td className="meta-val">POS Terminal #1 (JD)</td>
-                    </tr>
-                  </tbody>
-                </table>
+                    <div className="slip-divider">========================================</div>
+                    <div className="kot-items-table-header">
+                      <span className="col-kot-qty">QTY</span>
+                      <span className="col-kot-item">ITEM & ADD-ONS</span>
+                    </div>
+                    <div className="slip-divider">----------------------------------------</div>
 
-                {(ticket?.customerNotesSnapshot || order?.customerNotes) && (
-                  <div className="kot-special-notes">
-                    <div className="kot-notes-title">🚨 SPECIAL KITCHEN / COOKING NOTE:</div>
-                    <div className="kot-notes-body">{ticket?.customerNotesSnapshot || order?.customerNotes}</div>
-                  </div>
-                )}
-              </div>
-
-              <div className="slip-divider">========================================</div>
-              <div className="kot-items-header">
-                <span className="col-kot-qty">QTY</span>
-                <span className="col-kot-desc">ITEM & TOPPING MODIFIERS</span>
-              </div>
-              <div className="slip-divider">========================================</div>
-
-              <div className="kot-items-list">
-                {(() => {
-                  const kotItems =
-                    ticket?.items && ticket.items.length > 0
-                      ? ticket.items.map((it) => {
-                          const addOns = (it.addOns && it.addOns.length > 0)
-                            ? it.addOns.map((a) => a.addOnNameSnapshot)
-                            : [];
-                          return {
-                            name: it.productNameSnapshot,
-                            variant: it.variantNameSnapshot,
-                            quantity: it.quantity,
-                            addOns,
-                            notes: it.itemNotesSnapshot,
-                          };
-                        })
-                      : activeItems.length > 0
-                      ? activeItems.map((it: any) => {
-                          let variant = it.variantNameSnapshot || it.variant;
-                          let addOns: string[] = [];
-
-                          // Check explicit addOns field first
-                          if (it.addOns && Array.isArray(it.addOns) && it.addOns.length > 0) {
-                            addOns = it.addOns
-                              .map((a: any) => typeof a === 'string' ? a : (a.name || a.addOnNameSnapshot || ''))
-                              .filter(Boolean);
-                          }
-
-                          // If variant contains toppings formatted with bullet or plus
-                          if (variant) {
-                            if (variant.includes('• +')) {
-                              const parts = variant.split('• +');
-                              variant = parts[0].trim();
-                              const extracted = parts[1].split(',').map((s: string) => s.trim()).filter(Boolean);
-                              if (addOns.length === 0) addOns = extracted;
-                            } else if (variant.includes('•')) {
-                              const parts = variant.split('•');
-                              variant = parts[0].trim();
-                              const extracted = parts.slice(1).map((s: string) => s.replace(/^\+/, '').trim()).filter(Boolean);
-                              if (addOns.length === 0) addOns = extracted;
-                            } else if (variant.startsWith('+')) {
-                              const extracted = variant.substring(1).split(',').map((s: string) => s.trim()).filter(Boolean);
-                              if (addOns.length === 0) addOns = extracted;
-                              variant = undefined;
-                            }
-                          }
-
-                          return {
-                            name: it.productNameSnapshot || it.name || it.product?.name || 'Menu Item',
-                            variant,
-                            quantity: it.quantity || 1,
-                            addOns,
-                            notes: it.itemNotes,
-                          };
-                        })
-                      : [
-                          {
-                            name: bill?.notes || activeOrder?.orderNumber || '1x Order Ticket',
-                            variant: undefined,
-                            quantity: 1,
-                            addOns: [],
-                            notes: undefined,
-                          },
-                        ];
-
-                  return kotItems.map((it: any, idx: number) => (
-                    <div key={idx} className="kot-item-entry">
-                      <div className="kot-item-row">
-                        <span className="kot-qty">{it.quantity}x</span>
-                        <div className="kot-desc">
-                          <div className="kot-name">{it.name}</div>
+                    <div className="kot-items-list">
+                      {kotItems.map((it: any, idx: number) => (
+                        <div key={idx} className="kot-item-entry">
+                          <div className="kot-item-main">
+                            <span className="kot-qty">{it.quantity}x</span>
+                            <span className="kot-name">{it.name}</span>
+                          </div>
                           {it.variant && (
-                            <div className="kot-variant">▸ Size: {it.variant}</div>
+                            <div className="kot-detail-line kot-variant-line">
+                              ▸ Size: {it.variant}
+                            </div>
                           )}
-                          {it.addOns && it.addOns.length > 0 ? (
-                            <div className="kot-addons">
+                          {it.addOns && it.addOns.length > 0 && (
+                            <div className="kot-addons-group">
                               {it.addOns.map((add: string, aIdx: number) => (
-                                <div key={aIdx} className="kot-addon-line">
-                                  ✦ TOPPING: {add}
+                                <div key={aIdx} className="kot-detail-line kot-addon-line">
+                                  + {add}
                                 </div>
                               ))}
                             </div>
-                          ) : (
-                            <div className="kot-addon-none">• Toppings: None (Standard / Plain)</div>
                           )}
                           {it.notes && (
-                            <div className="kot-instruction">👉 Note: {it.notes}</div>
+                            <div className="kot-detail-line kot-item-note">
+                              * Note: {it.notes}
+                            </div>
                           )}
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ));
-                })()}
-              </div>
 
-              <div className="slip-divider">========================================</div>
-              <div className="kot-footer">
-                <div className="kot-summary-row">
-                  <span>Total Items: {ticket?.items?.length || order?.items?.length || 1}</span>
-                  <span>Kitchen Station: MAIN BAR</span>
-                </div>
-                <div className="kot-dispatch-tag">[ DISPATCHED TO BARISTA & KITCHEN LINE ]</div>
-              </div>
+                    <div className="slip-divider">----------------------------------------</div>
+                    <div className="kot-footer-summary">
+                      <span>Total Items: {kotItems.length}</span>
+                      <span>Total Qty: {totalKotQty}</span>
+                    </div>
+                    <div className="slip-divider">========================================</div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

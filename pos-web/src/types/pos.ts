@@ -49,6 +49,7 @@ export interface KitchenTicket {
   status: KitchenTicketStatus;
   orderNumberSnapshot: string;
   orderTypeSnapshot: string;
+  tableNumberSnapshot?: string;
   customerNotesSnapshot?: string;
   cancellationReason?: string;
   items: KitchenTicketItem[];
@@ -289,6 +290,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  kotNumber?: string;
   orderType: OrderType;
   status: string;
   customerName?: string;

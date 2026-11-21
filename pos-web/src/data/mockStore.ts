@@ -1161,10 +1161,12 @@ class MockStore {
     this.setStorage('orders', orders);
 
     // Create Kitchen Ticket (KOT)
-    const ticketSeq = 100 + tickets.length + 1;
+    const ticketSeq = tickets.length + 1;
+    const formattedKotNumber = `KOT #${String(ticketSeq).padStart(3, '0')}`;
+    newOrder.kotNumber = formattedKotNumber;
     const newTicket: KitchenTicket = {
       id: `kt-${orderId}`,
-      ticketNumber: `KOT-${ticketSeq}`,
+      ticketNumber: formattedKotNumber,
       status: 'QUEUED',
       orderNumberSnapshot: orderNumber,
       orderTypeSnapshot: req.orderType,
@@ -1271,10 +1273,12 @@ class MockStore {
     this.setStorage('orders', orders);
 
     // Supplementary KOT Ticket for added items
-    const ticketSeq = 100 + tickets.length + 1;
+    const ticketSeq = tickets.length + 1;
+    const formattedKotNumber = `KOT #${String(ticketSeq).padStart(3, '0')} (Round 2)`;
+    order.kotNumber = formattedKotNumber;
     const addOnTicket: KitchenTicket = {
       id: `kt-${orderId}-rnd2`,
-      ticketNumber: `KOT-${ticketSeq} (Add-on)`,
+      ticketNumber: formattedKotNumber,
       status: 'QUEUED',
       orderNumberSnapshot: order.orderNumber,
       orderTypeSnapshot: order.orderType,
