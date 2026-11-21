@@ -148,19 +148,37 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   🪑 {selectedTableNumber ? `Table ${selectedTableNumber}` : 'Select Table'}
                 </span>
                 {runningOrderId && (
-                  <span className="cart-badge-addon-order" title="Adding more items to running check">
-                    Add-on
-                  </span>
-                )}
-                {runningOrderId && onCancelRunningOrder && (
-                  <button
-                    type="button"
-                    className="cart-cancel-addon-link"
-                    onClick={onCancelRunningOrder}
-                    title="Cancel adding items to active check"
-                  >
-                    ✕ Cancel
-                  </button>
+                  items.some((i) => !i.isDispatched) ? (
+                    <>
+                      <span className="cart-badge-addon-order" title="Drafting new add-on items for running check">
+                        + Add-on
+                      </span>
+                      {onCancelRunningOrder && (
+                        <button
+                          type="button"
+                          className="cart-cancel-addon-link"
+                          onClick={onCancelRunningOrder}
+                          title="Discard new items and keep existing check"
+                        >
+                          ✕ Discard
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        padding: '2px 7px',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        borderRadius: '5px',
+                      }}
+                      title="Active check running on table"
+                    >
+                      ● Running Check
+                    </span>
+                  )
                 )}
                 {onChangeTable && (
                   <button
@@ -496,24 +514,26 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                       <span style={{ color: '#16a34a' }}>• KOT Sent</span>
                     </div>
 
+                    {/* 1. Primary Action: Settle Check & Collect Payment */}
                     <button
                       type="button"
                       className="retail-checkout-btn"
                       style={{
-                        background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                        background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                         color: '#ffffff',
-                        boxShadow: '0 4px 14px rgba(217, 119, 6, 0.35)',
-                        fontWeight: 700,
-                        fontSize: '0.96rem',
+                        boxShadow: '0 4px 14px rgba(22, 163, 74, 0.35)',
+                        fontWeight: 800,
+                        fontSize: '0.98rem',
                         height: '46px',
                       }}
-                      onClick={onPrintBill || onReviewOrder}
+                      onClick={onSettleOrder || onReviewOrder}
                       disabled={isSubmitting}
-                      title="Print Customer Tax Invoice / Bill"
+                      title="Open Payment Settlement Screen to collect Cash/UPI/Card and close check"
                     >
-                      <span>🖨️ Print Bill • ₹{total.toFixed(2)}</span>
+                      <span>💳 Settle & Collect Payment • ₹{total.toFixed(2)}</span>
                     </button>
 
+                    {/* 2. Secondary Row: Print Bill for Guest & Reprint KOT */}
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
                         type="button"
@@ -523,15 +543,16 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                           padding: '9px 10px',
                           fontWeight: 700,
                           fontSize: '0.8rem',
-                          background: '#ffffff',
-                          color: '#334155',
-                          border: '1px solid #cbd5e1',
+                          background: '#fef3c7',
+                          color: '#b45309',
+                          border: '1px solid #fde68a',
                           borderRadius: '8px',
                         }}
-                        onClick={onReviewOrder}
+                        onClick={onPrintBill || onReviewOrder}
                         disabled={isSubmitting}
+                        title="Print preliminary bill for customer to review before payment"
                       >
-                        💳 Settle Check & Pay
+                        🖨️ Print Guest Bill
                       </button>
 
                       {onPrintKot && (
@@ -543,9 +564,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                             padding: '9px 10px',
                             fontWeight: 600,
                             fontSize: '0.78rem',
-                            background: '#f8fafc',
-                            color: '#64748b',
-                            border: '1px solid #e2e8f0',
+                            background: '#ffffff',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
                             borderRadius: '8px',
                           }}
                           onClick={onPrintKot}
@@ -556,6 +577,85 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                         </button>
                       )}
                     </div>
+
+                    {/* 3. 1-Tap Fast Settle Shortcuts */}
+                    {onQuickSettle && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 8px',
+                          background: '#f8fafc',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                          marginTop: '2px',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.74rem', fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>
+                          1-Tap Settle:
+                        </span>
+                        <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
+                          <button
+                            type="button"
+                            style={{
+                              flex: 1,
+                              padding: '5px 4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              border: '1px solid #bbf7d0',
+                              background: '#f0fdf4',
+                              color: '#166534',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => onQuickSettle('CASH', autoPrint)}
+                            disabled={isSubmitting}
+                            title="1-Tap Cash Settlement & Auto-Print Bill"
+                          >
+                            💵 Cash
+                          </button>
+                          <button
+                            type="button"
+                            style={{
+                              flex: 1,
+                              padding: '5px 4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              border: '1px solid #e9d5ff',
+                              background: '#faf5ff',
+                              color: '#6b21a8',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => onQuickSettle('UPI', autoPrint)}
+                            disabled={isSubmitting}
+                            title="1-Tap UPI Settlement & Auto-Print Bill"
+                          >
+                            📱 UPI
+                          </button>
+                          <button
+                            type="button"
+                            style={{
+                              flex: 1,
+                              padding: '5px 4px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              borderRadius: '6px',
+                              border: '1px solid #bfdbfe',
+                              background: '#eff6ff',
+                              color: '#1e40af',
+                              cursor: 'pointer',
+                            }}
+                            onClick={() => onQuickSettle('CARD', autoPrint)}
+                            disabled={isSubmitting}
+                            title="1-Tap Card Settlement & Auto-Print Bill"
+                          >
+                            💳 Card
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   /* State B: New Items Ready to Send to Kitchen OR Empty Cart */

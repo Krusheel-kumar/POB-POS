@@ -463,7 +463,12 @@ export function App() {
     }
   };
 
-  const handleRecordPayment = async (amount: number, method: PaymentMethod, ref?: string) => {
+  const handleRecordPayment = async (
+    amount: number,
+    method: PaymentMethod,
+    ref?: string,
+    autoPrintReceipt = true
+  ) => {
     if (!activePaymentBill || !activePaymentOrder) return;
     setIsProcessingPayment(true);
     try {
@@ -472,9 +477,33 @@ export function App() {
       // Confirm payment to SUCCESSFUL
       await posApiClient.updatePaymentStatus(payment.id, 'SUCCESSFUL');
 
-      setOrderSuccessMessage(`Payment of ₹${amount.toFixed(2)} recorded successfully!`);
+      const finalOrder = await posApiClient.getOrderById(activePaymentOrder.id).catch(() => activePaymentOrder);
+      const finalBill = (await posApiClient.getBillByOrderId(activePaymentOrder.id).catch(() => null)) || activePaymentBill;
+
+      setOrderSuccessMessage(
+        `🎉 Bill #${finalBill.invoiceNumber || activePaymentBill.invoiceNumber} Settled via ${method} (₹${amount.toFixed(2)})! Table freed.`
+      );
+
+      // Auto-Print Customer Tax Invoice Receipt to Windows PC Printer
+      if (autoPrintReceipt) {
+        setReceiptModal({
+          isOpen: true,
+          mode: 'BILL',
+          order: finalOrder,
+          bill: finalBill,
+          customerName: finalOrder.customerName || undefined,
+          customerPhone: finalOrder.customerPhone || undefined,
+          autoPrint: true,
+        });
+      }
+
       setActivePaymentBill(null);
       setActivePaymentOrder(null);
+      setSelectedTable(null);
+      setRunningOrder(null);
+      setCartItems([]);
+      setIsKotSent(false);
+      setIsChoosingTable(true); // Return smoothly to table floor plan!
       await loadTables();
       setTimeout(() => setOrderSuccessMessage(null), 5000);
     } catch (err: unknown) {
@@ -605,40 +634,52 @@ export function App() {
     setApiError(null);
 
     try {
-      const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
-      const idempotencyKey = `POS-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+      let finalOrder: Order;
+      let finalBill: Bill;
 
-      const orderPayload: CreateOrderRequest = {
-        outletId,
-        orderType,
-        idempotencyKey,
-        customerName: customerName.trim() !== '' ? customerName.trim() : undefined,
-        customerPhone: customerPhone.trim() !== '' ? customerPhone.trim() : undefined,
-        tableId: orderType === 'DINE_IN' && selectedTable ? selectedTable.id : undefined,
-        tableNumber: orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : undefined,
-        customerNotes: customerNotes.trim() !== '' ? customerNotes : undefined,
-        items: cartItems.map((item) => ({
-          productId: item.product.id,
-          variantId: item.selectedVariant?.id,
-          addOnIds: item.selectedAddOns.map((a) => a.id),
-          quantity: item.quantity,
-          itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
-        })),
-      };
+      if (runningOrder) {
+        // Settle active running order
+        let issuedBill = await posApiClient.getBillByOrderId(runningOrder.id);
+        if (!issuedBill) {
+          issuedBill = await posApiClient.issueBill(runningOrder.id);
+        }
+        const pmtKey = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        await posApiClient.recordPayment(issuedBill.id, issuedBill.totalAmount, method, pmtKey);
+        await posApiClient.updatePaymentStatus(issuedBill.id, 'SUCCESSFUL').catch(() => {});
 
-      // 1. Create order
-      const createdOrder = await posApiClient.createOrder(orderPayload);
+        finalOrder = await posApiClient.getOrderById(runningOrder.id).catch(() => runningOrder);
+        finalBill = (await posApiClient.getBillByOrderId(runningOrder.id).catch(() => null)) || issuedBill;
+      } else {
+        // Create new order and settle
+        const outletId = posApiClient.getConfig().outletId || 'outlet-demo-flagship';
+        const idempotencyKey = `POS-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
-      // 2. Issue official gapless GST Tax Invoice
-      const issuedBill = await posApiClient.issueBill(createdOrder.id);
+        const orderPayload: CreateOrderRequest = {
+          outletId,
+          orderType,
+          idempotencyKey,
+          customerName: customerName.trim() !== '' ? customerName.trim() : undefined,
+          customerPhone: customerPhone.trim() !== '' ? customerPhone.trim() : undefined,
+          tableId: orderType === 'DINE_IN' && selectedTable ? selectedTable.id : undefined,
+          tableNumber: orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : undefined,
+          customerNotes: customerNotes.trim() !== '' ? customerNotes : undefined,
+          items: cartItems.map((item) => ({
+            productId: item.product.id,
+            variantId: item.selectedVariant?.id,
+            addOnIds: item.selectedAddOns.map((a) => a.id),
+            quantity: item.quantity,
+            itemNotes: item.itemNotes.trim() !== '' ? item.itemNotes : undefined,
+          })),
+        };
 
-      // 3. Record payment immediately with chosen payment method
-      const pmtKey = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-      await posApiClient.recordPayment(issuedBill.id, issuedBill.totalAmount, method, pmtKey);
+        const createdOrder = await posApiClient.createOrder(orderPayload);
+        const issuedBill = await posApiClient.issueBill(createdOrder.id);
+        const pmtKey = `PMT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+        await posApiClient.recordPayment(issuedBill.id, issuedBill.totalAmount, method, pmtKey);
 
-      // 4. Retrieve complete order with item snapshots for receipt printing
-      const finalOrder = await posApiClient.getOrderById(createdOrder.id).catch(() => createdOrder);
-      const finalBill = await posApiClient.getBillByOrderId(createdOrder.id).catch(() => issuedBill);
+        finalOrder = await posApiClient.getOrderById(createdOrder.id).catch(() => createdOrder);
+        finalBill = (await posApiClient.getBillByOrderId(createdOrder.id).catch(() => null)) || issuedBill;
+      }
 
       setLastPlacedOrder(finalOrder);
       setCartItems([]);
@@ -653,11 +694,11 @@ export function App() {
       }
 
       setOrderSuccessMessage(
-        `🎉 Bill #${issuedBill.invoiceNumber} Settled via ${method} (₹${issuedBill.totalAmount.toFixed(2)})! Table freed.`
+        `🎉 Bill #${finalBill.invoiceNumber} Settled via ${method} (₹${finalBill.totalAmount.toFixed(2)})! Table freed.`
       );
       setTimeout(() => setOrderSuccessMessage(null), 6000);
 
-      // 5. Open Thermal Receipt preview & trigger instant silent auto-print to default Windows PC printer
+      // Open Thermal Receipt preview & trigger instant silent auto-print to default Windows PC printer
       if (autoPrintReceipt) {
         setReceiptModal({
           isOpen: true,
@@ -1442,6 +1483,13 @@ export function App() {
             isSubmitting={isSubmitting}
             onPrintBill={() => handlePrintBill()}
             onPrintKot={() => handlePrintKot()}
+            onSettleOrder={() => {
+              if (runningOrder) {
+                handleOpenPayment(runningOrder.id);
+              } else {
+                setIsReviewOpen(true);
+              }
+            }}
             selectedTableNumber={orderType === 'DINE_IN' && selectedTable ? selectedTable.tableNumber : null}
             runningOrderId={runningOrder ? runningOrder.id : null}
             onCancelRunningOrder={() => setRunningOrder(null)}

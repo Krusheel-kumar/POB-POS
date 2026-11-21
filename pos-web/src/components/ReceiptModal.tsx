@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Order, Bill, KitchenTicket } from '../types/pos';
 import { getOrderPrintHistory, recordOrderPrint, type OrderPrintHistory } from '../utils/printTracker';
+import { posApiClient } from '../api/posApiClient';
 import './ReceiptModal.css';
 
 interface ReceiptModalProps {
@@ -149,10 +150,34 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onOpenPayment,
   autoPrint = false,
 }) => {
+  const [fetchedOrder, setFetchedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const targetOrderId = order?.id || bill?.orderId || bill?.order?.id;
+    const hasItems = (order?.items && order.items.length > 0) || (bill?.order?.items && bill.order.items.length > 0);
+
+    if (!hasItems && targetOrderId && targetOrderId !== 'temp-active-order') {
+      posApiClient
+        .getOrderById(targetOrderId)
+        .then((ord) => {
+          if (isMounted && ord && ord.items && ord.items.length > 0) {
+            setFetchedOrder(ord);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [order, bill, isOpen]);
+
+  const activeOrder = order || bill?.order || fetchedOrder || null;
+  const activeItems = (activeOrder?.items && activeOrder.items.length > 0) ? activeOrder.items : [];
+
   const orderKey =
-    order?.orderNumber ||
-    order?.id ||
-    bill?.order?.orderNumber ||
+    activeOrder?.orderNumber ||
+    activeOrder?.id ||
     bill?.invoiceNumber ||
     ticket?.orderNumberSnapshot ||
     ticket?.ticketNumber ||
@@ -451,16 +476,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <tr>
                       <td className="meta-key">Customer</td>
                       <td className="meta-colon">:</td>
-                      <td className="meta-val">{activeCustomerName || 'Walk-in Guest'}</td>
+                      <td className="meta-val">{activeCustomerName || activeOrder?.customerName || bill?.customerName || 'Walk-in Guest'}</td>
                     </tr>
                     <tr>
                       <td className="meta-key">Mobile No</td>
                       <td className="meta-colon">:</td>
                       <td className="meta-val">
-                        {activeCustomerPhone
-                          ? activeCustomerPhone.startsWith('+91')
-                            ? activeCustomerPhone
-                            : `+91 ${activeCustomerPhone}`
+                        {activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone
+                          ? String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone).startsWith('+91')
+                            ? String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone)
+                            : `+91 ${String(activeCustomerPhone || activeOrder?.customerPhone || bill?.customerPhone)}`
                           : 'Walk-in'}
                       </td>
                     </tr>
@@ -473,22 +498,22 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                       <td className="meta-key">Invoice No</td>
                       <td className="meta-colon">:</td>
                       <td className="meta-val">
-                        {bill?.invoiceNumber || (order?.orderNumber ? order.orderNumber.replace('ORD', 'INV') : 'INV-2026-089')}
+                        {bill?.invoiceNumber || (activeOrder?.orderNumber ? activeOrder.orderNumber.replace('ORD', 'POB-FLG') : 'INV-2026-LIVE')}
                       </td>
                     </tr>
                     <tr>
                       <td className="meta-key">Order No</td>
                       <td className="meta-colon">:</td>
                       <td className="meta-val">
-                        #{order?.orderNumber || bill?.order?.orderNumber || 'ORD-2026-4095'}
+                        #{activeOrder?.orderNumber || bill?.order?.orderNumber || (bill?.invoiceNumber ? bill.invoiceNumber.replace('POB-FLG', 'ORD') : 'ORD-2026-LIVE')}
                       </td>
                     </tr>
                     <tr>
                       <td className="meta-key">Order Type</td>
                       <td className="meta-colon">:</td>
                       <td className="meta-val">
-                        {order?.orderType ? order.orderType.replace('_', ' ') : 'DINE IN'}
-                        {order?.table ? ` (Table ${order.table.tableNumber})` : ' (Counter Pickup)'}
+                        {activeOrder?.orderType ? activeOrder.orderType.replace('_', ' ') : 'DINE IN'}
+                        {activeOrder?.tableNumber ? ` (Table #${activeOrder.tableNumber})` : activeOrder?.table ? ` (Table #${activeOrder.table.tableNumber})` : ' (Counter Pickup)'}
                       </td>
                     </tr>
                     <tr>
@@ -513,32 +538,39 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {order?.items && order.items.length > 0 ? (
-                    order.items.map((item, idx) => (
-                      <tr key={idx} className="thermal-item-row">
-                        <td className="td-item">
-                          <div className="table-item-name">{item.productNameSnapshot}</div>
-                          {item.variantNameSnapshot && (
-                            <div className="table-item-sub">• {item.variantNameSnapshot}</div>
-                          )}
-                          {item.itemNotes && (
-                            <div className="table-item-note">* Note: {item.itemNotes}</div>
-                          )}
-                        </td>
-                        <td className="td-qty">{item.quantity}</td>
-                        <td className="td-rate">₹{(item.lineTotalSnapshot / item.quantity).toFixed(2)}</td>
-                        <td className="td-amt">₹{item.lineTotalSnapshot.toFixed(2)}</td>
-                      </tr>
-                    ))
+                  {activeItems.length > 0 ? (
+                    activeItems.map((item: any, idx: number) => {
+                      const itemName = item.productNameSnapshot || item.name || item.product?.name || 'Menu Item';
+                      const variantName = item.variantNameSnapshot || item.variant;
+                      const qty = item.quantity || 1;
+                      const lineTotal = item.lineTotalSnapshot != null ? Number(item.lineTotalSnapshot) : (item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) * qty : (bill?.subtotal || 0));
+                      const rate = item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) : (lineTotal / qty);
+
+                      return (
+                        <tr key={idx} className="thermal-item-row">
+                          <td className="td-item">
+                            <div className="table-item-name">{itemName}</div>
+                            {variantName && (
+                              <div className="table-item-sub">• {variantName}</div>
+                            )}
+                            {item.itemNotes && (
+                              <div className="table-item-note">* Note: {item.itemNotes}</div>
+                            )}
+                          </td>
+                          <td className="td-qty">{qty}</td>
+                          <td className="td-rate">₹{rate.toFixed(2)}</td>
+                          <td className="td-amt">₹{lineTotal.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr className="thermal-item-row">
                       <td className="td-item">
-                        <div className="table-item-name">AUTHENTIC MILK TEA</div>
-                        <div className="table-item-sub">• Regular (350ml)</div>
+                        <div className="table-item-name">{bill?.notes || 'Ordered Item(s)'}</div>
                       </td>
                       <td className="td-qty">1</td>
-                      <td className="td-rate">₹249.00</td>
-                      <td className="td-amt">₹249.00</td>
+                      <td className="td-rate">₹{(bill?.subtotal || order?.subtotal || 0).toFixed(2)}</td>
+                      <td className="td-amt">₹{(bill?.subtotal || order?.subtotal || 0).toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
