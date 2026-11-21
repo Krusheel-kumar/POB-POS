@@ -343,12 +343,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       : selectedSubcat || undefined;
 
     // Collect add-on IDs for checked modifier groups
-    let mappedAddOnIds = addOns
+    const mappedAddOnIds = addOns
       .filter((a) => a.category && selectedGroupNames.includes(a.category))
       .map((a) => a.id);
-    if (mappedAddOnIds.length === 0 && addOns.length > 0) {
-      mappedAddOnIds = addOns.map((a) => a.id);
-    }
 
     setIsSubmitting(true);
     try {
