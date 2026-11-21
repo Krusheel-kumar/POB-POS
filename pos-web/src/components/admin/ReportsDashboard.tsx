@@ -202,7 +202,7 @@ export const ReportsDashboard: React.FC<ReportsDashboardProps> = ({
             paymentMethod: method,
             transactionReference: pmt?.transactionReference || `PMT-${b.invoiceNumber}`,
             status: b.status,
-            rawBill: b,
+            rawBill: b.order ? b : { ...b, order: associatedOrder || undefined },
           };
         })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1698,6 +1698,16 @@ TOTAL ECO AGGREGATOR,,0,${totalEco.toFixed(2)},0.00,${(totalEco * 0.025).toFixed
           onClose={() => setInspectedBill(null)}
           mode="BILL"
           bill={inspectedBill}
+          order={
+            (inspectedBill.order as any) ||
+            activeOrders.find(
+              (o) =>
+                o.id === inspectedBill.orderId ||
+                o.orderNumber === inspectedBill.order?.orderNumber ||
+                (inspectedBill.invoiceNumber && o.orderNumber === inspectedBill.invoiceNumber.replace('POB-FLG', 'ORD'))
+            ) ||
+            null
+          }
           customerName={inspectedBill.customerName}
           customerPhone={inspectedBill.customerPhone}
         />

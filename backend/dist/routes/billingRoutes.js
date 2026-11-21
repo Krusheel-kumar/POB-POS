@@ -161,9 +161,11 @@ async function formatBillResponse(row) {
                 id: String(r.id),
                 productId: String(r.product_id),
                 productNameSnapshot: String(r.product_name_snapshot),
+                variantNameSnapshot: r.variant_name_snapshot ? String(r.variant_name_snapshot) : undefined,
                 unitPriceSnapshot: Number(r.unit_price_snapshot),
                 quantity: Number(r.quantity),
                 lineTotalSnapshot: Number(r.line_total_snapshot),
+                itemNotes: r.item_notes ? String(r.item_notes) : undefined,
             })),
         };
     }

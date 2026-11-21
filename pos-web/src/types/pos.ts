@@ -302,6 +302,7 @@ export interface Order {
   items?: OrderItem[];
   customerNotes?: string;
   table?: RestaurantTable;
+  tableNumber?: string;
   createdAt: string;
 }
 

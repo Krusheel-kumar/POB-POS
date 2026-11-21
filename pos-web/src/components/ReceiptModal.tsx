@@ -8,7 +8,7 @@ interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'BILL' | 'KOT';
-  order?: Order | null;
+  order?: Order | any | null;
   bill?: Bill | null;
   ticket?: KitchenTicket | null;
   customerName?: string;
@@ -760,9 +760,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                             notes: it.itemNotesSnapshot,
                           };
                         })
-                      : order?.items && order.items.length > 0
-                      ? order.items.map((it) => {
-                          let variant = it.variantNameSnapshot;
+                      : activeItems.length > 0
+                      ? activeItems.map((it: any) => {
+                          let variant = it.variantNameSnapshot || it.variant;
                           let addOns: string[] = [];
 
                           // Check explicit addOns field first
@@ -777,39 +777,39 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                             if (variant.includes('• +')) {
                               const parts = variant.split('• +');
                               variant = parts[0].trim();
-                              const extracted = parts[1].split(',').map((s) => s.trim()).filter(Boolean);
+                              const extracted = parts[1].split(',').map((s: string) => s.trim()).filter(Boolean);
                               if (addOns.length === 0) addOns = extracted;
                             } else if (variant.includes('•')) {
                               const parts = variant.split('•');
                               variant = parts[0].trim();
-                              const extracted = parts.slice(1).map((s) => s.replace(/^\+/, '').trim()).filter(Boolean);
+                              const extracted = parts.slice(1).map((s: string) => s.replace(/^\+/, '').trim()).filter(Boolean);
                               if (addOns.length === 0) addOns = extracted;
                             } else if (variant.startsWith('+')) {
-                              const extracted = variant.substring(1).split(',').map((s) => s.trim()).filter(Boolean);
+                              const extracted = variant.substring(1).split(',').map((s: string) => s.trim()).filter(Boolean);
                               if (addOns.length === 0) addOns = extracted;
                               variant = undefined;
                             }
                           }
 
                           return {
-                            name: it.productNameSnapshot,
+                            name: it.productNameSnapshot || it.name || it.product?.name || 'Menu Item',
                             variant,
-                            quantity: it.quantity,
+                            quantity: it.quantity || 1,
                             addOns,
                             notes: it.itemNotes,
                           };
                         })
                       : [
                           {
-                            name: 'AUTHENTIC MILK TEA',
-                            variant: 'Regular (350ml)',
+                            name: bill?.notes || activeOrder?.orderNumber || '1x Order Ticket',
+                            variant: undefined,
                             quantity: 1,
-                            addOns: ['Brown Sugar Pearls', 'Grass Jelly'],
-                            notes: 'Less sweet, 50% ice',
+                            addOns: [],
+                            notes: undefined,
                           },
                         ];
 
-                  return kotItems.map((it, idx) => (
+                  return kotItems.map((it: any, idx: number) => (
                     <div key={idx} className="kot-item-entry">
                       <div className="kot-item-row">
                         <span className="kot-qty">{it.quantity}x</span>
@@ -820,7 +820,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                           )}
                           {it.addOns && it.addOns.length > 0 ? (
                             <div className="kot-addons">
-                              {it.addOns.map((add, aIdx) => (
+                              {it.addOns.map((add: string, aIdx: number) => (
                                 <div key={aIdx} className="kot-addon-line">
                                   ✦ TOPPING: {add}
                                 </div>
