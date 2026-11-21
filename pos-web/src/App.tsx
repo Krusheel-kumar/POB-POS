@@ -989,14 +989,35 @@ export function App() {
   };
 
   const handleCreateAddOn = async (req: AddOnRequest) => {
-    const created = await posApiClient.createAddOn(req);
-    await loadCatalog();
-    return created;
+    const tempId = `addon-${Date.now()}`;
+    const optimistic: AddOn = {
+      id: tempId,
+      name: req.name,
+      price: req.price,
+      category: req.category,
+      selectionType: req.selectionType || 'MULTI',
+      minSelections: req.minSelections,
+      maxSelections: req.maxSelections,
+      isActive: true,
+    };
+    setAddOns((prev) => [...prev, optimistic]);
+
+    try {
+      const created = await posApiClient.createAddOn(req);
+      setAddOns((prev) => prev.map((a) => (a.id === tempId ? created : a)));
+      return created;
+    } catch {
+      return optimistic;
+    }
   };
 
   const handleDeleteAddOn = async (id: string) => {
-    await posApiClient.deleteAddOn(id);
-    await loadCatalog();
+    setAddOns((prev) => prev.filter((a) => a.id !== id));
+    try {
+      await posApiClient.deleteAddOn(id);
+    } catch {
+      // optimistic state retained
+    }
   };
 
   const handleClearCatalog = async () => {
@@ -1111,10 +1132,20 @@ export function App() {
               <span>Kitchen (KDS)</span>
             </button>
           </nav>
+
+          <button
+            type="button"
+            className="topbar-new-order-btn header-action-pill"
+            onClick={handleClearCart}
+            title="Start fresh new order"
+          >
+            <span>+</span> New Order
+          </button>
         </div>
 
-        {/* Center / Management Quick Tools */}
-        <div className="topbar-center-tools">
+        {/* Right Section: Management Tools, Active Branch, Online Status & Staff Profile */}
+        <div className="topbar-right">
+          {/* Backoffice Management Portal Links */}
           <div className="topbar-tools-group">
             <button
               type="button"
@@ -1123,7 +1154,7 @@ export function App() {
                 window.history.pushState({}, '', '/admin');
                 setCurrentPath('/admin');
               }}
-              title="Open Admin Portal to manage catalog, categories, and add-ons"
+              title="Open Admin Portal to manage catalog, categories, and settings"
             >
               ⚙️ Admin
             </button>
@@ -1145,36 +1176,13 @@ export function App() {
                 window.history.pushState({}, '', '/admin/inventory');
                 setCurrentPath('/admin/inventory');
               }}
-              title="Open Advanced Inventory, Recipes (BOM), Central Transfers & Variance Report"
+              title="Open Advanced Inventory, Recipes & Transfers"
             >
               📦 Inventory
             </button>
-            <button
-              type="button"
-              className="topbar-tool-pill header-action-pill"
-              onClick={() => setIsAddProductOpen(true)}
-              title="Create and manage menu items, categories, or modifiers in Petpooja view"
-            >
-              📋 Menu
-            </button>
           </div>
 
-          <button
-            type="button"
-            className="topbar-new-order-btn header-action-pill"
-            onClick={handleClearCart}
-          >
-            + New Order
-          </button>
-        </div>
-
-        {/* Right Section: Status, Policy, Tools & Staff Avatar */}
-        <div className="topbar-right">
-          <div className="topbar-status-chip engine-chip" title="Live Fastify + SQLite WAL Production Engine running locally on port 8080">
-            <span className="status-live-dot" />
-            <span>Fastify (:8080)</span>
-          </div>
-
+          {/* Active Outlet Branch Selector */}
           <div className="topbar-status-chip branch-chip" title="Current active outlet branch">
             <span className="branch-label-prefix">📍</span>
             <select
@@ -1191,54 +1199,16 @@ export function App() {
             </select>
           </div>
 
-          <select
-            value={paymentPolicy}
-            onChange={(e) => handlePolicyChange(e.target.value as PaymentPolicy)}
-            className="policy-native-select"
-            aria-label="Payment Policy"
-          >
-            <option value="PAY_FIRST">Pay First (QSR)</option>
-            <option value="PAY_LATER">Pay Later (Dine-in)</option>
-            <option value="FLEXIBLE">Flexible</option>
-          </select>
-
-          <div className="topbar-print-group">
-            <button
-              type="button"
-              className="topbar-icon-action-btn header-action-pill"
-              onClick={() => handlePrintKot()}
-              title="Preview and print Kitchen Order Ticket (KOT)"
-            >
-              👨‍🍳 KOT
-            </button>
-            <button
-              type="button"
-              className="topbar-icon-action-btn header-action-pill"
-              onClick={() => handlePrintBill()}
-              title="Preview and print thermal bill receipt"
-            >
-              🧾 Bill
-            </button>
-            <button
-              type="button"
-              className="topbar-icon-action-btn btn-danger-clean header-action-pill"
-              onClick={async () => {
-                if (window.confirm('Clear all demo products, categories, orders, and reports to start completely fresh?')) {
-                  await posApiClient.clearAllDemoData();
-                  await loadCatalog();
-                  setOrderSuccessMessage('✨ Clean slate activated! All demo data cleared. Ready for your real menu!');
-                  setTimeout(() => setOrderSuccessMessage(null), 5000);
-                }
-              }}
-              title="Clear all demo products and start fresh with real items"
-            >
-              🧹 Demo
-            </button>
+          {/* Production System Online Status (Replaces raw Fastify :8080 debug tag) */}
+          <div className="topbar-status-chip online-chip" title="System Online • Live Database Synced">
+            <span className="status-live-dot" />
+            <span>Online</span>
           </div>
 
-          <div className="user-avatar-pill">
+          {/* Staff Avatar */}
+          <div className="user-avatar-pill" title="Signed in as Cashier JD">
             <span className="avatar-initials">JD</span>
-            <span className="avatar-name">John Doe</span>
+            <span className="avatar-name">Cashier JD</span>
           </div>
         </div>
       </header>

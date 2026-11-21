@@ -91,6 +91,19 @@ export class PosApiClient {
     return headers;
   }
 
+  private async fetchWithTimeout(url: string | URL, options: RequestInit = {}, timeoutMs = 2500): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url.toString(), {
+        ...options,
+        signal: options.signal || controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   /**
    * Fetch active categories
    */
@@ -628,10 +641,10 @@ export class PosApiClient {
     }
 
     try {
-      const res = await fetch(`${this.config.baseUrl}/api/v1/addons`, {
+      const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons`, {
         method: 'GET',
         headers: this.getHeaders(false),
-      });
+      }, 2500);
 
       if (!res.ok) {
         throw new Error(`Failed to load add-ons: ${res.status}`);
@@ -652,17 +665,19 @@ export class PosApiClient {
     }
 
     try {
-      const res = await fetch(`${this.config.baseUrl}/api/v1/addons`, {
+      const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons`, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(req),
-      });
+      }, 2500);
 
       if (!res.ok) {
         throw new Error(`Failed to create add-on: ${res.status}`);
       }
 
-      return res.json();
+      const data = await res.json();
+      mockStore.createAddOn(req.name, req.price, req.category, req.selectionType, req.minSelections, req.maxSelections);
+      return data;
     } catch {
       return mockStore.createAddOn(req.name, req.price, req.category, req.selectionType, req.minSelections, req.maxSelections);
     }
@@ -676,13 +691,17 @@ export class PosApiClient {
     if (this.demoMode) {
       return;
     }
-    const res = await fetch(`${this.config.baseUrl}/api/v1/addons/${id}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(false),
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      throw new Error(errData?.message || errData?.error || `Failed to delete add-on: ${res.status}`);
+    try {
+      const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(false),
+      }, 2500);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || errData?.error || `Failed to delete add-on: ${res.status}`);
+      }
+    } catch (err) {
+      console.warn('Backend delete add-on fallback to local store:', err);
     }
   }
 
@@ -694,10 +713,10 @@ export class PosApiClient {
       return mockStore.toggleAddOn(id);
     }
     try {
-      const res = await fetch(`${this.config.baseUrl}/api/v1/addons/${id}/toggle`, {
+      const res = await this.fetchWithTimeout(`${this.config.baseUrl}/api/v1/addons/${id}/toggle`, {
         method: 'PATCH',
         headers: this.getHeaders(),
-      });
+      }, 2500);
       if (!res.ok) throw new Error('Failed to toggle add-on');
       return res.json();
     } catch {

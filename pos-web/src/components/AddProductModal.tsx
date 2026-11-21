@@ -296,16 +296,22 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   if (!isOpen) return null;
 
   // Available modifier groups
+  const [localAddOns, setLocalAddOns] = useState<AddOn[]>(addOns);
+
+  useEffect(() => {
+    setLocalAddOns(addOns);
+  }, [addOns]);
+
   const allModifierGroups = Array.from(
     new Set([
       ...DEFAULT_MODIFIER_GROUPS,
-      ...addOns.map((a) => a.category || 'Choice Of Size'),
+      ...localAddOns.map((a) => a.category || 'Choice Of Size'),
     ])
   );
 
   const addOnsByGroup: Record<string, AddOn[]> = {};
   allModifierGroups.forEach((grp) => {
-    addOnsByGroup[grp] = addOns.filter((a) => a.category === grp);
+    addOnsByGroup[grp] = localAddOns.filter((a) => a.category === grp);
   });
 
   // Handlers
@@ -428,31 +434,59 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setErrorMsg('Choice name is required (e.g. Regular 300ml, Boba Pearls)');
       return;
     }
-    if (!onCreateAddOn) return;
 
-    setIsSubmitting(true);
-    try {
-      await onCreateAddOn({
-        name: modChoiceName.trim(),
-        price: Number(modChoicePrice) || 0,
-        category: group,
-        selectionType: modSelectionType,
-        minSelections: modSelectionType === 'SINGLE' ? 1 : modMinSelections,
-        maxSelections: modSelectionType === 'SINGLE' ? 1 : modMaxSelections,
-      });
+    const optionName = modChoiceName.trim();
+    const optionPrice = Number(modChoicePrice) || 0;
+    const tempId = `addon-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-      if (!selectedGroupNames.includes(group)) {
-        setSelectedGroupNames([...selectedGroupNames, group]);
+    const newAddOn: AddOn = {
+      id: tempId,
+      name: optionName,
+      price: optionPrice,
+      category: group,
+      selectionType: modSelectionType,
+      minSelections: modSelectionType === 'SINGLE' ? 1 : modMinSelections,
+      maxSelections: modSelectionType === 'SINGLE' ? 1 : modMaxSelections,
+      isActive: true,
+    };
+
+    // 1. Instant Optimistic UI Update (0ms delay)
+    setLocalAddOns((prev) => [...prev, newAddOn]);
+
+    if (!selectedGroupNames.includes(group)) {
+      setSelectedGroupNames((prev) => [...prev, group]);
+    }
+
+    setSuccessMsg(`✓ Added "${optionName}" to ${group}`);
+    setModChoiceName('');
+    setModChoicePrice(0);
+    setCustomModGroup('');
+
+    // 2. Background async save - does not freeze or block the UI button!
+    if (onCreateAddOn) {
+      try {
+        await onCreateAddOn({
+          name: newAddOn.name,
+          price: newAddOn.price,
+          category: newAddOn.category,
+          selectionType: newAddOn.selectionType,
+          minSelections: newAddOn.minSelections,
+          maxSelections: newAddOn.maxSelections,
+        });
+      } catch (err: unknown) {
+        console.warn('Background add-on save notice:', err);
       }
+    }
+  };
 
-      setSuccessMsg(`✓ Added "${modChoiceName}" to ${group}`);
-      setModChoiceName('');
-      setModChoicePrice(0);
-      setCustomModGroup('');
-    } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Failed to add choice');
-    } finally {
-      setIsSubmitting(false);
+  const handleDeleteModifierOption = async (id: string) => {
+    setLocalAddOns((prev) => prev.filter((a) => a.id !== id));
+    if (onDeleteAddOn) {
+      try {
+        await onDeleteAddOn(id);
+      } catch (err: unknown) {
+        console.warn('Background delete add-on notice:', err);
+      }
     }
   };
 
@@ -1566,10 +1600,10 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !modChoiceName.trim()}
+                  disabled={!modChoiceName.trim()}
                   className="min-btn-primary"
                 >
-                  {isSubmitting ? 'Adding...' : '+ Add Option'}
+                  + Add Option
                 </button>
               </div>
             </form>
@@ -1611,8 +1645,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                                   {onDeleteAddOn && (
                                     <button
                                       type="button"
-                                      onClick={() => onDeleteAddOn(it.id)}
+                                      onClick={() => handleDeleteModifierOption(it.id)}
                                       className="min-del-x"
+                                      title="Remove option"
                                     >
                                       ×
                                     </button>

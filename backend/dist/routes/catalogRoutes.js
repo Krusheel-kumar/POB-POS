@@ -229,10 +229,12 @@ async function catalogRoutes(fastify) {
         if (!name?.trim())
             return reply.status(400).send({ error: 'Add-on name is required' });
         const id = `addon-${Date.now()}`;
+        const resolvedMin = minSelections !== undefined ? minSelections : (selectionType === 'SINGLE' ? 1 : 0);
+        const resolvedMax = maxSelections !== undefined ? maxSelections : (selectionType === 'SINGLE' ? 1 : 3);
         await database_js_1.db.execute({
             sql: `INSERT INTO add_ons (id, name, price, category, selection_type, min_selections, max_selections)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            args: [id, name.trim(), price || 0, category || 'Choice Of Boba & Toppings', selectionType || 'MULTI', minSelections || 1, maxSelections || 1],
+            args: [id, name.trim(), price || 0, category || 'Choice Of Boba & Toppings', selectionType || 'MULTI', resolvedMin, resolvedMax],
         });
         return reply.status(201).send({
             id,

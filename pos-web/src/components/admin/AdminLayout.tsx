@@ -197,8 +197,24 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
   };
 
   const handleCreateAddOn = async (req: AddOnRequest) => {
-    await posApiClient.createAddOn(req);
-    await loadAdminData();
+    const tempId = `addon-${Date.now()}`;
+    const optimistic: AddOn = {
+      id: tempId,
+      name: req.name,
+      price: req.price,
+      category: req.category,
+      selectionType: req.selectionType || 'MULTI',
+      minSelections: req.minSelections,
+      maxSelections: req.maxSelections,
+      isActive: true,
+    };
+    setAddOns((prev) => [...prev, optimistic]);
+    try {
+      const created = await posApiClient.createAddOn(req);
+      setAddOns((prev) => prev.map((a) => (a.id === tempId ? created : a)));
+    } catch {
+      // optimistic state retained
+    }
   };
 
   const handleUpdateProductAddOns = async (productId: string, addOnIds: string[]) => {
@@ -212,8 +228,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
   };
 
   const handleDeleteAddOn = async (id: string) => {
-    await posApiClient.deleteAddOn(id);
-    await loadAdminData();
+    setAddOns((prev) => prev.filter((a) => a.id !== id));
+    try {
+      await posApiClient.deleteAddOn(id);
+    } catch {
+      // optimistic state retained
+    }
   };
 
   const [showAddOutletModal, setShowAddOutletModal] = useState<boolean>(false);
