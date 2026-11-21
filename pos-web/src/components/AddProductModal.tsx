@@ -252,14 +252,20 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   }, [allModifierGroups, localAddOns]);
 
   // Auto-sync selected category if not set or invalid
+  const activeCategories = useMemo(() => {
+    return categories.filter((c) => c.id !== 'cat-all' && c.isActive !== false);
+  }, [categories]);
+
   useEffect(() => {
-    if ((!selectedCatId || !categories.some((c) => c.id === selectedCatId)) && categories.length > 0) {
-      setSelectedCatId(categories[0].id);
+    if (activeCategories.length > 0) {
+      if (!selectedCatId || !activeCategories.some((c) => c.id === selectedCatId)) {
+        setSelectedCatId(activeCategories[0].id);
+      }
     }
-  }, [categories, selectedCatId]);
+  }, [activeCategories, selectedCatId]);
 
   // Auto-sync subcategory options
-  const activeCategory = categories.find((c) => c.id === selectedCatId) || categories[0];
+  const activeCategory = activeCategories.find((c) => c.id === selectedCatId) || activeCategories[0];
   const activeSubcats = activeCategory?.subcategories || [];
 
   useEffect(() => {
@@ -339,8 +345,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       setErrorMsg('Please enter a valid price');
       return;
     }
-    if (!selectedCatId) {
-      setErrorMsg('Please select a category');
+    const validCategory = activeCategories.find((c) => c.id === selectedCatId) || activeCategories[0];
+    if (!validCategory) {
+      setErrorMsg('Please select or create an active category first');
       return;
     }
 
@@ -358,7 +365,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       const payload: ProductRequest = {
         name: prodName.trim(),
         basePrice: Number(prodPrice),
-        categoryId: selectedCatId,
+        categoryId: validCategory.id,
         subcategory: subcat,
         dietaryType,
         imageUrl: prodImageUrl.trim() || undefined,
@@ -1051,7 +1058,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     + New
                   </button>
                 </div>
-                {categories.length === 0 ? (
+                {activeCategories.length === 0 ? (
                   <div className="min-inline-empty">
                     <span>No categories.</span>
                     <button
@@ -1072,7 +1079,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                     }}
                     required
                   >
-                    {categories.map((c) => (
+                    {activeCategories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>

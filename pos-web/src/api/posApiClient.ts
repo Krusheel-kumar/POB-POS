@@ -14,6 +14,8 @@ import type {
   ProductRequest,
   AddOn,
   AddOnRequest,
+  AddOnCategory,
+  AddOnCategoryRequest,
   Bill,
   RestaurantTable,
   TableRequest,
@@ -643,7 +645,11 @@ export class PosApiClient {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error || errData?.message || `Failed to create product: ${res.status}`);
+        const detailedMsg =
+          (errData?.message && errData.message !== 'Internal Server Error' ? errData.message : null) ||
+          (errData?.error && errData.error !== 'Internal Server Error' ? errData.error : null) ||
+          `Failed to create product (${res.status}): Please check category and input fields`;
+        throw new Error(detailedMsg);
       }
 
       return res.json();
@@ -847,6 +853,48 @@ export class PosApiClient {
     } catch {
       return mockStore.updateProductAddOns(productId, addOnIds);
     }
+  }
+
+  /**
+   * Fetch add-on categories
+   */
+  public async getAddOnCategories(): Promise<AddOnCategory[]> {
+    return mockStore.getAddOnCategories();
+  }
+
+  /**
+   * Create add-on category
+   */
+  public async createAddOnCategory(req: AddOnCategoryRequest): Promise<AddOnCategory> {
+    return mockStore.createAddOnCategory(req);
+  }
+
+  /**
+   * Update add-on category
+   */
+  public async updateAddOnCategory(id: string, req: Partial<AddOnCategoryRequest>): Promise<AddOnCategory> {
+    return mockStore.updateAddOnCategory(id, req);
+  }
+
+  /**
+   * Delete add-on category
+   */
+  public async deleteAddOnCategory(id: string): Promise<void> {
+    mockStore.deleteAddOnCategory(id);
+  }
+
+  /**
+   * Update product sequence ranking
+   */
+  public async updateProductRank(productId: string, displayOrder: number): Promise<Product> {
+    return mockStore.updateProductRank(productId, displayOrder);
+  }
+
+  /**
+   * Update add-on item sequence ranking
+   */
+  public async updateAddOnRank(addonId: string, displayOrder: number): Promise<AddOn> {
+    return mockStore.updateAddOnRank(addonId, displayOrder);
   }
 
   /**
