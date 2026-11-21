@@ -984,16 +984,18 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  if (currentPath === '/admin' || currentPath === '/admin/reports' || currentPath === '/admin/inventory') {
+  if (currentPath.startsWith('/admin')) {
+    const cleanPath = currentPath.split('?')[0].replace(/\/+$/, '');
+    let initialTab: 'dashboard' | 'reports' | 'inventory' | 'menu' | 'orders' | 'billing' = 'dashboard';
+    if (cleanPath === '/admin/reports') initialTab = 'reports';
+    else if (cleanPath === '/admin/inventory') initialTab = 'inventory';
+    else if (cleanPath === '/admin/menu') initialTab = 'menu';
+    else if (cleanPath === '/admin/orders') initialTab = 'orders';
+    else if (cleanPath === '/admin/billing') initialTab = 'billing';
+
     return (
       <AdminLayout
-        initialTab={
-          currentPath === '/admin/reports'
-            ? 'reports'
-            : currentPath === '/admin/inventory'
-            ? 'inventory'
-            : 'dashboard'
-        }
+        initialTab={initialTab}
         onBackToPos={() => {
           window.history.pushState({}, '', '/');
           setCurrentPath('/');

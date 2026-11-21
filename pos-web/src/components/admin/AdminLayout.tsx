@@ -30,6 +30,34 @@ export interface AdminLayoutProps {
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPos, onNavigateToKitchen }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab || 'dashboard');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.replace(/\/+$/, '');
+      if (path === '/admin/reports') setActiveTab('reports');
+      else if (path === '/admin/inventory') setActiveTab('inventory');
+      else if (path === '/admin/menu') setActiveTab('menu');
+      else if (path === '/admin/orders') setActiveTab('orders');
+      else if (path === '/admin/billing') setActiveTab('billing');
+      else if (path === '/admin') setActiveTab('dashboard');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleTabChange = (tab: AdminTab) => {
+    setActiveTab(tab);
+    const targetPath = tab === 'dashboard' ? '/admin' : `/admin/${tab}`;
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+  };
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [selectedOutletId, setSelectedOutletId] = useState<string>(() => {
     return posApiClient.getConfig().outletId || '';
@@ -188,42 +216,42 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
           >
             <span>📊</span> Dashboard
           </button>
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'reports' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reports')}
+            onClick={() => handleTabChange('reports')}
           >
             <span>📈</span> Reports & Analytics
           </button>
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-            onClick={() => setActiveTab('inventory')}
+            onClick={() => handleTabChange('inventory')}
           >
             <span>📦</span> Inventory & Recipes
           </button>
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}
-            onClick={() => setActiveTab('menu')}
+            onClick={() => handleTabChange('menu')}
           >
             <span>🍽️</span> Menu Catalog
           </button>
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
+            onClick={() => handleTabChange('orders')}
           >
             <span>🧾</span> Orders
           </button>
           <button
             type="button"
             className={`admin-nav-btn ${activeTab === 'billing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('billing')}
+            onClick={() => handleTabChange('billing')}
           >
             <span>💳</span> Billing & Invoices
           </button>
