@@ -8,6 +8,8 @@ interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddToCart: (item: Omit<CartItem, 'id' | 'lineTotal'>) => void;
+  editingCartItem?: CartItem | null;
+  onUpdateCartItem?: (cartItemId: string, item: Omit<CartItem, 'id' | 'lineTotal'>) => void;
 }
 
 // Elegant name formatting helper: fixes stuck parentheses and shouting ALL-CAPS into cafe Title Case
@@ -41,6 +43,8 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   isOpen,
   onClose,
   onAddToCart,
+  editingCartItem,
+  onUpdateCartItem,
 }) => {
   const defaultVariant = product.variants.length > 0 ? product.variants[0] : undefined;
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(defaultVariant);
@@ -70,11 +74,33 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   // Group add-ons by category (falls back to store toppings if product has none attached)
   const effectiveAddOns = useMemo(() => {
+    const list: AddOn[] = [];
+    const seen = new Set<string>();
+
+    const addList = (items?: AddOn[]) => {
+      if (!items) return;
+      items.forEach((a) => {
+        const key = a.id || `${a.name}-${a.category || ''}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          list.push(a);
+        }
+      });
+    };
+
     if (product.addOns && product.addOns.length > 0) {
-      return product.addOns;
+      addList(product.addOns);
+    } else if (availableAddOns && availableAddOns.length > 0) {
+      addList(availableAddOns);
     }
-    return availableAddOns || [];
-  }, [product.addOns, availableAddOns]);
+
+    // Ensure any previously chosen add-ons in the cart item remain present and selectable
+    if (editingCartItem?.selectedAddOns) {
+      addList(editingCartItem.selectedAddOns);
+    }
+
+    return list;
+  }, [product.addOns, availableAddOns, editingCartItem]);
 
   const groupedProductAddOns = useMemo(() => {
     const map: Record<string, AddOn[]> = {};
@@ -86,24 +112,45 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     return map;
   }, [effectiveAddOns]);
 
-  // Pre-select first choice for mandatory single-select groups (Size, Milk, Sugar, Ice) on open
+  // Pre-select choices:
+  // If editing an existing cart item: pre-populate its exact toppings, variant, notes, and quantity
+  // If new item: pre-select first choice for mandatory single-select groups (Size, Milk, Sugar, Ice)
   useEffect(() => {
     if (!isOpen) return;
 
-    const preselected: AddOn[] = [];
-    Object.entries(groupedProductAddOns).forEach(([category, items]) => {
-      const isSingle = isSingleCategory(category, items[0]?.selectionType);
-      if (isSingle && items.length > 0) {
-        preselected.push(items[0]); // pre-select default (e.g. Regular 300ml, Fresh Milk)
-      }
-    });
+    if (editingCartItem) {
+      // Variant matching
+      const matchedVariant = editingCartItem.selectedVariant
+        ? product.variants.find(
+            (v) =>
+              v.id === editingCartItem.selectedVariant?.id ||
+              v.name.toLowerCase() === editingCartItem.selectedVariant?.name.toLowerCase()
+          ) || editingCartItem.selectedVariant
+        : product.variants.length > 0
+        ? product.variants[0]
+        : undefined;
 
-    setSelectedAddOns(preselected);
-    setQuantity(1);
-    setItemNotes('');
-    setSelectedVariant(product.variants.length > 0 ? product.variants[0] : undefined);
-    setMaxWarningGroup(null);
-  }, [product, isOpen, groupedProductAddOns]);
+      setSelectedVariant(matchedVariant);
+      setSelectedAddOns(editingCartItem.selectedAddOns ? [...editingCartItem.selectedAddOns] : []);
+      setQuantity(editingCartItem.quantity > 0 ? editingCartItem.quantity : 1);
+      setItemNotes(editingCartItem.itemNotes || '');
+      setMaxWarningGroup(null);
+    } else {
+      const preselected: AddOn[] = [];
+      Object.entries(groupedProductAddOns).forEach(([category, items]) => {
+        const isSingle = isSingleCategory(category, items[0]?.selectionType);
+        if (isSingle && items.length > 0) {
+          preselected.push(items[0]); // pre-select default (e.g. Regular 300ml, Fresh Milk)
+        }
+      });
+
+      setSelectedAddOns(preselected);
+      setQuantity(1);
+      setItemNotes('');
+      setSelectedVariant(product.variants.length > 0 ? product.variants[0] : undefined);
+      setMaxWarningGroup(null);
+    }
+  }, [product, isOpen, groupedProductAddOns, editingCartItem]);
 
   if (!isOpen) return null;
 
@@ -168,14 +215,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     : ['Less Spicy', 'Extra Spicy', 'No Onion/Garlic', 'Extra Crispy', 'Sauce on Side'];
 
   const handleConfirm = () => {
-    onAddToCart({
+    const itemData = {
       product,
       selectedVariant,
       selectedAddOns,
       quantity,
       itemNotes,
       unitPrice: currentUnitPrice,
-    });
+    };
+    if (editingCartItem && onUpdateCartItem) {
+      onUpdateCartItem(editingCartItem.id, itemData);
+    } else {
+      onAddToCart(itemData);
+    }
     onClose();
   };
 
@@ -216,6 +268,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   <span className="lux-prep-tag">⏱️ {product.prepTimeMinutes} mins</span>
                 )}
                 <span className="lux-base-price">Base: ₹{product.basePrice.toFixed(2)}</span>
+                {editingCartItem && (
+                  <span className="lux-editing-cart-badge">
+                    ✏️ Editing Item Toppings
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -399,11 +456,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           {/* Right: Primary High-Contrast Action Button */}
           <button
             type="button"
-            className="lux-add-cart-btn"
+            className={`lux-add-cart-btn ${editingCartItem ? 'lux-update-cart-btn' : ''}`}
             onClick={handleConfirm}
           >
             <div className="lux-btn-left">
-              <span>Add to Cart</span>
+              <span>{editingCartItem ? 'Update Item' : 'Add to Cart'}</span>
               <span>—</span>
               <span className="lux-btn-price">₹{(currentUnitPrice * quantity).toFixed(2)}</span>
             </div>

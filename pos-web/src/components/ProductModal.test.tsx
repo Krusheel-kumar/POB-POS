@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ProductModal from './ProductModal';
-import type { Product, AddOn } from '../types/pos';
+import type { Product, AddOn, CartItem } from '../types/pos';
 
 const mockAddOns: AddOn[] = [
   // Single choice group: Size
@@ -149,5 +149,62 @@ describe('ProductModal Component', () => {
         ]),
       })
     );
+  });
+
+  it('pre-populates existing cart item toppings and calls onUpdateCartItem when updating', () => {
+    const handleAdd = vi.fn();
+    const handleUpdate = vi.fn();
+    const handleClose = vi.fn();
+
+    const mockCartItem: CartItem = {
+      id: 'cart-item-123',
+      product: mockProduct,
+      quantity: 2,
+      unitPrice: 255, // 220 base + 35 boba
+      lineTotal: 510,
+      selectedAddOns: [mockAddOns[0], mockAddOns[2]], // size-reg and top-boba
+      itemNotes: 'Less Ice',
+    };
+
+    render(
+      <ProductModal
+        product={mockProduct}
+        isOpen={true}
+        onAddToCart={handleAdd}
+        onClose={handleClose}
+        editingCartItem={mockCartItem}
+        onUpdateCartItem={handleUpdate}
+      />
+    );
+
+    // Shows editing badge and Update Item button with current total: 255 * 2 = 510
+    expect(screen.getByText(/Editing Item Toppings/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Update Item/i })).toBeInTheDocument();
+    expect(screen.getByText('₹510.00')).toBeInTheDocument();
+    expect(screen.getByText(/1\/2 selected/i)).toBeInTheDocument();
+
+    // Change topping: add Grass Jelly (+30) -> (220 + 35 + 30) * 2 = 570.00
+    fireEvent.click(screen.getByText('Grass Jelly'));
+    expect(screen.getByText('₹570.00')).toBeInTheDocument();
+
+    // Click Update Item button
+    fireEvent.click(screen.getByRole('button', { name: /Update Item/i }));
+
+    expect(handleUpdate).toHaveBeenCalledTimes(1);
+    expect(handleUpdate).toHaveBeenCalledWith(
+      'cart-item-123',
+      expect.objectContaining({
+        product: expect.objectContaining({ name: 'Authentic Milk Tea' }),
+        quantity: 2,
+        unitPrice: 285,
+        selectedAddOns: expect.arrayContaining([
+          expect.objectContaining({ id: 'size-reg' }),
+          expect.objectContaining({ id: 'top-boba' }),
+          expect.objectContaining({ id: 'top-jelly' }),
+        ]),
+      })
+    );
+    expect(handleAdd).not.toHaveBeenCalled();
+    expect(handleClose).toHaveBeenCalledTimes(1);
   });
 });

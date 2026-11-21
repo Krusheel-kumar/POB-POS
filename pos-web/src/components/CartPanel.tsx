@@ -32,6 +32,7 @@ interface CartPanelProps {
     quantity: number;
     unitPrice: number;
   }) => void;
+  onEditCartItem?: (item: CartItem) => void;
 }
 
 export const CartPanel: React.FC<CartPanelProps> = ({
@@ -60,6 +61,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   isKotSent = false,
   isSubmitting = false,
   onRequireManagerVoid,
+  onEditCartItem,
 }) => {
   const [localCustomerName, setLocalCustomerName] = useState('');
   const [localCustomerPhone, setLocalCustomerPhone] = useState('');
@@ -320,12 +322,34 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           )
         ) : (
           <div className="retail-items-list">
-            {items.map((item) => (
-              <div key={item.id} className="retail-item-row">
+            {items.map((item) => {
+              const canEditToppings = !item.isDispatched && Boolean(onEditCartItem);
+              return (
+              <div
+                key={item.id}
+                className={`retail-item-row ${canEditToppings ? 'editable-item' : ''}`}
+              >
                 <div className="item-details">
-                  <div className="item-title-row">
+                  <div
+                    className={`item-title-row ${canEditToppings ? 'clickable-to-edit' : ''}`}
+                    onClick={canEditToppings ? () => onEditCartItem?.(item) : undefined}
+                    title={canEditToppings ? 'Click to change toppings, size or instructions' : undefined}
+                  >
                     <span className="item-name">
                       {item.product.name}
+                      {canEditToppings && (
+                        <button
+                          type="button"
+                          className="cart-inline-edit-btn"
+                          title="Click to edit toppings / modifiers"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditCartItem?.(item);
+                          }}
+                        >
+                          ✏️ Edit Toppings
+                        </button>
+                      )}
                       {item.isDispatched ? (
                         <span className="cart-badge-locked" title="Dispatched to Kitchen. Modifying requires Manager PIN.">
                           🔒 Sent
@@ -340,7 +364,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   </div>
 
                   {(item.selectedVariant || (item.selectedAddOns && item.selectedAddOns.length > 0)) && (
-                    <div className="item-addons-wrap">
+                    <div
+                      className={`item-addons-wrap ${canEditToppings ? 'clickable-to-edit' : ''}`}
+                      onClick={canEditToppings ? () => onEditCartItem?.(item) : undefined}
+                      title={canEditToppings ? 'Click to change toppings' : undefined}
+                    >
                       {item.selectedVariant && (
                         <span className="cart-badge-variant">
                           {item.selectedVariant.name}
@@ -351,11 +379,22 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                           +{addon.name} {addon.price > 0 ? `(₹${addon.price})` : ''}
                         </span>
                       ))}
+                      {canEditToppings && (
+                        <span className="cart-badge-edit-hint" title="Click to customize toppings">
+                          🔄 Change
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {item.itemNotes && (
-                    <span className="item-instructions">📝 {item.itemNotes}</span>
+                    <span
+                      className={`item-instructions ${canEditToppings ? 'clickable-to-edit' : ''}`}
+                      onClick={canEditToppings ? () => onEditCartItem?.(item) : undefined}
+                      title={canEditToppings ? 'Click to edit notes' : undefined}
+                    >
+                      📝 {item.itemNotes}
+                    </span>
                   )}
 
                   <div className="item-footer-row">
@@ -395,7 +434,8 @@ export const CartPanel: React.FC<CartPanelProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

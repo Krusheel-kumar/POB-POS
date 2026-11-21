@@ -65,6 +65,7 @@ export function App() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeModalProduct, setActiveModalProduct] = useState<Product | null>(null);
+  const [editingCartItem, setEditingCartItem] = useState<CartItem | null>(null);
 
   // Table Management State
   const [tables, setTables] = useState<RestaurantTable[]>([]);
@@ -256,6 +257,29 @@ export function App() {
       lineTotal: item.unitPrice * item.quantity,
     };
     setCartItems((prev) => [...prev, newItem]);
+  };
+
+  const handleEditCartItem = (item: CartItem) => {
+    if (item.isDispatched) return;
+    setEditingCartItem(item);
+    setActiveModalProduct(item.product);
+  };
+
+  const handleUpdateCartItem = (cartItemId: string, updated: Omit<CartItem, 'id' | 'lineTotal'>) => {
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item.id === cartItemId) {
+          return {
+            ...item,
+            ...updated,
+            lineTotal: updated.unitPrice * updated.quantity,
+          };
+        }
+        return item;
+      })
+    );
+    setEditingCartItem(null);
+    setActiveModalProduct(null);
   };
 
   const handleUpdateQuantity = (cartItemId: string, delta: number) => {
@@ -1415,7 +1439,10 @@ export function App() {
                       <ProductCard
                         key={product.id}
                         product={product}
-                        onSelect={(p) => setActiveModalProduct(p)}
+                        onSelect={(p) => {
+                          setEditingCartItem(null);
+                          setActiveModalProduct(p);
+                        }}
                       />
                     ))}
                   </div>
@@ -1469,6 +1496,7 @@ export function App() {
             onCancelRunningOrder={() => setRunningOrder(null)}
             isKotSent={isKotSent}
             onRequireManagerVoid={(details) => setVoidTarget(details)}
+            onEditCartItem={handleEditCartItem}
           />
         </div>
       )}
@@ -1479,8 +1507,13 @@ export function App() {
           product={activeModalProduct}
           availableAddOns={addOns}
           isOpen={Boolean(activeModalProduct)}
-          onClose={() => setActiveModalProduct(null)}
+          onClose={() => {
+            setActiveModalProduct(null);
+            setEditingCartItem(null);
+          }}
           onAddToCart={handleAddToCart}
+          editingCartItem={editingCartItem}
+          onUpdateCartItem={handleUpdateCartItem}
         />
       )}
 
