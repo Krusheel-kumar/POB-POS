@@ -102,6 +102,10 @@ export function App() {
   const handleSwitchOutlet = (newId: string) => {
     setCurrentOutletId(newId);
     posApiClient.updateConfig({ outletId: newId });
+    const targetOutlet = outlets.find((o) => o.id === newId);
+    if (targetOutlet?.paymentPolicy) {
+      setPaymentPolicy(targetOutlet.paymentPolicy);
+    }
     loadTables();
   };
 
@@ -511,18 +515,6 @@ export function App() {
       throw err;
     } finally {
       setIsProcessingPayment(false);
-    }
-  };
-
-  // Policy Switcher
-  const handlePolicyChange = async (newPolicy: PaymentPolicy) => {
-    const outletId = posApiClient.getConfig().outletId;
-    if (!outletId) return;
-    try {
-      await posApiClient.updatePaymentPolicy(outletId, newPolicy);
-      setPaymentPolicy(newPolicy);
-    } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : 'Failed to change payment policy');
     }
   };
 
