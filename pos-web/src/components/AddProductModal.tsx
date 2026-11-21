@@ -164,6 +164,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (initialTab && isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
+
   // Synchronize when editingProduct changes or modal opens
   useEffect(() => {
     setCurrentEditingProduct(editingProduct || null);

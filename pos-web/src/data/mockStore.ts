@@ -714,6 +714,48 @@ class MockStore {
     this.setStorage('products', prods);
   }
 
+  public updateCategory(id: string, req: { name?: string; description?: string; subcategories?: string[] }): ProductCategory {
+    const list = this.getCategories();
+    const catIndex = list.findIndex((c) => c.id === id);
+    if (catIndex === -1) {
+      throw new Error('Category not found');
+    }
+    const current = list[catIndex];
+    const updated: ProductCategory = {
+      ...current,
+      name: req.name ? req.name.trim() : current.name,
+      description: req.description !== undefined ? req.description : current.description,
+      subcategories: req.subcategories !== undefined ? req.subcategories : current.subcategories,
+    };
+    list[catIndex] = updated;
+    this.setStorage('categories', list);
+
+    // Update products that reference this category
+    const prods = this.getProducts().map((p) => {
+      if (p.category?.id === id) {
+        return { ...p, category: updated };
+      }
+      return p;
+    });
+    this.setStorage('products', prods);
+    return updated;
+  }
+
+  public purgeInactiveCategories(): number {
+    const list = this.getCategories();
+    const prods = this.getProducts();
+    const active = list.filter((c) => {
+      if (c.isActive === false) {
+        const hasProds = prods.some((p) => p.category?.id === c.id || (p as any).categoryId === c.id);
+        return hasProds;
+      }
+      return true;
+    });
+    const purgedCount = list.length - active.length;
+    this.setStorage('categories', active);
+    return purgedCount;
+  }
+
   // Addons
   public getAddOns(): AddOn[] {
     const isCleared = this.getStorage('catalog_cleared', false);

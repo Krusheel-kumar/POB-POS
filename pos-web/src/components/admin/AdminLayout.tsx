@@ -181,6 +181,16 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
     await loadAdminData();
   };
 
+  const handleUpdateCategory = async (id: string, req: Partial<CategoryRequest>) => {
+    await posApiClient.updateCategory(id, req);
+    await loadAdminData();
+  };
+
+  const handlePurgeInactiveCategories = async () => {
+    await posApiClient.purgeInactiveCategories();
+    await loadAdminData();
+  };
+
   const handleDeleteSubcategory = async (categoryId: string, subcat: string) => {
     await posApiClient.deleteSubcategory(categoryId, subcat);
     await loadAdminData();
@@ -456,8 +466,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ initialTab, onBackToPo
               isLoading={loading}
               onRefresh={loadAdminData}
               onCreateCategory={handleCreateCategory}
+              onUpdateCategory={handleUpdateCategory}
               onDeactivateCategory={handleDeactivateCategory}
               onDeleteCategory={handleDeleteCategory}
+              onPurgeInactiveCategories={handlePurgeInactiveCategories}
               onDeleteSubcategory={handleDeleteSubcategory}
               onCreateProduct={handleCreateProduct}
               onUpdateProduct={handleUpdateProduct}

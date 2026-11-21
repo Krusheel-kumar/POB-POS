@@ -137,26 +137,155 @@
   gap: 6px;
 }
 
-.btn-cat-row-delete {
+.btn-cat-row-delete,
+.btn-cat-row-edit {
   background: transparent;
   border: none;
   color: #94a3b8;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   line-height: 1;
-  padding: 0 4px;
+  padding: 2px 4px;
   cursor: pointer;
   border-radius: 4px;
   opacity: 0;
   transition: all 0.15s ease;
 }
 
-.category-item-row:hover .btn-cat-row-delete {
+.category-item-row:hover .btn-cat-row-delete,
+.category-item-row:hover .btn-cat-row-edit {
   opacity: 1;
 }
 
 .btn-cat-row-delete:hover {
   color: #ef4444;
   background: #fee2e2;
+}
+
+.btn-cat-row-edit:hover {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+/* Inactive Categories Collapsible Cleanup Card */
+.inactive-categories-card {
+  margin: 0.5rem 0.6rem;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+}
+
+.inactive-categories-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inactive-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.inactive-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-toggle-inactive {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-purge-inactive {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-purge-inactive:hover {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.inactive-categories-list {
+  margin-top: 0.4rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.3rem;
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.inactive-category-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.inactive-category-row:hover {
+  background: #f1f5f9;
+}
+
+.inactive-category-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-delete-mini {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.btn-delete-mini:hover {
+  background: #fee2e2;
+}
+
+.subcat-pill-add {
+  background: #f0fdf4 !important;
+  border: 1px dashed #86efac !important;
+  color: #166534 !important;
+  font-weight: 700 !important;
+}
+
+.subcat-pill-add:hover {
+  background: #dcfce7 !important;
+  border-color: #4ade80 !important;
+}
+
+.petpooja-active-filter-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
 }
 
 .category-item-row.active .category-item-badge {

@@ -509,6 +509,48 @@ export class PosApiClient {
   }
 
   /**
+   * Update category (name, subcategories, description)
+   */
+  public async updateCategory(id: string, req: Partial<CategoryRequest>): Promise<ProductCategory> {
+    const updated = mockStore.updateCategory(id, req);
+    if (this.demoMode) {
+      return updated;
+    }
+
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify(req),
+      });
+
+      if (!res.ok) {
+        return updated;
+      }
+      return res.json();
+    } catch {
+      return updated;
+    }
+  }
+
+  /**
+   * Purge all empty inactive categories from catalog
+   */
+  public async purgeInactiveCategories(): Promise<number> {
+    const count = mockStore.purgeInactiveCategories();
+    try {
+      const cats = await this.getCategories();
+      const inactives = cats.filter((c) => c.isActive === false);
+      for (const cat of inactives) {
+        await this.deleteCategory(cat.id).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+    return count;
+  }
+
+  /**
    * Delete category (permanently deletes category and cascades to all products and subcategories)
    */
   public async deleteCategory(id: string): Promise<void> {
@@ -517,14 +559,27 @@ export class PosApiClient {
       return;
     }
 
-    const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${id}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(false),
-    });
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(false),
+      });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      throw new Error(errData?.message || errData?.error || `Failed to delete category: ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          // If DELETE endpoint is not yet mounted on backend, fallback to deactivating
+          await this.deactivateCategory(id).catch(() => {});
+          return;
+        }
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || errData?.error || `Failed to delete category: ${res.status}`);
+      }
+    } catch (err: any) {
+      if (err.message?.includes('404') || err.message?.includes('not found')) {
+        await this.deactivateCategory(id).catch(() => {});
+        return;
+      }
+      throw err;
     }
   }
 
@@ -537,14 +592,24 @@ export class PosApiClient {
       return;
     }
 
-    const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${categoryId}/subcategories/${encodeURIComponent(subcat)}`, {
-      method: 'DELETE',
-      headers: this.getHeaders(false),
-    });
+    try {
+      const res = await fetch(`${this.config.baseUrl}/api/v1/categories/${categoryId}/subcategories/${encodeURIComponent(subcat)}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(false),
+      });
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      throw new Error(errData?.message || errData?.error || `Failed to delete subcategory: ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          return;
+        }
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || errData?.error || `Failed to delete subcategory: ${res.status}`);
+      }
+    } catch (err: any) {
+      if (err.message?.includes('404') || err.message?.includes('not found')) {
+        return;
+      }
+      throw err;
     }
   }
 

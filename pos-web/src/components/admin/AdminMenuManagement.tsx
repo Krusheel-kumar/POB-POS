@@ -10,8 +10,10 @@ interface AdminMenuManagementProps {
   isLoading: boolean;
   onRefresh: () => void;
   onCreateCategory: (req: CategoryRequest) => Promise<void>;
+  onUpdateCategory?: (id: string, req: Partial<CategoryRequest>) => Promise<void>;
   onDeactivateCategory: (id: string) => Promise<void>;
   onDeleteCategory?: (id: string) => Promise<void>;
+  onPurgeInactiveCategories?: () => Promise<void>;
   onDeleteSubcategory?: (categoryId: string, subcat: string) => Promise<void>;
   onCreateProduct: (req: ProductRequest) => Promise<void>;
   onUpdateProduct?: (id: string, req: ProductRequest) => Promise<void>;
@@ -30,8 +32,10 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   isLoading,
   onRefresh,
   onCreateCategory,
+  onUpdateCategory,
   onDeactivateCategory,
   onDeleteCategory,
+  onPurgeInactiveCategories,
   onDeleteSubcategory,
   onCreateProduct,
   onUpdateProduct,
@@ -59,6 +63,20 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [categoryDesc, setCategoryDesc] = useState('');
+  const [categorySubcatsInput, setCategorySubcatsInput] = useState('');
+
+  // Edit Category State
+  const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryDesc, setEditCategoryDesc] = useState('');
+  const [editCategorySubcats, setEditCategorySubcats] = useState('');
+
+  // Quick Add Subcategory Modal State
+  const [showAddSubcatModal, setShowAddSubcatModal] = useState(false);
+  const [newSubcatInput, setNewSubcatInput] = useState('');
+
+  // Inactive Categories expansion
+  const [showInactiveCategories, setShowInactiveCategories] = useState(false);
 
   // Product Modal State
   const [showProductModal, setShowProductModal] = useState(false);
@@ -132,11 +150,20 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
     return counts;
   }, [products]);
 
-  // Petpooja: Filtered categories respecting hideEmptyCategories
+  // Split into active categories and inactive/duplicate categories
+  const activeCategories = useMemo(() => {
+    return categories.filter((c) => c.isActive !== false);
+  }, [categories]);
+
+  const inactiveCategories = useMemo(() => {
+    return categories.filter((c) => c.isActive === false);
+  }, [categories]);
+
+  // Sidebar visible categories: active categories (with optional empty filter)
   const visibleCategories = useMemo(() => {
-    if (!hideEmptyCategories) return categories;
-    return categories.filter((c) => (categoryCounts[c.id] || 0) > 0);
-  }, [categories, hideEmptyCategories, categoryCounts]);
+    if (!hideEmptyCategories) return activeCategories;
+    return activeCategories.filter((c) => (categoryCounts[c.id] || 0) > 0);
+  }, [activeCategories, hideEmptyCategories, categoryCounts]);
 
   // Petpooja: Active category object
   const activeCategoryObj = useMemo(() => {
@@ -185,21 +212,96 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
   // Handlers
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!categoryName.trim()) return;
     setErrorMsg(null);
     try {
+      const parsedSubs = categorySubcatsInput
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
       await onCreateCategory({
-        name: categoryName,
-        description: categoryDesc,
+        name: categoryName.trim(),
+        description: categoryDesc.trim() || undefined,
         displayOrder: categories.length + 1,
         isActive: true,
+        subcategories: parsedSubs.length > 0 ? parsedSubs : undefined,
       });
       setCategoryName('');
       setCategoryDesc('');
+      setCategorySubcatsInput('');
       setShowCategoryModal(false);
-      setSuccessMsg('Category created successfully');
+      setSuccessMsg(`✓ Category "${categoryName.trim()}" created successfully!`);
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to create category');
+    }
+  };
+
+  const handleOpenEditCategory = (cat: ProductCategory) => {
+    setEditingCategory(cat);
+    setEditCategoryName(cat.name);
+    setEditCategoryDesc(cat.description || '');
+    setEditCategorySubcats(cat.subcategories ? cat.subcategories.join(', ') : '');
+  };
+
+  const handleSaveEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !onUpdateCategory) return;
+    if (!editCategoryName.trim()) return;
+    setErrorMsg(null);
+    try {
+      const parsedSubs = editCategorySubcats
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      await onUpdateCategory(editingCategory.id, {
+        name: editCategoryName.trim(),
+        description: editCategoryDesc.trim() || undefined,
+        subcategories: parsedSubs,
+      });
+      setSuccessMsg(`✓ Category "${editCategoryName.trim()}" updated successfully!`);
+      setEditingCategory(null);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to update category');
+    }
+  };
+
+  const handleAddSubcategoryToCurrent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubcatInput.trim() || !activeCategoryObj || !onUpdateCategory) return;
+    const cleanSub = newSubcatInput.trim();
+    const currentSubs = activeCategoryObj.subcategories || [];
+    if (currentSubs.some((s) => s.toLowerCase() === cleanSub.toLowerCase())) {
+      setErrorMsg(`Subcategory "${cleanSub}" already exists in this category.`);
+      return;
+    }
+    setErrorMsg(null);
+    try {
+      const updatedSubs = [...currentSubs, cleanSub];
+      await onUpdateCategory(activeCategoryObj.id, { subcategories: updatedSubs });
+      setSuccessMsg(`✓ Added subcategory "${cleanSub}"`);
+      setNewSubcatInput('');
+      setShowAddSubcatModal(false);
+      setSelectedSubcategory(cleanSub);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to add subcategory');
+    }
+  };
+
+  const handlePurgeInactive = async () => {
+    if (!onPurgeInactiveCategories) return;
+    if (window.confirm(`⚠️ Permanently purge all ${inactiveCategories.length} inactive duplicate categories?`)) {
+      setErrorMsg(null);
+      try {
+        await onPurgeInactiveCategories();
+        setSuccessMsg(`✓ Cleaned up all inactive duplicate categories!`);
+        setShowInactiveCategories(false);
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } catch (err: unknown) {
+        setErrorMsg(err instanceof Error ? err.message : 'Failed to purge inactive categories');
+      }
     }
   };
 
@@ -359,7 +461,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                   setShowProductModal(true);
                 }}
               >
-                + Add Product
+                + Add Menu Item
               </button>
             </div>
           </div>
@@ -370,7 +472,7 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
               <div className="category-sidebar-header">
                 <div className="category-sidebar-title">
                   <span>Categories</span>
-                  <span className="category-sidebar-count">{categories.length}</span>
+                  <span className="category-sidebar-count">{activeCategories.length}</span>
                 </div>
                 <button
                   type="button"
@@ -421,6 +523,19 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                       <span className="category-item-name">{c.name}</span>
                       <div className="category-item-actions">
                         <span className="category-item-badge">{count}</span>
+                        {onUpdateCategory && (
+                          <button
+                            type="button"
+                            className="btn-cat-row-edit"
+                            title={`Edit category "${c.name}"`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditCategory(c);
+                            }}
+                          >
+                            ✏️
+                          </button>
+                        )}
                         {onDeleteCategory && (
                           <button
                             type="button"
@@ -428,13 +543,14 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                             title={`Delete category "${c.name}"`}
                             onClick={async (e) => {
                               e.stopPropagation();
-                              if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will also cascade delete all its subcategories and all products in this category.`)) {
+                              if (window.confirm(`⚠️ Permanently delete category "${c.name}"?\n\nThis will cascade delete all its subcategories and all products in this category.`)) {
                                 try {
                                   await onDeleteCategory(c.id);
                                   if (selectedCategoryId === c.id) {
                                     setSelectedCategoryId('ALL');
                                   }
-                                  setSuccessMsg(`Category "${c.name}" deleted.`);
+                                  setSuccessMsg(`✓ Category "${c.name}" deleted.`);
+                                  setTimeout(() => setSuccessMsg(null), 4000);
                                 } catch (err: any) {
                                   setErrorMsg(err.message || 'Failed to delete category');
                                 }
@@ -449,6 +565,61 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                   );
                 })}
               </div>
+
+              {/* Inactive / Duplicate Categories Collapsible Cleanup Card */}
+              {inactiveCategories.length > 0 && (
+                <div className="inactive-categories-card">
+                  <div className="inactive-categories-header">
+                    <span className="inactive-title">
+                      Inactive ({inactiveCategories.length})
+                    </span>
+                    <div className="inactive-actions">
+                      <button
+                        type="button"
+                        className="btn-toggle-inactive"
+                        onClick={() => setShowInactiveCategories(!showInactiveCategories)}
+                      >
+                        {showInactiveCategories ? 'Hide' : 'View'}
+                      </button>
+                      {onPurgeInactiveCategories && (
+                        <button
+                          type="button"
+                          className="btn-purge-inactive"
+                          title="Purge all 0-item inactive categories"
+                          onClick={handlePurgeInactive}
+                        >
+                          🧹 Clean All
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {showInactiveCategories && (
+                    <div className="inactive-categories-list">
+                      {inactiveCategories.map((c) => (
+                        <div key={c.id} className="inactive-category-row">
+                          <span className="inactive-category-name" title={c.name}>
+                            {c.name}
+                          </span>
+                          {onDeleteCategory && (
+                            <button
+                              type="button"
+                              className="btn-delete-mini"
+                              onClick={async () => {
+                                if (window.confirm(`Delete inactive category "${c.name}"?`)) {
+                                  await onDeleteCategory(c.id);
+                                }
+                              }}
+                              title="Delete inactive category"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* RIGHT: Items & Actions Panel */}
@@ -475,16 +646,20 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                     )}
                   </div>
 
-                  {activeSubcategories.length > 0 && (
-                    <div className="petpooja-subcat-pills">
-                      <button
-                        type="button"
-                        className={`subcat-pill ${selectedSubcategory === 'ALL' ? 'active' : ''}`}
-                        onClick={() => setSelectedSubcategory('ALL')}
-                      >
-                        All
-                      </button>
-                      {activeSubcategories.map((subcat) => (
+                  <div className="petpooja-subcat-pills">
+                    <button
+                      type="button"
+                      className={`subcat-pill ${selectedSubcategory === 'ALL' ? 'active' : ''}`}
+                      onClick={() => setSelectedSubcategory('ALL')}
+                    >
+                      All ({activeCategoryObj ? (categoryCounts[activeCategoryObj.id] || 0) : products.length})
+                    </button>
+                    {activeSubcategories.map((subcat) => {
+                      const subCount = products.filter((p) => {
+                        const matchCat = selectedCategoryId === 'ALL' || p.category?.id === selectedCategoryId;
+                        return matchCat && p.subcategory === subcat;
+                      }).length;
+                      return (
                         <div
                           key={subcat}
                           className={`subcat-pill-wrapper ${selectedSubcategory === subcat ? 'active' : ''}`}
@@ -494,13 +669,13 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                             className="subcat-pill-label"
                             onClick={() => setSelectedSubcategory(subcat)}
                           >
-                            {subcat}
+                            {subcat} ({subCount})
                           </button>
                           {onDeleteSubcategory && activeCategoryObj && (
                             <button
                               type="button"
                               className="subcat-pill-delete"
-                              title={`Delete subcategory "${subcat}" and all its items`}
+                              title={`Delete subcategory "${subcat}" and its items`}
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 if (window.confirm(`⚠️ Delete subcategory "${subcat}"?\n\nAll items under "${subcat}" will also be permanently deleted.`)) {
@@ -509,7 +684,8 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                                     if (selectedSubcategory === subcat) {
                                       setSelectedSubcategory('ALL');
                                     }
-                                    setSuccessMsg(`Subcategory "${subcat}" and its items deleted.`);
+                                    setSuccessMsg(`✓ Subcategory "${subcat}" and its items deleted.`);
+                                    setTimeout(() => setSuccessMsg(null), 4000);
                                   } catch (err: any) {
                                     setErrorMsg(err.message || 'Failed to delete subcategory');
                                   }
@@ -520,22 +696,30 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                             </button>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      );
+                    })}
+
+                    {/* Quick + Add Subcategory Button */}
+                    {activeCategoryObj && onUpdateCategory && (
+                      <button
+                        type="button"
+                        className="subcat-pill subcat-pill-add"
+                        onClick={() => {
+                          setNewSubcatInput('');
+                          setShowAddSubcatModal(true);
+                        }}
+                        title={`Add new subcategory under "${activeCategoryObj.name}"`}
+                      >
+                        + Add Subcategory
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="petpooja-toolbar-right">
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm petpooja-add-btn"
-                    onClick={() => {
-                      setEditingProduct(null);
-                      setShowProductModal(true);
-                    }}
-                  >
-                    + Add Items
-                  </button>
+                  <span className="petpooja-active-filter-badge">
+                    {activeCategoryObj ? activeCategoryObj.name : 'All Categories'} • {filteredProducts.length} Items
+                  </span>
                 </div>
               </div>
 
@@ -1214,11 +1398,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
          ======================================================== */}
       {showCategoryModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '420px', maxWidth: '90%' }}>
             <h3 style={{ marginTop: 0 }}>Create Category</h3>
             <form onSubmit={handleCreateCategory}>
               <div className="form-group">
-                <label className="form-label">Category Name</label>
+                <label className="form-label">Category Name *</label>
                 <input
                   type="text"
                   className="form-input"
@@ -1229,13 +1413,23 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
                 />
               </div>
               <div className="form-group">
+                <label className="form-label">Subcategories (Optional, comma-separated)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={categorySubcatsInput}
+                  onChange={(e) => setCategorySubcatsInput(e.target.value)}
+                  placeholder="e.g. Classic, Cheese Foam, Fruit Teas"
+                />
+              </div>
+              <div className="form-group">
                 <label className="form-label">Description (Optional)</label>
                 <input
                   type="text"
                   className="form-input"
                   value={categoryDesc}
                   onChange={(e) => setCategoryDesc(e.target.value)}
-                  placeholder="e.g. Hot and iced artisanal coffees"
+                  placeholder="e.g. Signature Taiwan recipes"
                 />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
@@ -1252,6 +1446,101 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
       )}
 
       {/* ========================================================
+          EDIT CATEGORY MODAL
+         ======================================================== */}
+      {editingCategory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '440px', maxWidth: '90%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0 }}>Edit Category: "{editingCategory.name}"</h3>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setEditingCategory(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleSaveEditCategory}>
+              <div className="form-group">
+                <label className="form-label">Category Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Subcategories (comma-separated)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editCategorySubcats}
+                  onChange={(e) => setEditCategorySubcats(e.target.value)}
+                  placeholder="e.g. Classic, Fruit, Cheese Foam"
+                />
+                <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                  Items assigned to existing subcategories will retain their assignments.
+                </small>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editCategoryDesc}
+                  onChange={(e) => setEditCategoryDesc(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingCategory(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          ADD SUBCATEGORY MODAL
+         ======================================================== */}
+      {showAddSubcatModal && activeCategoryObj && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'white', padding: '1.5rem', borderRadius: '8px', width: '380px', maxWidth: '90%' }}>
+            <h3 style={{ marginTop: 0 }}>Add Subcategory to "{activeCategoryObj.name}"</h3>
+            <form onSubmit={handleAddSubcategoryToCurrent}>
+              <div className="form-group">
+                <label className="form-label">Subcategory Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  required
+                  autoFocus
+                  placeholder="e.g. Cheese Foam Series"
+                  value={newSubcatInput}
+                  onChange={(e) => setNewSubcatInput(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddSubcatModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  + Add Subcategory
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
           ADD & EDIT PRODUCT MODAL (WITH IMAGE PREVIEWS & MODIFIER MAPPING)
          ======================================================== */}
       <AddProductModal
@@ -1260,10 +1549,11 @@ export const AdminMenuManagement: React.FC<AdminMenuManagementProps> = ({
           setShowProductModal(false);
           setEditingProduct(null);
         }}
-        categories={categories}
+        initialTab="product"
+        categories={categories.filter((c) => c.isActive !== false)}
         addOns={addOns}
         editingProduct={editingProduct}
-        initialCategoryId={selectedCategoryId !== 'ALL' ? selectedCategoryId : (categories[0]?.id || '')}
+        initialCategoryId={selectedCategoryId !== 'ALL' ? selectedCategoryId : (activeCategories[0]?.id || '')}
         onProductCreated={async (req) => {
           await onCreateProduct(req);
           if (req.categoryId && req.categoryId !== selectedCategoryId && selectedCategoryId !== 'ALL') {
