@@ -100,6 +100,106 @@ export const extractItemCleanVariant = (item: any): string | null => {
   return str;
 };
 
+export interface ItemBreakdownTopping {
+  name: string;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface ItemBreakdown {
+  baseRate: number;
+  baseAmount: number;
+  sizeName?: string;
+  sizePrice: number;
+  sizeAmount: number;
+  toppings: ItemBreakdownTopping[];
+  qty: number;
+  lineTotal: number;
+}
+
+export const calculateItemBreakdown = (item: any): ItemBreakdown => {
+  const qty = Math.max(1, Number(item.quantity) || 1);
+  const lineTotal = item.lineTotalSnapshot != null
+    ? Number(item.lineTotalSnapshot)
+    : (item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) * qty : 0);
+  const totalUnitPrice = item.unitPriceSnapshot != null
+    ? Number(item.unitPriceSnapshot)
+    : (lineTotal / qty);
+
+  const allToppings = extractItemToppings(item);
+  const cleanVariant = extractItemCleanVariant(item);
+
+  let sizeName: string | undefined = cleanVariant || undefined;
+  let sizePrice = 0;
+  const normalToppings: { name: string; price: number }[] = [];
+
+  for (const top of allToppings) {
+    const isSize =
+      top.name.toLowerCase().includes('size') ||
+      /\b(regular|medium|large|small|400ml|500ml|650ml|700ml|300ml)\b/i.test(top.name);
+
+    if (isSize && !sizeName) {
+      sizeName = top.name;
+      sizePrice = top.price;
+    } else if (isSize && sizeName) {
+      if (top.price > 0 && sizePrice === 0) sizePrice = top.price;
+    } else {
+      normalToppings.push(top);
+    }
+  }
+
+  // If sizeName was parsed from variantNameSnapshot (e.g. "Large (+₹69)" or "Large")
+  if (cleanVariant && sizePrice === 0) {
+    const rawVariant = String(item.variantNameSnapshot || '');
+    const priceMatch = rawVariant.match(/\(\+?₹?(\d+(?:\.\d+)?)\)/);
+    if (priceMatch) {
+      sizePrice = parseFloat(priceMatch[1]);
+    } else if (item.selectedVariant && item.selectedVariant.price != null) {
+      const vPrice = Number(item.selectedVariant.price);
+      if (item.product?.basePrice && vPrice > item.product.basePrice) {
+        sizePrice = vPrice - item.product.basePrice;
+      } else if (vPrice > 0 && vPrice < 100) {
+        sizePrice = vPrice;
+      }
+    }
+  }
+
+  // Determine the genuine base rate
+  let baseRate: number;
+  if (item.product?.basePrice != null && Number(item.product.basePrice) > 0) {
+    baseRate = Number(item.product.basePrice);
+  } else if (item.basePrice != null && Number(item.basePrice) > 0) {
+    baseRate = Number(item.basePrice);
+  } else {
+    const extraPerUnit = sizePrice + normalToppings.reduce((s, t) => s + (t.price || 0), 0);
+    baseRate = Math.max(0, totalUnitPrice - extraPerUnit);
+  }
+
+  // If totalUnitPrice was given and baseRate + extras doesn't balance, calibrate baseRate
+  const expectedTotalUnit = baseRate + sizePrice + normalToppings.reduce((s, t) => s + (t.price || 0), 0);
+  if (totalUnitPrice > 0 && Math.abs(expectedTotalUnit - totalUnitPrice) > 0.01 && !item.product?.basePrice) {
+    baseRate = Math.max(0, totalUnitPrice - sizePrice - normalToppings.reduce((s, t) => s + (t.price || 0), 0));
+  }
+
+  const baseAmount = Number((baseRate * qty).toFixed(2));
+  const sizeAmount = Number((sizePrice * qty).toFixed(2));
+
+  return {
+    baseRate,
+    baseAmount,
+    sizeName,
+    sizePrice,
+    sizeAmount,
+    toppings: normalToppings.map((t) => ({
+      name: t.name,
+      unitPrice: t.price,
+      amount: Number(((t.price || 0) * qty).toFixed(2)),
+    })),
+    qty,
+    lineTotal,
+  };
+};
+
 export const buildThermalPrintHtml = (slipHtml: string, title: string): string => {
   return `<!DOCTYPE html>
 <html>
@@ -425,7 +525,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const targetOrderId = order?.id || bill?.orderId || bill?.order?.id;
 
   const billTaxable = bill?.taxableAmount ?? (order?.taxableAmount ?? (bill?.subtotal ?? (order?.subtotal ?? 249)));
-  const billTax = bill?.taxAmount ?? (order?.taxAmount ?? 12.45);
+  const cgstVal = bill?.cgstAmount != null ? Number(bill.cgstAmount) : Number((billTaxable * 0.025).toFixed(2));
+  const sgstVal = bill?.sgstAmount != null ? Number(bill.sgstAmount) : Number((billTaxable * 0.025).toFixed(2));
+  const billTax = bill?.taxAmount ?? Number((cgstVal + sgstVal).toFixed(2));
   const rawTotal = Number((billTaxable + billTax).toFixed(2));
   const finalTotal = bill?.totalAmount ?? (order?.totalAmount ?? Math.round(rawTotal));
   const roundOff = bill?.roundOffAmount ?? Number((finalTotal - rawTotal).toFixed(2));
@@ -633,32 +735,35 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   {activeItems.length > 0 ? (
                     activeItems.map((item: any, idx: number) => {
                       const itemName = item.productNameSnapshot || item.name || item.product?.name || 'Menu Item';
-                      const cleanVariant = extractItemCleanVariant(item);
-                      const toppings = extractItemToppings(item);
-                      const qty = item.quantity || 1;
-                      const lineTotal = item.lineTotalSnapshot != null ? Number(item.lineTotalSnapshot) : (item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) * qty : (bill?.subtotal || 0));
-                      const rate = item.unitPriceSnapshot != null ? Number(item.unitPriceSnapshot) : (lineTotal / qty);
+                      const bd = calculateItemBreakdown(item);
 
                       return (
                         <React.Fragment key={idx}>
                           <tr className="thermal-item-row">
                             <td className="td-item">
                               <div className="table-item-name">{itemName}</div>
-                              {cleanVariant && (
-                                <div className="table-item-sub">• {cleanVariant}</div>
-                              )}
                             </td>
-                            <td className="td-qty">{qty}</td>
-                            <td className="td-rate">₹{rate.toFixed(2)}</td>
-                            <td className="td-amt">₹{lineTotal.toFixed(2)}</td>
+                            <td className="td-qty">{bd.qty}</td>
+                            <td className="td-rate">₹{bd.baseRate.toFixed(2)}</td>
+                            <td className="td-amt">₹{bd.baseAmount.toFixed(2)}</td>
                           </tr>
-                          {toppings.map((top, tIdx) => (
-                            <tr key={`top-${idx}-${tIdx}`} className="table-topping-row">
+                          {bd.sizeName && (
+                            <tr key={`size-${idx}`} className="table-topping-row">
                               <td colSpan={3} className="td-item td-topping-name">
-                                + {top.name}
+                                ▸ Size: {bd.sizeName}
                               </td>
                               <td className="td-amt td-topping-price">
-                                {top.price > 0 ? `₹${top.price.toFixed(2)}` : '₹0'}
+                                {bd.sizeAmount > 0 ? `+₹${bd.sizeAmount.toFixed(2)}` : '₹0'}
+                              </td>
+                            </tr>
+                          )}
+                          {bd.toppings.map((top, tIdx) => (
+                            <tr key={`top-${idx}-${tIdx}`} className="table-topping-row">
+                              <td colSpan={3} className="td-item td-topping-name">
+                                + {top.name}{bd.qty > 1 ? ` (${bd.qty}x)` : ''}
+                              </td>
+                              <td className="td-amt td-topping-price">
+                                {top.amount > 0 ? `+₹${top.amount.toFixed(2)}` : '₹0'}
                               </td>
                             </tr>
                           ))}
@@ -692,15 +797,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <tbody>
                   <tr>
                     <td className="calc-label">Item Subtotal:</td>
-                    <td className="calc-val">₹{(bill?.subtotal || order?.subtotal || 249).toFixed(2)}</td>
+                    <td className="calc-val">₹{billTaxable.toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="calc-label">CGST @ 2.5%:</td>
-                    <td className="calc-val">₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</td>
+                    <td className="calc-val">₹{cgstVal.toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td className="calc-label">SGST @ 2.5%:</td>
-                    <td className="calc-val">₹{((bill?.taxAmount || order?.taxAmount || 12.45) / 2).toFixed(2)}</td>
+                    <td className="calc-val">₹{sgstVal.toFixed(2)}</td>
                   </tr>
                   {roundOff !== 0 && (
                     <tr>
